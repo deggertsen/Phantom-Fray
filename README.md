@@ -13,7 +13,7 @@ This is a Virtual Reality game that uses a VR controller that has a gripper and 
 
 2. Phantom Behavior and Combat:
    - Phantoms approach the player from various angles
-   - Each phantom type has a "sweet spot" for maximum points
+   - Each phantom type has a "sweet spot" for maximum points (points are what are needed to close the rifts)
    - Encourage different punch types (jabs, hooks, uppercuts, punch while squatting) for optimal scoring
 
 3. Weapon System:
