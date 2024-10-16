@@ -59,6 +59,14 @@ Sure thing, David! Let’s embark on this epic journey to bring **Phantom-Fray**
      - Story elements intertwined with gameplay progression.
 
 ### 4. **Additional Features**
+   - **Rift System**
+     - Implement rift system with weak points that grant more points.
+     - Rift will have a health bar that depletes as the player scores points.
+   - **Simulated Training Room**
+     - A black box dark room where phantoms are "projected" that players can practice against. A rift is also "projected" at the back of the room where phantoms will spawn from.
+     - Allow the player to practice gameplay mechanics in a safe environment before jumping into the fray.
+     - No player damage can occur in the training room.
+     - Player can select from different types of phantoms to practice against.
    - **Combo System**
      - Reward chaining successful hits on sweet spots.
      - Implement score multipliers and ability charge-ups.
