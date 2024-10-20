@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://cpty7xivtp6y2" path="res://Scenes/Player/player.tscn" id="1_kj6n4"]
 [ext_resource type="PackedScene" uid="uid://clc5dre31iskm" path="res://addons/godot-xr-tools/xr/start_xr.tscn" id="1_vliex"]
-[ext_resource type="PackedScene" path="res://Scenes/RiftManager/RiftManager.tscn" id="2_riftmanager"]
+[ext_resource type="PackedScene" path="res://Scenes/Rifts/rift_manager.tscn" id="2_riftmanager"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aj3qk"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
