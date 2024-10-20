@@ -1,8 +1,9 @@
-[gd_scene load_steps=9 format=3 uid="uid://caw3nf1021su3"]
+[gd_scene load_steps=10 format=3 uid="uid://caw3nf1021su3"]
 
 [ext_resource type="PackedScene" uid="uid://cpty7xivtp6y2" path="res://Scenes/Player/player.tscn" id="1_kj6n4"]
 [ext_resource type="PackedScene" uid="uid://clc5dre31iskm" path="res://addons/godot-xr-tools/xr/start_xr.tscn" id="1_vliex"]
-[ext_resource type="PackedScene" path="res://Scenes/Rifts/rift_manager.tscn" id="2_riftmanager"]
+[ext_resource type="PackedScene" uid="uid://b88j32sxks21p" path="res://Scenes/Rifts/rift_manager.tscn" id="2_riftmanager"]
+[ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="4_cwvt3"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aj3qk"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -37,11 +38,12 @@ shadow_enabled = true
 [node name="Player" parent="." instance=ExtResource("1_kj6n4")]
 
 [node name="Floor" type="StaticBody3D" parent="."]
+
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
 mesh = SubResource("PlaneMesh_8uwq6")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("BoxShape3D_t1qua")
 
-# Adding RiftManager instance
 [node name="RiftManager" parent="." instance=ExtResource("2_riftmanager")]
+phantom_scene = ExtResource("4_cwvt3")
