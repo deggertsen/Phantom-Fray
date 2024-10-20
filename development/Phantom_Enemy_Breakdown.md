@@ -3,7 +3,7 @@
 ### 1. **Phantom Base Setup**
    - **Create Base `Phantom` Scene**
      - **Nodes Structure:**
-       - `KinematicBody3D` *(preferred for controlled movement)*
+       - `CharacterBody3D` *(preferred for controlled movement)*
        - `CollisionShape3D` *(defines physical boundaries)*
        - `MeshInstance3D` *(placeholder or detailed models)*
        - `AnimationPlayer` *(handles animations: idle, attack, death)*
