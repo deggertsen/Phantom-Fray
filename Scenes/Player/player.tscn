@@ -8,7 +8,7 @@
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_picfr"]
 
-[node name="Player" type="XROrigin3D"]
+[node name="Player" type="XROrigin3D" groups=["Player"]]
 
 [node name="XRCamera3D" type="XRCamera3D" parent="."]
 
