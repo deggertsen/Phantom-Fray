@@ -9,6 +9,7 @@
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_msm2f"]
 
 [node name="BasePhantom" type="CharacterBody3D"]
+transform = Transform3D(1, 0, 0, 0, 0.0865993, 0.996243, 0, -0.996243, 0.0865993, 0, 0.536897, 0)
 script = ExtResource("1_kog1c")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
