@@ -28,6 +28,12 @@ enabled=PackedStringArray("res://addons/godot-xr-tools/plugin.cfg")
 
 Player=""
 
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="hands"
+3d_physics/layer_3="phantoms"
+
 [xr]
 
 openxr/enabled=true
