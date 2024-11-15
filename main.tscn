@@ -46,9 +46,9 @@ mesh = SubResource("PlaneMesh_8uwq6")
 shape = SubResource("BoxShape3D_t1qua")
 
 [node name="RiftManager" parent="." instance=ExtResource("2_riftmanager")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2.55581, -10)
 phantom_scene = ExtResource("4_cwvt3")
 
 [node name="RiftManager2" parent="." instance=ExtResource("2_riftmanager")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.93045, -10)
 phantom_scene = ExtResource("4_cwvt3")
