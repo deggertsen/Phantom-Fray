@@ -1,8 +1,11 @@
-extends XRController3D
+extends "res://Scripts/Player/hand_collision.gd"
 
 var is_grabbing = false
 
 func _ready():
+	# Call parent _ready function first
+	super()
+	
 	# Connect the button_pressed signal
 	button_pressed.connect(_on_button_pressed)
 

@@ -64,7 +64,7 @@ func _close_rift():
 	_play_rift_closure_effect()
 	
 	# Declare victory or move to the next stage
-	print("Rift closed! Victory achieved!")
+	print("Rift closed!")
 	# You can emit a signal here to notify other systems
 	emit_signal("rift_closed")
 
@@ -95,6 +95,6 @@ func _play_rift_closure_effect():
 	
 	# Optionally, add sound effects
 	var audio = AudioStreamPlayer3D.new()
-	audio.stream = load("res://Audio/rift_close_sound.wav")
+	audio.stream = load("res://Assets/Audio/SFX/rift_close_sound.mp3")
 	add_child(audio)
 	audio.play()
