@@ -6,6 +6,6 @@
 render_priority = 0
 shader = ExtResource("1_m7an4")
 shader_parameter/dissolve_amount = 0.0
-shader_parameter/impact_point = null
-shader_parameter/dissolve_direction = null
-shader_parameter/edge_color = Color(0.5, 0.2, 1, 1)
+shader_parameter/impact_point = Vector3(0, 0, 0)
+shader_parameter/dissolve_direction = Vector3(0, 1, 0)
+shader_parameter/edge_color = Color(1, 0.2, 0, 1)
