@@ -19,6 +19,11 @@ var current_phantoms: int = 0
 # Timer for spawning phantoms
 var spawn_timer: Timer
 
+# Dissolve variables
+var dissolving = false
+var dissolve_amount = 0.0
+var dissolve_speed = 0.5
+
 func _ready():
 	# Initialize and add the spawn timer
 	spawn_timer = Timer.new()
@@ -30,6 +35,11 @@ func _ready():
 	
 	# Optional: Initialize visual indicators for the rift
 	_initialize_rift_visuals()
+	
+	# Add unique material for dissolve effect
+	var portal = $MeshInstance3D
+	var dissolve_material = preload("res://Resources/Materials/rift_dissolve.tres").duplicate()
+	portal.material_override = dissolve_material
 
 func _on_SpawnTimer_timeout():
 	if current_phantoms < max_phantoms and rift_health > 0:
@@ -60,21 +70,28 @@ func _close_rift():
 	# Stop spawning new phantoms
 	spawn_timer.stop()
 	
-	# Optionally, perform closure animations or effects
-	_play_rift_closure_effect()
+	# Start dissolve effect
+	dissolving = true
 	
-	# Declare victory or move to the next stage
-	print("Rift closed!")
-	# You can emit a signal here to notify other systems
-	emit_signal("rift_closed")
+	# Play sound effect
+	var audio = AudioStreamPlayer3D.new()
+	audio.stream = load("res://Assets/Audio/SFX/rift_close_sound.mp3")
+	add_child(audio)
+	audio.play()
 
 func _initialize_rift_visuals():
-	# Implement visual indicators for the Rift (e.g., glowing portal)
+	# Create the portal mesh
 	var portal = MeshInstance3D.new()
+	portal.name = "MeshInstance3D"  # Keep the same name for consistency
 	portal.mesh = SphereMesh.new()
-	portal.scale = Vector3(2, 2, 2)
-	portal.material_override = StandardMaterial3D.new()
-	portal.material_override.albedo_color = Color(0, 0, 1, 0.5) # Semi-transparent blue
+	portal.mesh.radius = 2.0
+	portal.mesh.height = 4.0
+	
+	# Create and set the dissolve material
+	var dissolve_material = preload("res://Resources/Materials/rift_dissolve.tres").duplicate()
+	portal.material_override = dissolve_material
+	
+	# Add the portal to the scene
 	add_child(portal)
 
 func _update_rift_health_visuals():
@@ -97,3 +114,13 @@ func _play_rift_closure_effect():
 	audio.stream = load("res://Assets/Audio/SFX/rift_close_sound.mp3")
 	add_child(audio)
 	audio.play()
+
+func _process(delta):
+	if dissolving:
+		dissolve_amount = min(dissolve_amount + dissolve_speed * delta, 1.0)
+		var portal = get_node_or_null("MeshInstance3D")
+		if portal and portal.material_override:
+			portal.material_override.set_shader_parameter("dissolve_amount", dissolve_amount)
+		
+		if dissolve_amount >= 1.0:
+			queue_free()
