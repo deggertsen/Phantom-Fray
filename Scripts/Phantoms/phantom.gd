@@ -82,7 +82,16 @@ func _on_Area3D_body_entered(body: Node3D):
 		emit_signal("player_hit")
 		disappear()
 
-func handle_punch(velocity: float, _punch_position: Vector3):
+func handle_punch(velocity: float, punch_position: Vector3):
+	# Create hit info dictionary
+	var hit_info = {
+		"velocity": Vector3.FORWARD * velocity,  # Convert float to Vector3
+		"position": punch_position
+	}
+	
+	# Call on_hit with the hit information
+	on_hit(hit_info)
+	
 	health -= 1
 	if health <= 0:
 		emit_signal("phantom_hit", calculate_points())
@@ -110,14 +119,33 @@ func disappear():
 func calculate_points():
 	return 100  # Base points
 
-func on_hit(impact_position: Vector3, impact_velocity: Vector3):
-	var material = $MeshInstance3D.get_surface_override_material(0)
-	# Normalize the velocity to get the direction
-	var direction = impact_velocity.normalized()
+func on_hit(hit_info):
+	print("Hit detected with velocity: ", hit_info.velocity.length())
 	
-	# Set the shader parameters
-	material.set_shader_parameter("impact_point", impact_position)
-	material.set_shader_parameter("dissolve_direction", direction)
+	# Get the material
+	var material = $MeshInstance3D.material_override
+	if not material:
+		print("No material override found!")
+		return
 	
-	# Start the death animation
-	$AnimationPlayer.play("death")
+	# Calculate impact direction from hit velocity
+	var impact_direction = hit_info.velocity.normalized()
+	
+	# Apply physical force
+	var force = hit_info.velocity * 2.0  # Adjust multiplier for desired force
+	self.linear_velocity = force # Access linear_velocity through self since this is likely a RigidBody3D
+	
+	# Set shader parameters for dissolve effect
+	material.set_shader_parameter("impact_point", hit_info.position)
+	material.set_shader_parameter("dissolve_direction", impact_direction)
+	
+	# Debug prints
+	print("Impact position: ", hit_info.position)
+	print("Impact direction: ", impact_direction)
+	
+	# Play the death animation
+	if $AnimationPlayer.has_animation("death"):
+		print("Playing death animation")
+		$AnimationPlayer.play("death")
+	else:
+		print("No death animation found!")
