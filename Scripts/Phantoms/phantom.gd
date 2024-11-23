@@ -25,7 +25,7 @@ var _player: Node3D = null
 
 var dissolve_amount = 0.0
 var dissolving = false
-var dissolve_speed = 0.5  # Adjust this to control dissolve speed
+var dissolve_speed = 1.5  # Increased from default for more dramatic effect
 
 # Add at the top with other variables
 var is_hit = false
