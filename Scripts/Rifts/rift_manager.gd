@@ -24,6 +24,9 @@ var dissolving = false
 var dissolve_amount = 0.0
 var dissolve_speed = 0.5
 
+# Phantom container
+var phantom_container: Node3D = null
+
 func _ready():
 	# Initialize and add the spawn timer
 	spawn_timer = Timer.new()
@@ -40,6 +43,11 @@ func _ready():
 	var portal = $MeshInstance3D
 	var dissolve_material = preload("res://Resources/Materials/rift_dissolve.tres").duplicate()
 	portal.material_override = dissolve_material
+	
+	# Add to existing _ready function
+	phantom_container = get_tree().get_root().get_node_or_null("Main/PhantomContainer")
+	if not phantom_container:
+		push_warning("PhantomContainer not found in scene tree!")
 
 func _on_SpawnTimer_timeout():
 	if current_phantoms < max_phantoms and rift_health > 0:
@@ -47,7 +55,12 @@ func _on_SpawnTimer_timeout():
 		
 func _spawn_phantom():
 	var phantom_instance = phantom_scene.instantiate()
-	add_child(phantom_instance)
+	
+	# Add to phantom container instead of self
+	if phantom_container:
+		phantom_container.add_child(phantom_instance)
+	else:
+		add_child(phantom_instance)
 	
 	# Position the phantom at the rift's location with some randomness
 	var spawn_position = global_transform.origin + Vector3(randf_range(-5, 5), 0, randf_range(-5, 5))
