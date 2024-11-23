@@ -39,15 +39,18 @@ func _ready():
 	$Area3D.body_entered.connect(_on_Area3D_body_entered)
 	_player = get_tree().get_first_node_in_group("Player")
 	
+	# Create unique material instance for this phantom
+	var unique_material = $MeshInstance3D.material_override.duplicate()
+	$MeshInstance3D.material_override = unique_material
+	
 	# Initialize shader parameters
-	var material = $MeshInstance3D.material_override
-	if material:
-		print("Material found in _ready")
-		material.set_shader_parameter("dissolve_amount", 0.0)
-		material.set_shader_parameter("impact_point", Vector3.ZERO)
-		material.set_shader_parameter("dissolve_direction", Vector3.UP)
+	if unique_material:
+		print("Unique material created in _ready")
+		unique_material.set_shader_parameter("dissolve_amount", 0.0)
+		unique_material.set_shader_parameter("impact_point", Vector3.ZERO)
+		unique_material.set_shader_parameter("dissolve_direction", Vector3.UP)
 	else:
-		print("No material found in _ready")
+		print("Failed to create unique material in _ready")
 
 func _physics_process(delta):
 	if _player:
@@ -154,7 +157,6 @@ func _process(delta):
 		dissolve_amount = min(dissolve_amount + dissolve_speed * delta, 1.0)
 		var material = $MeshInstance3D.material_override
 		if material:
-			print("Dissolve amount: ", dissolve_amount)
 			material.set_shader_parameter("dissolve_amount", dissolve_amount)
 		else:
 			print("No material found while dissolving")
