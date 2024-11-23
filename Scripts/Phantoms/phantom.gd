@@ -27,6 +27,11 @@ var dissolve_amount = 0.0
 var dissolving = false
 var dissolve_speed = 0.5  # Adjust this to control dissolve speed
 
+# Add at the top with other variables
+var is_hit = false
+var hit_velocity = Vector3.ZERO
+var hit_drag = 0.95  # Adjust this to control how quickly the phantom slows down
+
 func _ready():
 	# Set up collision layers
 	collision_layer = 4  # Layer 3 for phantoms
@@ -53,6 +58,12 @@ func _ready():
 		print("Failed to create unique material in _ready")
 
 func _physics_process(delta):
+	if is_hit:
+		# Apply drag to gradually slow down the phantom
+		velocity *= hit_drag
+		move_and_slide()
+		return
+		
 	if _player:
 		# Update time for wobble effect
 		_time += delta
@@ -144,14 +155,14 @@ func on_hit(hit_info):
 	# Calculate impact direction from hit velocity
 	var impact_direction = hit_info.velocity.normalized()
 	
-	# Apply physical force
-	var force = hit_info.velocity * 2.0  # Adjust multiplier for desired force
-	velocity = force
+	# Set hit state and velocity
+	is_hit = true
+	velocity = hit_info.velocity * 2.0  # Adjust multiplier for desired force
 	
 	# Set shader parameters for dissolve effect
 	material.set_shader_parameter("impact_point", hit_info.position)
 	material.set_shader_parameter("dissolve_direction", impact_direction)
-	
+
 func _process(delta):
 	if dissolving:
 		dissolve_amount = min(dissolve_amount + dissolve_speed * delta, 1.0)
