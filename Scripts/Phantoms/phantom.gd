@@ -136,7 +136,7 @@ func disappear():
 	
 	# Play sound
 	var audio = AudioStreamPlayer3D.new()
-	audio.stream = load("res://Assets/Audio/SFX/phantom_death_sound.mp3")
+	audio.stream = load("res://Assets/Audio/SFX/phantom_death.mp3")
 	add_child(audio)
 	audio.play()
 	
