@@ -131,9 +131,9 @@ func on_hit(hit_info):
 	# Calculate impact direction from hit velocity
 	var impact_direction = hit_info.velocity.normalized()
 	
-	# Apply physical force (using CharacterBody3D's velocity property)
+	# Apply physical force
 	var force = hit_info.velocity * 2.0  # Adjust multiplier for desired force
-	velocity = force  # CharacterBody3D uses 'velocity' not 'linear_velocity'
+	velocity = force
 	
 	# Set shader parameters for dissolve effect
 	material.set_shader_parameter("impact_point", hit_info.position)
@@ -142,10 +142,3 @@ func on_hit(hit_info):
 	# Debug prints
 	print("Impact position: ", hit_info.position)
 	print("Impact direction: ", impact_direction)
-	
-	# Play the death animation
-	if $AnimationPlayer.has_animation("death"):
-		print("Playing death animation")
-		$AnimationPlayer.play("death")
-	else:
-		print("No death animation found!")
