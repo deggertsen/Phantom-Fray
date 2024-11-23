@@ -131,9 +131,9 @@ func on_hit(hit_info):
 	# Calculate impact direction from hit velocity
 	var impact_direction = hit_info.velocity.normalized()
 	
-	# Apply physical force
+	# Apply physical force (using CharacterBody3D's velocity property)
 	var force = hit_info.velocity * 2.0  # Adjust multiplier for desired force
-	self.linear_velocity = force # Access linear_velocity through self since this is likely a RigidBody3D
+	velocity = force  # CharacterBody3D uses 'velocity' not 'linear_velocity'
 	
 	# Set shader parameters for dissolve effect
 	material.set_shader_parameter("impact_point", hit_info.position)
