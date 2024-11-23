@@ -17,7 +17,7 @@ void fragment() {
 	float noise = fract(sin(dot(UV + distance_along_direction * 0.1, vec2(12.9898, 78.233))) * 43758.5453);
 	
 	// Adjust dissolve threshold based on distance
-	float threshold = dissolve_amount - distance_along_direction * 0.1;
+	float threshold = 1.0 - dissolve_amount - distance_along_direction * 0.1;
 	float dissolve_value = step(threshold, noise);
 	
 	ALPHA = dissolve_value;
