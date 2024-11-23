@@ -93,7 +93,6 @@ func _play_rift_closure_effect():
 	# Configure particle properties as needed
 	add_child(particles)
 	
-	# Optionally, add sound effects
 	var audio = AudioStreamPlayer3D.new()
 	audio.stream = load("res://Assets/Audio/SFX/rift_close_sound.mp3")
 	add_child(audio)

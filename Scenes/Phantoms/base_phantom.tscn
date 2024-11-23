@@ -38,8 +38,8 @@ script = ExtResource("1_kog1c")
 shape = SubResource("CapsuleShape3D_0ktb3")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+material_override = ExtResource("2_2r1sb")
 mesh = SubResource("CapsuleMesh_apnx8")
-surface_material_override/0 = ExtResource("2_2r1sb")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
