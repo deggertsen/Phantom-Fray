@@ -42,9 +42,12 @@ func _ready():
 	# Initialize shader parameters
 	var material = $MeshInstance3D.material_override
 	if material:
+		print("Material found in _ready")
 		material.set_shader_parameter("dissolve_amount", 0.0)
 		material.set_shader_parameter("impact_point", Vector3.ZERO)
 		material.set_shader_parameter("dissolve_direction", Vector3.UP)
+	else:
+		print("No material found in _ready")
 
 func _physics_process(delta):
 	if _player:
@@ -151,7 +154,10 @@ func _process(delta):
 		dissolve_amount = min(dissolve_amount + dissolve_speed * delta, 1.0)
 		var material = $MeshInstance3D.material_override
 		if material:
+			print("Dissolve amount: ", dissolve_amount)
 			material.set_shader_parameter("dissolve_amount", dissolve_amount)
+		else:
+			print("No material found while dissolving")
 		
 		if dissolve_amount >= 1.0:
 			queue_free()

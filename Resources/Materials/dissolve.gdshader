@@ -1,4 +1,5 @@
 shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
 uniform float dissolve_amount : hint_range(0, 1) = 0;
 uniform vec3 impact_point;
@@ -6,6 +7,9 @@ uniform vec3 dissolve_direction;
 uniform vec4 edge_color : source_color = vec4(0.5, 0.2, 1.0, 1.0);
 
 void fragment() {
+	// Debug output
+	ALBEDO = vec3(1.0, 1.0, 1.0);  // White base color for visibility
+	
 	// If dissolve_amount is 0, show the full phantom
 	if (dissolve_amount == 0.0) {
 		ALPHA = 1.0;
@@ -24,14 +28,13 @@ void fragment() {
 	
 	// Adjust dissolve threshold based on distance
 	float threshold = dissolve_amount - distance_along_direction * 0.1;
-	float dissolve_value = step(threshold, noise);
 	
-	ALPHA = dissolve_value;
-	if (dissolve_value < 0.1) {
+	if (noise < threshold) {
 		discard;
 	}
 	
 	// Add glowing edge effect
 	float edge = smoothstep(threshold - 0.1, threshold, noise);
 	EMISSION = edge_color.rgb * (1.0 - edge) * 5.0;
+	ALPHA = edge;
 }
