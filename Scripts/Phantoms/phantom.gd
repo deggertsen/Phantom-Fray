@@ -100,6 +100,7 @@ func handle_punch(velocity: float, punch_position: Vector3):
 		$AnimationPlayer.play("hit_reaction")
 
 func disappear():
+	print("Starting disappear function")
 	# Disable collisions
 	collision_layer = 0
 	collision_mask = 0
@@ -107,8 +108,14 @@ func disappear():
 	$Area3D.collision_mask = 0
 	
 	# Play death animation
-	$AnimationPlayer.play("death")
-	await $AnimationPlayer.animation_finished
+	if $AnimationPlayer.has_animation("death"):
+		print("Playing death animation")
+		$AnimationPlayer.play("death")
+		await $AnimationPlayer.animation_finished
+		print("Death animation finished")
+	else:
+		print("No death animation found in disappear()")
+	
 	queue_free()
 
 	var audio = AudioStreamPlayer3D.new()
@@ -119,9 +126,7 @@ func disappear():
 func calculate_points():
 	return 100  # Base points
 
-func on_hit(hit_info):
-	print("Hit detected with velocity: ", hit_info.velocity.length())
-	
+func on_hit(hit_info):	
 	# Get the material
 	var material = $MeshInstance3D.material_override
 	if not material:
@@ -139,6 +144,3 @@ func on_hit(hit_info):
 	material.set_shader_parameter("impact_point", hit_info.position)
 	material.set_shader_parameter("dissolve_direction", impact_direction)
 	
-	# Debug prints
-	print("Impact position: ", hit_info.position)
-	print("Impact direction: ", impact_direction)
