@@ -38,6 +38,7 @@ shadow_enabled = true
 [node name="Player" parent="." instance=ExtResource("1_kj6n4")]
 
 [node name="Floor" type="StaticBody3D" parent="."]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
 mesh = SubResource("PlaneMesh_8uwq6")
@@ -46,11 +47,11 @@ mesh = SubResource("PlaneMesh_8uwq6")
 shape = SubResource("BoxShape3D_t1qua")
 
 [node name="RiftManager" parent="." instance=ExtResource("2_riftmanager")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2.55581, -10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.2442, 3.16106, -15.0434)
 phantom_scene = ExtResource("4_cwvt3")
 
 [node name="RiftManager2" parent="." instance=ExtResource("2_riftmanager")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.93045, -10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.33858, 3.00932, -17.4987)
 phantom_scene = ExtResource("4_cwvt3")
 
 [node name="PhantomContainer" type="Node3D" parent="."]
