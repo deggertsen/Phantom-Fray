@@ -96,11 +96,12 @@ func _initialize_rift_visuals():
 
 func _update_rift_health_visuals():
 	# Update visuals based on rift_health
-	# For example, change the color intensity
 	for child in get_children():
 		if child is MeshInstance3D:
-			var material = child.material_override as StandardMaterial3D
-			material.albedo_color.a = clamp(rift_health / 100.0, 0.1, 1.0)
+			var material = child.material_override
+			if material:
+				# Update the shader parameter instead of albedo_color
+				material.set_shader_parameter("base_color", Color(0.0, 0.0, 1.0, clamp(rift_health / 100.0, 0.1, 1.0)))
 
 func _play_rift_closure_effect():
 	# Play particle effects or animations to signify rift closure
