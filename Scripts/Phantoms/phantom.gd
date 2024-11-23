@@ -122,7 +122,8 @@ func handle_punch(velocity: float, punch_position: Vector3):
 	
 	health -= 1
 	if health <= 0:
-		emit_signal("phantom_hit", calculate_points())
+		# Pass the velocity as points
+		emit_signal("phantom_hit", velocity)
 		disappear()
 
 func disappear():
@@ -141,9 +142,6 @@ func disappear():
 	
 	# Start dissolve effect
 	dissolving = true
-
-func calculate_points():
-	return 100  # Base points
 
 func on_hit(hit_info):	
 	# Get the material
