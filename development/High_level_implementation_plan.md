@@ -1,127 +1,170 @@
-Sure thing, David! Let’s embark on this epic journey to bring **Phantom-Fray** to life using the Godot Engine. 🚀 May the code be with us!
+# Phantom-Fray Implementation Checklist 🎮
 
-## Implementation Outline for Phantom-Fray
+## 🎯 Current Progress
+- Core Systems: [##--------] 20%
+- Game Mechanics: [###-------] 30%
+- Additional Features: [####------] 40%
+- User Interface: [####------] 40%
+- Audio Design: [####------] 40%
+- Testing and Optimization: [####------] 40%
+- Deployment: [####------] 40%
+- Documentation and Support: [####------] 40%
+- Future Enhancements: [####------] 40%
 
-### 1. **Project Setup**
-   - **Initialize the Godot Project**
-     - Create a new Godot project named `Phantom-Fray`.
-     - Set up the project directory structure.
-   - **Version Control**
-     - Initialize a Git repository.
-     - Set up `.gitignore` for Godot and relevant files.
-   - **Configure Project Settings**
-     - Set up VR settings and input mappings.
-     - Configure resolution, aspect ratio, and other general settings.
+## 1. Project Setup
+- [x] Initialize Godot Project
+  - [x] Create new project named `Phantom-Fray`
+  - [x] Set up directory structure
+- [x] Version Control
+  - [x] Initialize Git repository
+  - [x] Configure .gitignore
+- [x] Project Settings
+  - [x] Configure VR settings
+  - [x] Set up input mappings
+  - [x] Configure resolution and aspect ratio
 
-### 2. **Core Systems**
-   - **Player System**
-     - **Player Node Setup**
-       - Create a `Player` scene with necessary nodes (e.g., `KinematicBody`, `CollisionShape`, `MeshInstance`).
-     - **Movement Mechanics**
-       - Implement dodging, ducking, and jumping mechanics.
-     - **Punching Mechanics**
-       - Integrate VR controller inputs for melee attacks.
-   - **Phantom System**
-     - **Phantom Node Setup**
-       - Create a `Phantom` scene with different types.
-       - Implement player and phantom collision detection.
-         - Create a "hitbox" for the phantom that the player can punch.
-         - Create a "hurtbox" for when the phantom reaches the player and does damage to the player.
-     - **AI Behavior**
-       - Develop AI for approaching the player from various angles and heights.
-       - Implement "sweet spot" targeting logic.
-   - **Weapon System**
-     - **Energy Gloves**
-       - Design and implement the ERM gauntlets.
-       - Integrate with player inputs for punching.
-   - **Health/Life Force System**
-     - **Life Force Management**
-       - Create visual indicators for phantom infection.
-       - Implement audio cues for life force depletion.
-   - **Progression System**
-     - **Story-Driven Progression**
-       - Set up mission objectives and checkpoints.
-     - **DLC and Expansion Handling**
-       - Plan for future expansions and modular content loading.
+## 2. Core Systems
+- [x] Player System
+  - [x] Create Player scene with required nodes
+  - [x] Implement movement mechanics (dodge, duck, jump)
+  - [x] Integrate VR controller inputs for melee
+- [ ] Phantom System
+  - [ ] Create Phantom scene with variants
+  - [ ] Implement collision detection
+    - [ ] Create phantom hitbox system
+    - [ ] Create phantom hurtbox system
+  - [ ] Develop AI behavior
+    - [ ] Implement approach patterns
+    - [ ] Create sweet spot targeting logic
+- [ ] Weapon System
+  - [ ] Design ERM gauntlets
+  - [ ] Integrate punch inputs
+- [ ] Health/Life Force System
+  - [ ] Create visual infection indicators
+  - [ ] Implement audio depletion cues
+- [ ] Progression System
+  - [ ] Set up mission objectives
+  - [ ] Implement checkpoint system
+  - [ ] Create DLC/expansion framework
 
-### 3. **Game Mechanics**
-   - **Player Movement**
-     - Implement stationary dodging, ducking, and possible jumping.
-     - Focus on upper body movements for VR interactions.
-   - **Phantom Behavior and Combat**
-     - Diverse approaches and attack patterns for phantoms.
-     - Encourage varied punch types for scoring.
-   - **Weapon System**
-     - Basic energy gloves with plans for special abilities.
-   - **Health/Life Force System**
-     - Visual and audio indicators for health status.
-   - **Progression**
-     - Story elements intertwined with gameplay progression.
+## 3. Game Mechanics
+- [ ] Player Movement
+  - [ ] Implement stationary dodging
+  - [ ] Implement ducking mechanics
+  - [ ] Implement jumping system
+  - [ ] Fine-tune upper body VR interactions
+- [ ] Phantom Behavior and Combat
+  - [ ] Create diverse approach patterns
+  - [ ] Implement varied attack patterns
+  - [ ] Design scoring system for different punch types
+- [ ] Weapon System
+  - [ ] Implement basic energy gloves
+  - [ ] Create framework for special abilities
+- [ ] Health/Life Force System
+  - [ ] Implement visual health indicators
+  - [ ] Create audio feedback system
+- [ ] Progression
+  - [ ] Implement story element triggers
+  - [ ] Create progression tracking system
 
-### 4. **Additional Features**
-   - **Rift System**
-     - Implement rift system with weak points that grant more points.
-     - Rift will have a health bar that depletes as the player scores points.
-   - **Simulated Training Room**
-     - A black box dark room where phantoms are "projected" that players can practice against. A rift is also "projected" at the back of the room where phantoms will spawn from.
-     - Allow the player to practice gameplay mechanics in a safe environment before jumping into the fray.
-     - No player damage can occur in the training room.
-     - Player can select from different types of phantoms to practice against.
-   - **Combo System**
-     - Reward chaining successful hits on sweet spots.
-     - Implement score multipliers and ability charge-ups.
-   - **Phantom Variety**
-     - Different phantom types requiring specific punch combinations.
-     - Implement specialized phantoms like "shield" phantoms.
-   - **Environmental Hazards**
-     - Introduce simple hazards like energy beams or projectiles.
-   - **Power-Ups**
-     - Design temporary boosts (e.g., time slow, punch power increase).
-   - **Boss Battles**
-     - Larger phantoms with complex defeat strategies tied to story progression.
+## 4. Additional Features
+- [ ] Rift System
+  - [ ] Create rift weak points
+  - [ ] Implement scoring system
+  - [ ] Add rift health bar mechanics
+- [ ] Simulated Training Room
+  - [ ] Create black box environment
+  - [ ] Implement phantom projections
+  - [ ] Add practice rift system
+  - [ ] Create phantom selection interface
+  - [ ] Disable damage system for training
+- [ ] Combo System
+  - [ ] Implement hit chaining
+  - [ ] Create score multipliers
+  - [ ] Add ability charge-up system
+- [ ] Phantom Variety
+  - [ ] Create basic phantom types
+  - [ ] Implement shield phantoms
+  - [ ] Design punch combination requirements
+- [ ] Environmental Hazards
+  - [ ] Add energy beam system
+  - [ ] Implement projectile mechanics
+- [ ] Power-Ups
+  - [ ] Create time slow mechanic
+  - [ ] Implement punch power boost
+- [ ] Boss Battles
+  - [ ] Design boss phantom mechanics
+  - [ ] Integrate with story progression
 
-### 5. **User Interface (UI)**
-   - **Main Menu**
-     - Design an intuitive VR-compatible main menu.
-   - **In-Game HUD**
-     - Display life force, score, and other vital stats.
-   - **Pause and Settings**
-     - Allow players to adjust settings and pause the game.
+## 5. User Interface
+- [ ] Main Menu
+  - [ ] Design VR-compatible interface
+  - [ ] Implement menu navigation
+- [ ] In-Game HUD
+  - [ ] Create life force display
+  - [ ] Add score counter
+  - [ ] Implement status indicators
+- [ ] Pause and Settings
+  - [ ] Create pause mechanism
+  - [ ] Implement settings menu
+  - [ ] Add control
 
-### 6. **Audio Design**
-   - **Sound Effects**
-     - Implement punching sounds, phantom noises, and environmental sounds.
-   - **Music**
-     - Create or integrate background music that fits the game's atmosphere.
-   - **Audio Cues**
-     - Heartbeat intensifies as life force depletes.
+## 6. Audio Design
+- [ ] Sound Effects
+  - [ ] Create punch sound effects
+  - [ ] Add phantom audio
+  - [ ] Implement environmental sounds
+- [ ] Music
+  - [ ] Implement background music system
+  - [ ] Create/integrate music tracks
+- [ ] Audio Cues
+  - [ ] Add life force depletion sounds
+  - [ ] Implement positional audio
 
-### 7. **Testing and Optimization**
-   - **VR Performance Optimization**
-     - Ensure smooth performance for VR experiences.
-   - **Gameplay Testing**
-     - Conduct playtests to fine-tune mechanics and difficulty.
-   - **Bug Fixing**
-     - Iterate on feedback and fix identified issues.
+## 7. Testing and Optimization
+- [ ] VR Performance
+  - [ ] Implement performance monitoring
+  - [ ] Optimize render pipeline
+  - [ ] Fine-tune physics calculations
+- [ ] Gameplay Testing
+  - [ ] Conduct internal playtests
+  - [ ] Gather and analyze feedback
+  - [ ] Balance difficulty curves
+- [ ] Bug Fixing
+  - [ ] Set up bug tracking system
+  - [ ] Implement automated testing
+  - [ ] Create debug tools
 
-### 8. **Deployment**
-   - **Platform Optimization**
-     - Prepare the game for target VR platforms.
-   - **Build Pipeline**
-     - Set up automated builds if necessary.
-   - **Release Management**
-     - Plan for initial release and subsequent updates or DLCs.
+## 8. Deployment
+- [ ] Platform Optimization
+  - [ ] Optimize for target VR platforms
+  - [ ] Test on different VR headsets
+- [ ] Build Pipeline
+  - [ ] Set up CI/CD pipeline
+  - [ ] Create build automation
+- [ ] Release Management
+  - [ ] Create release checklist
+  - [ ] Plan update schedule
+  - [ ] Set up distribution channels
 
-### 9. **Documentation and Support**
-   - **Code Documentation**
-     - Maintain well-documented code for future reference and team collaboration.
-   - **User Documentation**
-     - Provide guides or tutorials for players if needed.
+## 9. Documentation and Support
+- [ ] Code Documentation
+  - [ ] Document core systems
+  - [ ] Create API documentation
+  - [ ] Write development guides
+- [ ] User Documentation
+  - [ ] Create player manual
+  - [ ] Write tutorials
+  - [ ] Design in-game help system
 
-### 10. **Future Enhancements**
-   - **Expanded Lore and Storylines**
-     - Deepen the game’s narrative based on player progression.
-   - **Advanced VR Interactions**
-     - Introduce more immersive VR mechanics as technology evolves.
-   - **Community Features**
-     - Consider leaderboards, achievements, or mod support.
+## 10. Future Enhancements
+- [ ] Expanded Lore
+  - [ ] Develop additional storylines
+  - [ ] Create lore documents
+- [ ] Advanced VR Features
+  - [ ] Research new VR capabilities
+  - [ ] Plan feature implementations
+- [ ] Community Features
+  - [ ] Design leaderboard system
+  - [ ] Plan achievement system
+  - [ ] Create mod support framework
