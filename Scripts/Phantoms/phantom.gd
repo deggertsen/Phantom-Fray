@@ -102,5 +102,22 @@ func disappear():
 	await $AnimationPlayer.animation_finished
 	queue_free()
 
+	var audio = AudioStreamPlayer3D.new()
+	audio.stream = load("res://Assets/Audio/SFX/phantom_death_sound.mp3")
+	add_child(audio)
+	audio.play()
+
 func calculate_points():
 	return 100  # Base points
+
+func on_hit(impact_position: Vector3, impact_velocity: Vector3):
+	var material = $MeshInstance3D.get_surface_override_material(0)
+	# Normalize the velocity to get the direction
+	var direction = impact_velocity.normalized()
+	
+	# Set the shader parameters
+	material.set_shader_parameter("impact_point", impact_position)
+	material.set_shader_parameter("dissolve_direction", direction)
+	
+	# Start the death animation
+	$AnimationPlayer.play("death")
