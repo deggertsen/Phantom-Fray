@@ -31,6 +31,7 @@ var dissolve_speed = 1.5  # Increased from default for more dramatic effect
 var is_hit = false
 var hit_velocity = Vector3.ZERO
 var hit_drag = 0.95  # Adjust this to control how quickly the phantom slows down
+var audio: AudioStreamPlayer3D = null
 
 func _ready():
 	# Set up collision layers
@@ -45,17 +46,14 @@ func _ready():
 	_player = get_tree().get_first_node_in_group("Player")
 	
 	# Create unique material instance for this phantom
-	var unique_material = $MeshInstance3D.material_override.duplicate()
-	$MeshInstance3D.material_override = unique_material
+	var unique_material = preload("res://Resources/Materials/dissolve.tres").duplicate()
+	$MeshInstance3D.material_overlay = unique_material
 	
 	# Initialize shader parameters
 	if unique_material:
-		print("Unique material created in _ready")
 		unique_material.set_shader_parameter("dissolve_amount", 0.0)
 		unique_material.set_shader_parameter("impact_point", Vector3.ZERO)
 		unique_material.set_shader_parameter("dissolve_direction", Vector3.UP)
-	else:
-		print("Failed to create unique material in _ready")
 
 func _physics_process(delta):
 	if is_hit:
@@ -135,19 +133,23 @@ func disappear():
 	$Area3D.collision_mask = 0
 	
 	# Play sound
-	var audio = AudioStreamPlayer3D.new()
+	audio = AudioStreamPlayer3D.new()
 	audio.stream = load("res://Assets/Audio/SFX/phantom_death.mp3")
+	audio.finished.connect(_on_audio_finished)
 	add_child(audio)
 	audio.play()
 	
 	# Start dissolve effect
 	dissolving = true
 
+func _on_audio_finished():
+	queue_free()
+
 func on_hit(hit_info):	
 	# Get the material
-	var material = $MeshInstance3D.material_override
+	var material = $MeshInstance3D.material_overlay
 	if not material:
-		print("No material override found!")
+		print("No material overlay found!")
 		return
 	
 	# Calculate impact direction from hit velocity
@@ -164,7 +166,7 @@ func on_hit(hit_info):
 func _process(delta):
 	if dissolving:
 		dissolve_amount = min(dissolve_amount + dissolve_speed * delta, 1.0)
-		var material = $MeshInstance3D.material_override
+		var material = $MeshInstance3D.material_overlay
 		if material:
 			material.set_shader_parameter("dissolve_amount", dissolve_amount)
 		else:
