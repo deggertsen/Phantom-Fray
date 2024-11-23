@@ -23,6 +23,10 @@ var _time: float = 0.0
 # Cache the player reference
 var _player: Node3D = null
 
+var dissolve_amount = 0.0
+var dissolving = false
+var dissolve_speed = 0.5  # Adjust this to control dissolve speed
+
 func _ready():
 	# Set up collision layers
 	collision_layer = 4  # Layer 3 for phantoms
@@ -34,6 +38,13 @@ func _ready():
 	add_to_group("phantom")
 	$Area3D.body_entered.connect(_on_Area3D_body_entered)
 	_player = get_tree().get_first_node_in_group("Player")
+	
+	# Initialize shader parameters
+	var material = $MeshInstance3D.material_override
+	if material:
+		material.set_shader_parameter("dissolve_amount", 0.0)
+		material.set_shader_parameter("impact_point", Vector3.ZERO)
+		material.set_shader_parameter("dissolve_direction", Vector3.UP)
 
 func _physics_process(delta):
 	if _player:
@@ -96,8 +107,6 @@ func handle_punch(velocity: float, punch_position: Vector3):
 	if health <= 0:
 		emit_signal("phantom_hit", calculate_points())
 		disappear()
-	else:
-		$AnimationPlayer.play("hit_reaction")
 
 func disappear():
 	print("Starting disappear function")
@@ -107,21 +116,14 @@ func disappear():
 	$Area3D.collision_layer = 0
 	$Area3D.collision_mask = 0
 	
-	# Play death animation
-	if $AnimationPlayer.has_animation("death"):
-		print("Playing death animation")
-		$AnimationPlayer.play("death")
-		await $AnimationPlayer.animation_finished
-		print("Death animation finished")
-	else:
-		print("No death animation found in disappear()")
-	
-	queue_free()
-
+	# Play sound
 	var audio = AudioStreamPlayer3D.new()
 	audio.stream = load("res://Assets/Audio/SFX/phantom_death_sound.mp3")
 	add_child(audio)
 	audio.play()
+	
+	# Start dissolve effect
+	dissolving = true
 
 func calculate_points():
 	return 100  # Base points
@@ -144,3 +146,12 @@ func on_hit(hit_info):
 	material.set_shader_parameter("impact_point", hit_info.position)
 	material.set_shader_parameter("dissolve_direction", impact_direction)
 	
+func _process(delta):
+	if dissolving:
+		dissolve_amount = min(dissolve_amount + dissolve_speed * delta, 1.0)
+		var material = $MeshInstance3D.material_override
+		if material:
+			material.set_shader_parameter("dissolve_amount", dissolve_amount)
+		
+		if dissolve_amount >= 1.0:
+			queue_free()
