@@ -7,9 +7,9 @@ signal phantom_hit(points)
 signal player_hit
 
 # Movement properties
-@export var move_speed: float = 2.0
+@export var move_speed: float = 5.0
 @export var acceleration: float = 5.0
-@export var wobble_strength: float = 0.5
+@export var wobble_strength: float = 0.2
 @export var wobble_speed: float = 2.0
 @export var hover_height: float = 1.0  # Height to maintain above ground
 
