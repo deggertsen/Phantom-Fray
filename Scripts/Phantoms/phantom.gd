@@ -23,15 +23,17 @@ var _time: float = 0.0
 # Cache the player reference
 var _player: Node3D = null
 
+# At the top with other variables
+@onready var mesh_instance = $MeshInstance3D
+var dissolve_speed = 0.7
 var dissolve_amount = 0.0
 var dissolving = false
-var dissolve_speed = 1.5  # Increased from default for more dramatic effect
+var audio_player: AudioStreamPlayer3D = null
 
 # Add at the top with other variables
 var is_hit = false
 var hit_velocity = Vector3.ZERO
 var hit_drag = 0.95  # Adjust this to control how quickly the phantom slows down
-var audio: AudioStreamPlayer3D = null
 
 func _ready():
 	# Set up collision layers
@@ -45,15 +47,21 @@ func _ready():
 	$Area3D.body_entered.connect(_on_Area3D_body_entered)
 	_player = get_tree().get_first_node_in_group("Player")
 	
-	# Create unique material instance for this phantom
-	var unique_material = preload("res://Resources/Materials/dissolve.tres").duplicate()
-	$MeshInstance3D.material_overlay = unique_material
+	# Create a unique instance of the material for this phantom
+	var base_material = preload("res://Resources/Materials/dissolve.tres")
+	var unique_material = base_material.duplicate()
+	mesh_instance.material_override = unique_material
 	
 	# Initialize shader parameters
-	if unique_material:
-		unique_material.set_shader_parameter("dissolve_amount", 0.0)
-		unique_material.set_shader_parameter("impact_point", Vector3.ZERO)
-		unique_material.set_shader_parameter("dissolve_direction", Vector3.UP)
+	unique_material.set_shader_parameter("dissolve_amount", 0.0)
+	unique_material.set_shader_parameter("impact_point", Vector3.ZERO)
+	unique_material.set_shader_parameter("dissolve_direction", Vector3.UP)
+	
+	# Get the audio bus for sound effects
+	var sfx_bus_index = AudioServer.get_bus_index("SFX")  # Create this bus in the Audio settings
+	if sfx_bus_index != -1:
+		# Set the volume to about half (-6 dB is approximately half volume)
+		AudioServer.set_bus_volume_db(sfx_bus_index, -6.0)
 
 func _physics_process(delta):
 	if is_hit:
@@ -133,11 +141,11 @@ func disappear():
 	$Area3D.collision_mask = 0
 	
 	# Play sound
-	audio = AudioStreamPlayer3D.new()
-	audio.stream = load("res://Assets/Audio/SFX/phantom_death.mp3")
-	audio.finished.connect(_on_audio_finished)
-	add_child(audio)
-	audio.play()
+	audio_player = AudioStreamPlayer3D.new()
+	audio_player.stream = preload("res://Assets/Audio/SFX/phantom_death.mp3")
+	add_child(audio_player)
+	audio_player.play()
+	audio_player.finished.connect(_on_audio_finished)
 	
 	# Start dissolve effect
 	dissolving = true
@@ -145,11 +153,11 @@ func disappear():
 func _on_audio_finished():
 	queue_free()
 
-func on_hit(hit_info):	
-	# Get the material
-	var material = $MeshInstance3D.material_overlay
+func on_hit(hit_info):
+	# Get the unique material instance
+	var material = mesh_instance.material_override
 	if not material:
-		print("No material overlay found!")
+		print("No material found!")
 		return
 	
 	# Calculate impact direction from hit velocity
@@ -158,19 +166,22 @@ func on_hit(hit_info):
 	# Set hit state and velocity
 	is_hit = true
 	velocity = hit_info.velocity * 2.0  # Adjust multiplier for desired force
-	
-	# Set shader parameters for dissolve effect
+		# Set dissolve parameters
+	dissolving = true
 	material.set_shader_parameter("impact_point", hit_info.position)
-	material.set_shader_parameter("dissolve_direction", impact_direction)
+	material.set_shader_parameter("dissolve_direction", hit_info.velocity.normalized())
+	
+	# Play sound
+	if not audio_player:
+		audio_player = AudioStreamPlayer3D.new()
+		audio_player.stream = preload("res://Assets/Audio/SFX/phantom_death.mp3")
+		add_child(audio_player)
+	audio_player.play()
+	audio_player.finished.connect(_on_audio_finished)
 
 func _process(delta):
 	if dissolving:
 		dissolve_amount = min(dissolve_amount + dissolve_speed * delta, 1.0)
-		var material = $MeshInstance3D.material_overlay
+		var material = mesh_instance.material_override
 		if material:
 			material.set_shader_parameter("dissolve_amount", dissolve_amount)
-		else:
-			print("No material found while dissolving")
-		
-		if dissolve_amount >= 1.0:
-			queue_free()
