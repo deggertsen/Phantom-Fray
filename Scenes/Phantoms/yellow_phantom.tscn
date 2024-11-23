@@ -1,11 +1,43 @@
-[gd_scene load_steps=3 format=3 uid="uid://dfjs75v4og1r2"]
+[gd_scene load_steps=7 format=3 uid="uid://dfjs75v4og1r2"]
 
 [ext_resource type="PackedScene" uid="uid://b6ntj7u11rswk" path="res://Scenes/Phantoms/base_phantom.tscn" id="1_xqnx5"]
 [ext_resource type="Script" path="res://Scripts/Phantoms/yellow_phantom.gd" id="2_yellow"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_sweet"]
+radius = 0.3
+height = 0.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sweet"]
+transparency = 1
+albedo_color = Color(1.0, 0.9, 0.0, 0.2)
+emission_enabled = true
+emission = Color(1.0, 0.9, 0.0, 1.0)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_sweet"]
+emission_shape = 1
+emission_sphere_radius = 0.3
+gravity = Vector3(0, 0.5, 0)
+scale_min = 0.05
+scale_max = 0.1
+color = Color(1.0, 0.9, 0.0, 0.5)
+
+[sub_resource type="SphereMesh" id="SphereMesh_particle"]
+radius = 0.05
+height = 0.1
 
 [node name="YellowPhantom" instance=ExtResource("1_xqnx5")]
 script = ExtResource("2_yellow")
 sweet_spot_size = 0.3
 sweet_spot_score_multiplier = 2.0
 base_score = 100
-move_speed = 4.0  # Slightly slower than base speed
+
+[node name="SweetSpotVisual" type="MeshInstance3D" parent="." index="3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0, 0)
+mesh = SubResource("SphereMesh_sweet")
+surface_material_override/0 = SubResource("StandardMaterial3D_sweet")
+
+[node name="SweetSpotParticles" type="GPUParticles3D" parent="SweetSpotVisual" index="0"]
+amount = 20
+process_material = SubResource("ParticleProcessMaterial_sweet")
+draw_pass_1 = SubResource("SphereMesh_particle")
