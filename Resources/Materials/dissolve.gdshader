@@ -1,14 +1,19 @@
 shader_type spatial;
-render_mode blend_mix, depth_prepass_alpha, cull_back;
+render_mode blend_mix, cull_back;
 
 uniform float dissolve_amount : hint_range(0, 1) = 0;
 uniform vec3 impact_point;
 uniform vec3 dissolve_direction;
 
+varying vec3 world_vertex;
+
+void vertex() {
+	world_vertex = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+
 void fragment() {
 	// Get world position for directional effect
-	vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	vec3 dir_to_point = world_pos - impact_point;
+	vec3 dir_to_point = world_vertex - impact_point;
 	float distance_along_direction = dot(dir_to_point, normalize(dissolve_direction));
 	
 	// Create very chunky noise pattern
@@ -33,4 +38,7 @@ void fragment() {
 	// Strong emission at the edges
 	float glow = (1.0 - edge) * 3.0;
 	EMISSION = mix(vec3(1.0, 0.5, 0.0), vec3(0.7, 0.0, 0.0), edge) * glow;
+	
+	// Add some alpha for better blending
+	ALPHA = edge;
 }
