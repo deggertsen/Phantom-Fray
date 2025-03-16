@@ -35,7 +35,8 @@
     - [x] Create phantom hurtbox system
   - [x] Develop AI behavior
     - [x] Implement approach patterns
-    - [ ] Create sweet spot targeting logic
+    - [ ] Implement sweet spot system
+    - [x] Add visual feedback for hits
 - [ ] Weapon System
   - [ ] Design ERM gauntlets
   - [ ] Integrate punch inputs
@@ -95,6 +96,10 @@
 - [ ] Boss Battles
   - [ ] Design boss phantom mechanics
   - [ ] Integrate with story progression
+- [ ] Hand Tracking Support (Quest 3)
+  - [ ] Research Godot hand tracking capabilities
+  - [ ] Design hand gesture recognition system
+  - [ ] Implement hand-based collision detection
 
 ## 5. User Interface
 - [ ] Main Menu
