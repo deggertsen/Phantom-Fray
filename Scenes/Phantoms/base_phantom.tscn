@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://cstxepa784o20"]
 
-[ext_resource type="Script" path="res://Scripts/Phantoms/phantom.gd" id="1_kog1c"]
+[ext_resource type="Script" uid="uid://dpkbtk5f8tfp3" path="res://Scripts/Phantoms/phantom.gd" id="1_kog1c"]
 [ext_resource type="Material" uid="uid://c4pvljjhur5p8" path="res://Resources/Materials/dissolve.tres" id="2_2r1sb"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_0ktb3"]

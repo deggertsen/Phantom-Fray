@@ -1,5 +1,5 @@
 [gd_scene load_steps=2 format=3 uid="uid://bkr8rchbej3vt"]
 
-[ext_resource type="PackedScene" path="res://Scenes/Phantoms/base_phantom.tscn" id="1_3abr1"]
+[ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="1_3abr1"]
 
 [node name="BasePhantom" instance=ExtResource("1_3abr1")]
