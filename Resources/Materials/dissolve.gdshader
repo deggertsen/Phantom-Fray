@@ -4,6 +4,7 @@ render_mode blend_mix, cull_back;
 uniform float dissolve_amount : hint_range(0, 1) = 0;
 uniform vec3 impact_point;
 uniform vec3 dissolve_direction;
+uniform vec4 base_color : source_color = vec4(0.5, 0.2, 1.0, 0.8);
 
 varying vec3 world_vertex;
 
@@ -32,13 +33,13 @@ void fragment() {
 		discard;
 	}
 	
-	// Keep original color but add fire effect
-	ALBEDO = mix(vec3(1.0, 0.2, 0.0), vec3(0.5, 0.2, 1.0), edge);
+	// Use base color but add fire effect at edges
+	ALBEDO = mix(vec3(1.0, 0.2, 0.0), base_color.rgb, edge);
 	
 	// Strong emission at the edges
 	float glow = (1.0 - edge) * 3.0;
-	EMISSION = mix(vec3(1.0, 0.5, 0.0), vec3(0.7, 0.0, 0.0), edge) * glow;
+	EMISSION = mix(vec3(1.0, 0.5, 0.0), base_color.rgb, edge) * glow;
 	
 	// Add some alpha for better blending
-	ALPHA = edge;
+	ALPHA = edge * base_color.a;
 }

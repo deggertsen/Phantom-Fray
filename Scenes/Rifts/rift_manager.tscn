@@ -1,6 +1,22 @@
-[gd_scene load_steps=2 format=3 uid="uid://b88j32sxks21p"]
+[gd_scene load_steps=6 format=3 uid="uid://b88j32sxks21p"]
 
 [ext_resource type="Script" uid="uid://cw86jlto2s4fn" path="res://Scripts/Rifts/rift_manager.gd" id="1_eyexh"]
+[ext_resource type="PackedScene" uid="uid://dfjs75v4og1r2" path="res://Scenes/Phantoms/yellow_phantom.tscn" id="2_yellow"]
+[ext_resource type="PackedScene" uid="uid://drfoaoui21cln" path="res://Scenes/Phantoms/blue_phantom.tscn" id="3_blue"]
+[ext_resource type="PackedScene" uid="uid://bkr8rchbej3vt" path="res://Scenes/Phantoms/green_phantom.tscn" id="4_green"]
+[ext_resource type="PackedScene" uid="uid://diw6ch678tdbi" path="res://Scenes/Phantoms/pink_phantom.tscn" id="5_pink"]
 
 [node name="RiftManager" type="Node3D"]
 script = ExtResource("1_eyexh")
+yellow_phantom_scene = ExtResource("2_yellow")
+blue_phantom_scene = ExtResource("3_blue")
+green_phantom_scene = ExtResource("4_green")
+pink_phantom_scene = ExtResource("5_pink")
+yellow_weight = 40.0
+blue_weight = 30.0
+green_weight = 20.0
+pink_weight = 10.0
+spawn_interval = 5.0
+min_spawn_interval = 2.0
+spawn_interval_decrease = 0.1
+max_phantoms = 10

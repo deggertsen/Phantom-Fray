@@ -1,57 +1,49 @@
 extends "res://Scripts/Phantoms/phantom.gd"
 
-# Yellow phantom specific properties
-@export var sweet_spot_size: float = 0.3
-@export var sweet_spot_score_multiplier: float = 2.0
-@export var base_score: int = 100
-
-# Override the ready function to set up yellow-specific properties
 func _ready():
-    super()
-    
-    # Set yellow phantom material
-    var material = $MeshInstance3D.material_override
-    if material:
-        material.set_shader_parameter("base_color", Color(1.0, 0.9, 0.0, 0.8))
-    
-    # Modify collision mask to only detect left hand
-    $Area3D.collision_mask = 2  # Layer 2 is for hands
-    
-    # Start with subtle sweet spot visualization
-    var sweet_spot_visual = $SweetSpotVisual
-    sweet_spot_visual.material_override.albedo_color.a = 0.2
-    var sweet_spot_particles = $SweetSpotVisual/SweetSpotParticles
-    sweet_spot_particles.emitting = true
+	super()
+	
+	# Set yellow phantom material with more vibrant yellow
+	var material = $MeshInstance3D.material_override
+	if material:
+		material.set_shader_parameter("base_color", Color(1.0, 0.8, 0.0, 0.9))  # Bright yellow
+	
+	# Modify collision mask to only detect left hand
+	$Area3D.collision_layer = 4  # Layer 3 for phantoms
+	$Area3D.collision_mask = 2  # Layer 2 for hands
+	print("Yellow Phantom Area3D setup - Layer: ", $Area3D.collision_layer, " Mask: ", $Area3D.collision_mask)  # Debug print
+	
+	# Set yellow sweet spot visual color with more vibrant yellow
+	if has_node("SweetSpotVisual"):
+		var sweet_spot_material = $SweetSpotVisual.get_surface_override_material(0)
+		if sweet_spot_material:
+			sweet_spot_material.albedo_color = Color(1.0, 0.8, 0.0, 0.3)  # More saturated yellow, slightly more opaque
+			sweet_spot_material.emission = Color(1.0, 0.8, 0.0, 1.0)
+			sweet_spot_material.emission_energy_multiplier = 2.0  # Brighter glow
+		
+		var particles = $SweetSpotVisual/SweetSpotParticles
+		if particles and particles.process_material:
+			particles.process_material.color = Color(1.0, 0.8, 0.0, 0.7)  # More visible particles
+			particles.emitting = true
 
-# Override the handle_punch function to implement yellow-specific behavior
+# Override is_valid_hit to only accept left hand hits
+func is_valid_hit(collider: Node3D) -> bool:
+	if not collider:
+		print("Yellow Phantom: No collider")  # Debug print
+		return false
+	
+	# Check if it's a left hand controller
+	print("Yellow Phantom checking hit from: ", collider.name)  # Debug print
+	
+	# Check if the controller is valid and is a left hand
+	if collider is XRController3D:
+		var is_left = collider.tracker == "left_hand"
+		print("Yellow Phantom - Is left hand? ", is_left, " Tracker: ", collider.tracker)  # Debug print
+		return is_left
+	
+	return false
+
+# Override handle_punch to handle the punch directly
 func handle_punch(velocity: float, punch_position: Vector3):
-    var hit_info = super.handle_punch(velocity, punch_position)
-    
-    if _is_left_hand_hit():
-        var sweet_spot_factor = _calculate_sweet_spot_factor(punch_position)
-        if sweet_spot_factor > 0.8:
-            _highlight_sweet_spot_hit()
-    
-    return hit_info
-
-func _is_left_hand_hit() -> bool:
-    # Implementation will depend on your hand tracking setup
-    # This is a placeholder that should be implemented based on your collision system
-    return true
-
-func _calculate_sweet_spot_factor(hit_position: Vector3) -> float:
-    # Calculate distance from ideal hit location
-    # This is a placeholder - implement based on your sweet spot definition
-    var distance_to_sweet_spot = (hit_position - global_position).length()
-    return clamp(1.0 - (distance_to_sweet_spot / sweet_spot_size), 0.1, 1.0)
-
-func _highlight_sweet_spot_hit():
-    # Create a quick flash effect
-    var tween = create_tween()
-    tween.tween_property($SweetSpotVisual.material_override, "albedo_color:a", 0.8, 0.1)
-    tween.tween_property($SweetSpotVisual.material_override, "albedo_color:a", 0.2, 0.3)
-    
-    # Increase particle emission temporarily
-    $SweetSpotVisual/SweetSpotParticles.amount = 40
-    await get_tree().create_timer(0.3).timeout
-    $SweetSpotVisual/SweetSpotParticles.amount = 20
+	print("Yellow Phantom - Handling punch with velocity: ", velocity)  # Debug print
+	super.handle_punch(velocity, punch_position)

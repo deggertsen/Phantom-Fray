@@ -13,9 +13,20 @@ signal player_hit
 @export var wobble_speed: float = 2.0
 @export var hover_height: float = 1.0  # Height to maintain above ground
 
+# Sweet spot properties
+@export var sweet_spot_size: float = 0.3
+@export var sweet_spot_score_multiplier: float = 2.0
+@export var base_score: int = 100
+@export var sweet_spot_rotation_speed: float = 1.0
+
 # Health and score
 var health = 1
 var score = 0
+
+# Sweet spot tracking
+var sweet_spot_position: Vector3
+var sweet_spot_rotation: float = 0.0
+var sweet_spot_orbit_radius: float = 0.5  # Distance from phantom center
 
 # Time tracking for wobble
 var _time: float = 0.0
@@ -62,6 +73,9 @@ func _ready():
 	if sfx_bus_index != -1:
 		# Set the volume to about half (-6 dB is approximately half volume)
 		AudioServer.set_bus_volume_db(sfx_bus_index, -6.0)
+	
+	# Initialize sweet spot position
+	_update_sweet_spot_position()
 
 func _physics_process(delta):
 	if is_hit:
@@ -106,6 +120,45 @@ func _physics_process(delta):
 		
 		# Move and slide using Godot's built-in function
 		move_and_slide()
+		
+		# Update sweet spot position
+		sweet_spot_rotation += sweet_spot_rotation_speed * delta
+		_update_sweet_spot_position()
+
+func _update_sweet_spot_position():
+	# Calculate sweet spot position in a circular orbit around the phantom
+	sweet_spot_position = Vector3(
+		cos(sweet_spot_rotation) * sweet_spot_orbit_radius,
+		0.0,  # Keep it at the same height
+		sin(sweet_spot_rotation) * sweet_spot_orbit_radius
+	)
+	
+	# Update visual position if the phantom has a sweet spot visual
+	if has_node("SweetSpotVisual"):
+		$SweetSpotVisual.position = sweet_spot_position
+
+func _calculate_sweet_spot_factor(hit_position: Vector3) -> float:
+	# Calculate distance from sweet spot
+	var global_sweet_spot = global_position + sweet_spot_position
+	var distance_to_sweet_spot = (hit_position - global_sweet_spot).length()
+	
+	# Return a factor between 0 and 1 based on distance
+	return clamp(1.0 - (distance_to_sweet_spot / sweet_spot_size), 0.1, 1.0)
+
+func _highlight_sweet_spot_hit():
+	if has_node("SweetSpotVisual"):
+		# Create a quick flash effect
+		var tween = create_tween()
+		tween.tween_property($SweetSpotVisual.material_override, "albedo_color:a", 0.8, 0.1)
+		tween.tween_property($SweetSpotVisual.material_override, "albedo_color:a", 0.2, 0.3)
+		
+		# Increase particle emission temporarily
+		var particles = $SweetSpotVisual/SweetSpotParticles
+		if particles:
+			particles.amount = 40
+			await get_tree().create_timer(0.3).timeout
+			if is_instance_valid(particles):
+				particles.amount = 20
 
 func _on_Area3D_body_entered(body: Node3D):
 	print("Collision with: ", body.name, " Groups: ", body.get_groups())  # Debug print
@@ -116,20 +169,34 @@ func _on_Area3D_body_entered(body: Node3D):
 		emit_signal("player_hit")
 		disappear()
 
+# Virtual method to be overridden by child classes
+func is_valid_hit(collider: Node3D) -> bool:
+	return true  # Base phantom accepts all hits
+
 func handle_punch(velocity: float, punch_position: Vector3):
-	# Create hit info dictionary
+	var sweet_spot_factor = _calculate_sweet_spot_factor(punch_position)
+	var final_score = base_score
+	
+	if sweet_spot_factor > 0.8:
+		final_score = int(base_score * sweet_spot_score_multiplier * sweet_spot_factor)
+		_highlight_sweet_spot_hit()
+	
+	# Create hit info with score
 	var hit_info = {
-		"velocity": Vector3.FORWARD * velocity,  # Convert float to Vector3
-		"position": punch_position
+		"velocity": Vector3.FORWARD * velocity,
+		"position": punch_position,
+		"score": final_score
 	}
 	
 	# Call on_hit with the hit information
 	on_hit(hit_info)
 	
+	# Emit signal with score
+	emit_signal("phantom_hit", final_score)
+	
+	# Start disappear sequence if health depleted
 	health -= 1
 	if health <= 0:
-		# Pass the velocity as points
-		emit_signal("phantom_hit", velocity)
 		disappear()
 
 func disappear():
@@ -166,7 +233,8 @@ func on_hit(hit_info):
 	# Set hit state and velocity
 	is_hit = true
 	velocity = hit_info.velocity * 2.0  # Adjust multiplier for desired force
-		# Set dissolve parameters
+	
+	# Set dissolve parameters
 	dissolving = true
 	material.set_shader_parameter("impact_point", hit_info.position)
 	material.set_shader_parameter("dissolve_direction", hit_info.velocity.normalized())
