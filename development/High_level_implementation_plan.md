@@ -28,13 +28,13 @@
   - [x] Create Player scene with required nodes
   - [x] Implement movement mechanics (dodge, duck, jump)
   - [x] Integrate VR controller inputs for melee
-- [ ] Phantom System
-  - [ ] Create Phantom scene with variants
-  - [ ] Implement collision detection
-    - [ ] Create phantom hitbox system
-    - [ ] Create phantom hurtbox system
-  - [ ] Develop AI behavior
-    - [ ] Implement approach patterns
+- [x] Phantom System
+  - [x] Create Phantom scene with variants
+  - [x] Implement collision detection
+    - [x] Create phantom hitbox system
+    - [x] Create phantom hurtbox system
+  - [x] Develop AI behavior
+    - [x] Implement approach patterns
     - [ ] Create sweet spot targeting logic
 - [ ] Weapon System
   - [ ] Design ERM gauntlets
@@ -48,10 +48,10 @@
   - [ ] Create DLC/expansion framework
 
 ## 3. Game Mechanics
-- [ ] Player Movement
-  - [ ] Implement stationary dodging
-  - [ ] Implement ducking mechanics
-  - [ ] Implement jumping system
+- [x] Player Movement
+  - [x] Implement stationary dodging
+  - [x] Implement ducking mechanics
+  - [x] Implement jumping system
   - [ ] Fine-tune upper body VR interactions
 - [ ] Phantom Behavior and Combat
   - [ ] Create diverse approach patterns
