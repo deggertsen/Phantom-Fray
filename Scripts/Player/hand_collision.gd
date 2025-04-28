@@ -45,6 +45,5 @@ func _on_punch_area_body_entered(body: Node3D):
 	if body.is_in_group("phantom") or body.is_in_group("Phantom"):
 		var velocity = punch_area.get_meta("current_velocity", 0.0)
 		if velocity > punch_strength_threshold:
-			print("Punch hit with velocity: ", velocity)  # Debug print
 			emit_signal("punch_hit", velocity)
 			body.handle_punch(velocity, global_position)
