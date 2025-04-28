@@ -12,6 +12,7 @@ signal player_hit
 @export var wobble_strength: float = 0.2
 @export var wobble_speed: float = 2.0
 @export var hover_height: float = 1.0  # Height to maintain above ground
+@export var rotation_speed: float = 10.0  # How quickly the phantom rotates to face the player
 
 # Health and score
 var health = 1
@@ -22,6 +23,7 @@ var _time: float = 0.0
 
 # Cache the player reference
 var _player: Node3D = null
+var _player_camera: Node3D = null
 
 # At the top with other variables
 @onready var mesh_instance = $MeshInstance3D
@@ -45,7 +47,17 @@ func _ready():
 	
 	add_to_group("phantom")
 	$Area3D.body_entered.connect(_on_Area3D_body_entered)
+	
+	# Get references to player and player camera
 	_player = get_tree().get_first_node_in_group("Player")
+	if _player:
+		# Find the XRCamera3D node which represents the player's head
+		_player_camera = _player.get_node_or_null("XRCamera3D")
+		if not _player_camera:
+			push_warning("Could not find XRCamera3D node in player hierarchy!")
+			_player_camera = _player
+		else:
+			print("Found player camera at: ", _player_camera.global_position)
 	
 	# Create a unique instance of the material for this phantom
 	var base_material = preload("res://Resources/Materials/dissolve.tres")
@@ -62,6 +74,24 @@ func _ready():
 	if sfx_bus_index != -1:
 		# Set the volume to about half (-6 dB is approximately half volume)
 		AudioServer.set_bus_volume_db(sfx_bus_index, -6.0)
+	
+	# Wait one frame to ensure everything is initialized
+	await get_tree().process_frame
+	
+	# Now face the player
+	_face_player()
+
+func _face_player():
+	if _player_camera:
+		# Calculate direction to player in XZ plane
+		var direction = (_player_camera.global_position - global_position).normalized()
+		var direction_xz = Vector3(direction.x, 0, direction.z).normalized()
+		
+		if direction_xz != Vector3.ZERO:
+			# Calculate the angle to face the player
+			var angle = atan2(direction_xz.x, direction_xz.z)
+			# Apply the rotation around Y-axis only
+			global_transform.basis = global_transform.basis.rotated(Vector3.UP, angle)
 
 func _physics_process(delta):
 	if is_hit:
@@ -70,12 +100,12 @@ func _physics_process(delta):
 		move_and_slide()
 		return
 		
-	if _player:
+	if _player_camera:
 		# Update time for wobble effect
 		_time += delta
 		
-		# Calculate direction to player
-		var direction = (_player.global_position - global_position).normalized()
+		# Calculate direction to player's camera (head)
+		var direction = (_player_camera.global_position - global_position).normalized()
 		
 		# Add wobble effect
 		var wobble = Vector3(
@@ -104,6 +134,17 @@ func _physics_process(delta):
 		# Smoothly interpolate current velocity
 		velocity = velocity.lerp(target_velocity, acceleration * delta)
 		
+		# Make the phantom face the player's camera while maintaining horizontal orientation
+		var direction_xz = Vector3(direction.x, 0, direction.z).normalized()
+		if direction_xz != Vector3.ZERO:
+			# Calculate the target angle to face the player
+			var target_angle = atan2(direction_xz.x, direction_xz.z)
+			# Set the rotation directly, keeping the phantom horizontal
+			var current_basis = global_transform.basis
+			var new_basis = Basis(Vector3.UP, target_angle)
+			# Preserve the current orientation of the mesh (so it stays horizontal)
+			global_transform.basis = new_basis
+			
 		# Move and slide using Godot's built-in function
 		move_and_slide()
 
@@ -133,7 +174,6 @@ func handle_punch(velocity: float, punch_position: Vector3):
 		disappear()
 
 func disappear():
-	print("Starting disappear function")
 	# Disable collisions
 	collision_layer = 0
 	collision_mask = 0
