@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://cpty7xivtp6y2" path="res://Scenes/Player/player.tscn" id="1_kj6n4"]
 [ext_resource type="PackedScene" uid="uid://clc5dre31iskm" path="res://addons/godot-xr-tools/xr/start_xr.tscn" id="1_vliex"]
 [ext_resource type="PackedScene" uid="uid://b88j32sxks21p" path="res://Scenes/Rifts/rift_manager.tscn" id="2_riftmanager"]
-[ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="4_cwvt3"]
+[ext_resource type="Script" uid="uid://brk235cg30bfi" path="res://Scripts/Rifts/rift_spawn_manager.gd" id="5_spawn"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aj3qk"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -46,12 +46,8 @@ mesh = SubResource("PlaneMesh_8uwq6")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("BoxShape3D_t1qua")
 
-[node name="RiftManager" parent="." instance=ExtResource("2_riftmanager")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.2442, 3.16106, -15.0434)
-phantom_scene = ExtResource("4_cwvt3")
-
-[node name="RiftManager2" parent="." instance=ExtResource("2_riftmanager")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.33858, 3.00932, -17.4987)
-phantom_scene = ExtResource("4_cwvt3")
+[node name="RiftSpawnManager" type="Node3D" parent="."]
+script = ExtResource("5_spawn")
+rift_manager_scene = ExtResource("2_riftmanager")
 
 [node name="PhantomContainer" type="Node3D" parent="."]

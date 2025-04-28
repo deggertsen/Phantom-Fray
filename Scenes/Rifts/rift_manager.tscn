@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://b88j32sxks21p"]
+[gd_scene load_steps=3 format=3 uid="uid://b88j32sxks21p"]
 
 [ext_resource type="Script" uid="uid://cw86jlto2s4fn" path="res://Scripts/Rifts/rift_manager.gd" id="1_eyexh"]
+[ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="2_phantom"]
 
 [node name="RiftManager" type="Node3D"]
 script = ExtResource("1_eyexh")
+phantom_scene = ExtResource("2_phantom")
