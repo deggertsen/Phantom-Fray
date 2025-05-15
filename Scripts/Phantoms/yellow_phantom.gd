@@ -13,7 +13,7 @@ func _ready():
 	var material = $MeshInstance3D.material_override
 	if material:
 		material.set_shader_parameter("base_color", Color(1.0, 0.9, 0.0, 0.8))
-	--
+	
 	# Modify collision mask to only detect left hand
 	$Area3D.collision_mask = 2  # Layer 2 is for hands
 	
