@@ -41,7 +41,7 @@ func _ready():
 	
 	# Add unique material for dissolve effect
 	var portal = $MeshInstance3D
-	var dissolve_material = preload("res://Resources/Materials/rift_dissolve.tres").duplicate()
+	var dissolve_material = preload("res://Resources/Materials/rift.tres").duplicate()
 	portal.material_override = dissolve_material
 	
 	# Add to existing _ready function
@@ -101,7 +101,7 @@ func _initialize_rift_visuals():
 	portal.mesh.height = 4.0
 	
 	# Create and set the dissolve material
-	var dissolve_material = preload("res://Resources/Materials/rift_dissolve.tres").duplicate()
+	var dissolve_material = preload("res://Resources/Materials/rift.tres").duplicate()
 	portal.material_override = dissolve_material
 	
 	# Add the portal to the scene

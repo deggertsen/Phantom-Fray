@@ -1,0 +1,56 @@
+[gd_scene load_steps=7 format=3 uid="uid://dp16cjqfvu1p1"]
+
+[ext_resource type="Material" uid="uid://mp6oegd8w1ng" path="res://Resources/Materials/rift.tres" id="1_qboj1"]
+[ext_resource type="Material" uid="uid://c4pvljjhur5qa" path="res://Resources/Materials/rift_dissolve.tres" id="2_v8bi0"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_jtlnk"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_p7kfd"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ptrm0"]
+
+[sub_resource type="PrismMesh" id="PrismMesh_m76l6"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+material_override = ExtResource("1_qboj1")
+mesh = SubResource("SphereMesh_jtlnk")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.97708, 0, 0)
+material_override = ExtResource("2_v8bi0")
+mesh = SubResource("SphereMesh_jtlnk")
+
+[node name="MeshInstance3D5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.739616, 0, 0, 0, 1, 3.64109, 0, 0)
+material_override = ExtResource("1_qboj1")
+mesh = SubResource("CapsuleMesh_p7kfd")
+
+[node name="MeshInstance3D6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.592269, 0, 0, 0, 1, 3.64109, -0.309941, 0)
+material_override = ExtResource("2_v8bi0")
+mesh = SubResource("CylinderMesh_ptrm0")
+
+[node name="MeshInstance3D7" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.303532, 0.00381907, 0, -0.0064482, -0.179772, 0, 0, 0, 0.384723, 4.00328, -0.953699, -0.0121491)
+material_override = ExtResource("2_v8bi0")
+mesh = SubResource("PrismMesh_m76l6")
+
+[node name="MeshInstance3D8" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.402358, 0.00378837, 0, -0.00854766, -0.178327, 0, 0, 0, 0.814676, 3.65648, -0.975741, -0.0121491)
+material_override = ExtResource("2_v8bi0")
+mesh = SubResource("PrismMesh_m76l6")
+
+[node name="MeshInstance3D9" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.303763, 0.00382198, 0, -0.00645311, -0.179909, 0, 0, 0, 0.331059, 3.31624, -0.98579, -0.0130963)
+material_override = ExtResource("2_v8bi0")
+mesh = SubResource("PrismMesh_m76l6")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 427.427, 0, 0)
+skeleton = NodePath("../MeshInstance3D")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 429.433, 0.0552139, 0.0271606)
+skeleton = NodePath("../MeshInstance3D2")
