@@ -14,8 +14,8 @@ extends Node3D
 @export var min_player_distance: float = 15.0
 @export var max_player_distance: float = 25.0
 
-# Spawn area dimensions
-@export var spawn_area_size: Vector3 = Vector3(30, 0, 30)
+# Spawn area dimensions (centered around player)
+@export var spawn_area_size: Vector3 = Vector3(50, 0, 50)
 
 # Spawn timer duration in seconds
 @export var spawn_timer_duration: float = 45.0
@@ -33,7 +33,7 @@ var spawn_timer: Timer
 var player: Node3D
 
 func _ready():
-	# Get reference to the player
+	# Get reference to the player (XROrigin3D)
 	player = get_tree().get_root().get_node_or_null("Main/Player")
 	if not player:
 		push_warning("Player not found in scene tree!")
@@ -89,15 +89,21 @@ func _spawn_new_rift():
 
 func _find_valid_position() -> Vector3:
 	var attempts = 0
-	var max_attempts = 20  # Increased attempts since we have more constraints
+	var max_attempts = 50  # Increased attempts for better spawn success
+	
+	# Get player position, default to origin if player not found
+	var player_pos = Vector3.ZERO
+	if player:
+		player_pos = player.global_transform.origin
 	
 	while attempts < max_attempts:
-		# Generate random position within spawn area
-		var random_pos = Vector3(
+		# Generate random position within spawn area centered on player
+		var random_offset = Vector3(
 			randf_range(-spawn_area_size.x/2, spawn_area_size.x/2),
 			3.0, # Keep at a consistent height
 			randf_range(-spawn_area_size.z/2, spawn_area_size.z/2)
 		)
+		var random_pos = player_pos + random_offset
 		
 		# Check if position is valid (far enough from other rifts and player)
 		var is_valid = true
@@ -110,17 +116,20 @@ func _find_valid_position() -> Vector3:
 		
 		# Check distance from player
 		if player and is_valid:
-			var distance_to_player = player.global_transform.origin.distance_to(random_pos)
+			var distance_to_player = player_pos.distance_to(random_pos)
 			if distance_to_player < min_player_distance or distance_to_player > max_player_distance:
 				is_valid = false
 		
 		if is_valid:
+			print("Valid rift position found: ", random_pos, " (distance from player: ", player_pos.distance_to(random_pos), ")")
 			return random_pos
 		
 		attempts += 1
 	
-	# If we couldn't find a valid position, return a default one
-	return Vector3(0, 3.0, 0)
+	# If we couldn't find a valid position, try a fallback position
+	var fallback_pos = player_pos + Vector3(min_player_distance, 3.0, 0)
+	print("Using fallback rift position: ", fallback_pos)
+	return fallback_pos
 
 func _on_rift_closed(rift):
 	rift_instances.erase(rift)
