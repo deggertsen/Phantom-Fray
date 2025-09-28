@@ -71,11 +71,16 @@ func _spawn_new_rift():
 	# Make the rift face the player
 	if player:
 		var direction_to_player = (player.global_transform.origin - valid_position).normalized()
-		# Create a transform that looks at the player
-		var look_transform = Transform3D()
-		look_transform = look_transform.looking_at(player.global_transform.origin, Vector3.UP)
-		new_rift.global_transform = look_transform
-		new_rift.global_transform.origin = valid_position
+		# Only create a look transform if the positions are different
+		if not valid_position.is_equal_approx(player.global_transform.origin):
+			# Create a transform that looks at the player
+			var look_transform = Transform3D()
+			look_transform = look_transform.looking_at(player.global_transform.origin, Vector3.UP)
+			new_rift.global_transform = look_transform
+			new_rift.global_transform.origin = valid_position
+		else:
+			# If positions are the same, just set the position without rotation
+			new_rift.global_transform.origin = valid_position
 	
 	# Connect to the tree_exiting signal
 	new_rift.tree_exiting.connect(_on_rift_closed.bind(new_rift))

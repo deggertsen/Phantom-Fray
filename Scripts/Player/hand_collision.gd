@@ -2,7 +2,7 @@ extends XRController3D
 
 signal punch_hit(velocity: float)
 
-@onready var punch_area: Area3D = $PunchArea
+var punch_area: Area3D
 var previous_position: Vector3
 var current_velocity: Vector3
 var punch_strength_threshold: float = 1.0
