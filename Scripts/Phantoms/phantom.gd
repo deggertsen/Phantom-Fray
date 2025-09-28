@@ -183,6 +183,7 @@ func disappear():
 	# Play sound
 	audio_player = AudioStreamPlayer3D.new()
 	audio_player.stream = preload("res://Assets/Audio/SFX/phantom_death.mp3")
+	audio_player.volume_db = -2.5  # Reduced by 25% for less jarring death sounds
 	add_child(audio_player)
 	audio_player.play()
 	audio_player.finished.connect(_on_audio_finished)
@@ -218,6 +219,7 @@ func on_hit(hit_info):
 	if not audio_player:
 		audio_player = AudioStreamPlayer3D.new()
 		audio_player.stream = preload("res://Assets/Audio/SFX/phantom_death.mp3")
+		audio_player.volume_db = -2.5  # Reduced by 25% for less jarring death sounds
 		add_child(audio_player)
 	audio_player.play()
 	audio_player.finished.connect(_on_audio_finished)

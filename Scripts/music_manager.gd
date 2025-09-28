@@ -11,7 +11,7 @@ signal music_finished()
 @export var music_directory: String = "res://Assets/Audio/Music/"
 @export var auto_play: bool = true
 @export var shuffle_mode: bool = true
-@export var volume_db: float = -10.0
+@export var volume_db: float = -7.5
 
 var audio_player: AudioStreamPlayer
 var available_tracks: Array[String] = []
