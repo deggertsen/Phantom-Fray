@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://bfpum5su7cyjx"]
+
+[ext_resource type="Script" path="res://Scripts/music_manager.gd" id="1_0abc2"]
+
+[node name="MusicManager" type="Node"]
+script = ExtResource("1_0abc2")
+music_directory = &"res://Assets/Audio/Music/"
+auto_play = true
+shuffle_mode = true
+volume_db = -10.0
+
