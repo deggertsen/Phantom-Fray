@@ -24,8 +24,8 @@ func _ready():
 	sweet_spot_particles.emitting = true
 
 # Override the handle_punch function to implement yellow-specific behavior
-func handle_punch(velocity: float, punch_position: Vector3):
-	var hit_info = super.handle_punch(velocity, punch_position)
+func handle_punch(velocity: float, punch_position: Vector3, punch_direction: Vector3 = Vector3.FORWARD):
+	var hit_info = super.handle_punch(velocity, punch_position, punch_direction)
 	
 	if _is_left_hand_hit():
 		var sweet_spot_factor = _calculate_sweet_spot_factor(punch_position)

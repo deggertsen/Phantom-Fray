@@ -35,7 +35,7 @@ var audio_player: AudioStreamPlayer3D = null
 # Add at the top with other variables
 var is_hit = false
 var hit_velocity = Vector3.ZERO
-var hit_drag = 0.95  # Adjust this to control how quickly the phantom slows down
+var hit_drag = 0.92  # Reduced drag for more satisfying knockback (was 0.95)
 
 func _ready():
 	# Set up collision layers
@@ -157,10 +157,10 @@ func _on_Area3D_body_entered(body: Node3D):
 		emit_signal("player_hit")
 		disappear()
 
-func handle_punch(velocity: float, punch_position: Vector3):
-	# Create hit info dictionary
+func handle_punch(velocity: float, punch_position: Vector3, punch_direction: Vector3 = Vector3.FORWARD):
+	# Create hit info dictionary using the actual punch direction
 	var hit_info = {
-		"velocity": Vector3.FORWARD * velocity,  # Convert float to Vector3
+		"velocity": punch_direction * velocity,  # Use actual punch direction
 		"position": punch_position
 	}
 	
@@ -203,13 +203,16 @@ func on_hit(hit_info):
 	# Calculate impact direction from hit velocity
 	var impact_direction = hit_info.velocity.normalized()
 	
-	# Set hit state and velocity
+	# Set hit state and velocity with improved physics
 	is_hit = true
-	velocity = hit_info.velocity * 2.0  # Adjust multiplier for desired force
-		# Set dissolve parameters
+	# Apply knockback force with proper scaling - stronger punches = more knockback
+	var knockback_force = hit_info.velocity * 3.0  # Increased multiplier for more satisfying impact
+	velocity = knockback_force
+	
+	# Set dissolve parameters
 	dissolving = true
 	material.set_shader_parameter("impact_point", hit_info.position)
-	material.set_shader_parameter("dissolve_direction", hit_info.velocity.normalized())
+	material.set_shader_parameter("dissolve_direction", impact_direction)
 	
 	# Play sound
 	if not audio_player:

@@ -1,6 +1,6 @@
 extends XRController3D
 
-signal punch_hit(velocity: float)
+signal punch_hit(velocity: float, direction: Vector3)
 
 var punch_area: Area3D
 var previous_position: Vector3
@@ -40,10 +40,12 @@ func _physics_process(delta):
 		var speed = current_velocity.length()
 		if speed > punch_strength_threshold:
 			punch_area.set_meta("current_velocity", speed)
+			punch_area.set_meta("current_direction", current_velocity.normalized())
 
 func _on_punch_area_body_entered(body: Node3D):
 	if body.is_in_group("phantom") or body.is_in_group("Phantom"):
 		var velocity = punch_area.get_meta("current_velocity", 0.0)
+		var direction = punch_area.get_meta("current_direction", Vector3.ZERO)
 		if velocity > punch_strength_threshold:
-			emit_signal("punch_hit", velocity)
-			body.handle_punch(velocity, global_position)
+			emit_signal("punch_hit", velocity, direction)
+			body.handle_punch(velocity, global_position, direction)
