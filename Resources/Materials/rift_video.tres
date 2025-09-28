@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://b8x7k2m9n4p5q"]
+
+[ext_resource type="Shader" path="res://Resources/Materials/rift_portal.gdshader" id="1_shader"]
+
+[resource]
+shader = ExtResource("1_shader")
+shader_parameter/time_scale = 1.0
+shader_parameter/inner_color = Color(0.4, 0.8, 1, 1)
+shader_parameter/outer_color = Color(0.1, 0.2, 0.8, 1)
+shader_parameter/rim_color = Color(0.8, 0.9, 1, 1)
+shader_parameter/spiral_speed = 1.5
+shader_parameter/spiral_density = 6.0
+shader_parameter/pulse_speed = 2.0

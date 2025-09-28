@@ -39,10 +39,11 @@ func _ready():
 	# Optional: Initialize visual indicators for the rift
 	_initialize_rift_visuals()
 	
-	# Add unique material for dissolve effect
-	var portal = $MeshInstance3D
-	var dissolve_material = preload("res://Resources/Materials/dissolve.tres").duplicate()
-	portal.material_override = dissolve_material
+	# Add video material for rift effect
+	var portal = get_node_or_null("MeshInstance3D")
+	if portal:
+		var video_material = preload("res://Resources/Materials/rift_video.tres").duplicate()
+		portal.material_override = video_material
 	
 	# Add to existing _ready function
 	phantom_container = get_tree().get_root().get_node_or_null("Main/PhantomContainer")
@@ -93,16 +94,18 @@ func _close_rift():
 	audio.play()
 
 func _initialize_rift_visuals():
-	# Create the portal mesh
+	# Create the portal mesh as a quad for better 2D video display
 	var portal = MeshInstance3D.new()
 	portal.name = "MeshInstance3D"  # Keep the same name for consistency
-	portal.mesh = SphereMesh.new()
-	portal.mesh.radius = 2.0
-	portal.mesh.height = 4.0
+	portal.mesh = QuadMesh.new()
+	portal.mesh.size = Vector2(4.0, 4.0)  # 4x4 meter quad
 	
-	# Create and set the dissolve material
-	var dissolve_material = preload("res://Resources/Materials/dissolve.tres").duplicate()
-	portal.material_override = dissolve_material
+	# Create and set the video material
+	var video_material = preload("res://Resources/Materials/rift_video.tres").duplicate()
+	portal.material_override = video_material
+	
+	# Enable billboard mode to always face the player
+	portal.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	
 	# Add the portal to the scene
 	add_child(portal)
@@ -112,11 +115,12 @@ func _update_rift_health_visuals():
 	for child in get_children():
 		if child is MeshInstance3D:
 			var material = child.material_override
-			if material and material is ShaderMaterial:
-				# Update the shader parameter for health visualization
-				# We'll use the dissolve_amount as a health indicator (inverse relationship)
+			if material and material is StandardMaterial3D:
+				# Update the emission based on health (weaker emission when damaged)
 				var health_factor = clamp(rift_health / 100.0, 0.1, 1.0)
-				material.set_shader_parameter("dissolve_amount", 1.0 - health_factor)
+				material.emission_energy = 0.5 * health_factor
+				# Make the rift more transparent when damaged
+				material.albedo_color.a = 0.8 * health_factor
 
 func _play_rift_closure_effect():
 	# Play particle effects or animations to signify rift closure
@@ -135,8 +139,10 @@ func _process(delta):
 	if dissolving:
 		dissolve_amount = min(dissolve_amount + dissolve_speed * delta, 1.0)
 		var portal = get_node_or_null("MeshInstance3D")
-		if portal and portal.material_override:
-			portal.material_override.set_shader_parameter("dissolve_amount", dissolve_amount)
+		if portal and portal.material_override and portal.material_override is StandardMaterial3D:
+			# Fade out the video material during dissolution
+			portal.material_override.albedo_color.a = 0.8 * (1.0 - dissolve_amount)
+			portal.material_override.emission_energy = 0.5 * (1.0 - dissolve_amount)
 		
 		if dissolve_amount >= 1.0:
 			queue_free()
