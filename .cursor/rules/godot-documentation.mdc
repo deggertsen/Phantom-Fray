@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+description: Always reference the latest Godot Engine documentation for all Godot-specific questions and implementations
+---
+
+# Godot Engine Documentation Reference
+
+## Critical Requirement
+**ALWAYS** reference the official Godot Engine documentation when working with Godot-specific features, nodes, methods, or concepts. Use the most current documentation for Godot 4.x series.
+
+## Documentation Sources
+- **Primary**: https://docs.godotengine.org/en/stable/
+- **API Reference**: https://docs.godotengine.org/en/stable/classes/
+- **Tutorials**: https://docs.godotengine.org/en/stable/tutorials/
+- **Community**: https://godotengine.org/community/
+
+## When to Reference Documentation
+- Node types and their properties (CharacterBody3D, Area3D, MeshInstance3D, etc.)
+- Built-in methods (move_and_slide(), get_world_3d(), etc.)
+- Physics and collision systems
+- Shader programming and materials
+- Animation systems
+- Audio systems
+- VR/XR implementation details
+- Input handling
+- Scene management
+
+## Documentation Usage Pattern
+When implementing or explaining Godot features:
+1. First reference the official documentation
+2. Provide the specific documentation link
+3. Explain how it applies to the Phantom-Fray project
+4. Include relevant code examples from the docs when helpful
+
+## Project Context
+This is a VR game project using Godot 4.5 with the godot-xr-tools plugin. Always ensure documentation references are compatible with Godot 4.x and consider VR-specific implementations.

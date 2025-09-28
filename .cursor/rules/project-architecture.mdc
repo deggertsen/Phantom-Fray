@@ -1,0 +1,54 @@
+---
+alwaysApply: true
+description: Project structure and architecture guidelines for Phantom-Fray VR game
+---
+
+# Phantom-Fray Project Architecture
+
+## Project Overview
+**Phantom-Fray** is a VR combat game where players fight ethereal phantom enemies using energy gauntlets. The game uses Godot 4.5 with the godot-xr-tools plugin for VR functionality.
+
+## Core Game Mechanics
+- **Stationary VR Combat**: Player stays in place but can dodge, duck, and punch
+- **Phantom Enemies**: Multiple types (Yellow, Blue, Green, Pink) with different defeat mechanics
+- **Rift System**: Phantoms spawn from dimensional rifts that must be closed by defeating phantoms
+- **Life Force System**: Player health represented as life force that phantoms drain when they touch the player instead of the player punching them with the gauntlets
+- **Dissolve Effects**: Custom shaders for phantom destruction and rift closure
+
+## Project Structure
+
+### Main Directories
+- **[Scripts/](mdc:Scripts/)**: All GDScript files organized by system
+  - `Scripts/Phantoms/`: Phantom enemy logic and variants
+  - `Scripts/Player/`: VR player and hand interaction scripts
+  - `Scripts/Rifts/`: Rift spawning and management systems
+- **[Scenes/](mdc:Scenes/)**: Godot scene files (.tscn)
+  - `Scenes/Phantoms/`: Phantom enemy scenes and variants
+  - `Scenes/Player/`: VR player setup
+  - `Scenes/Rifts/`: Rift spawning scenes
+- **[Resources/](mdc:Resources/)**: Materials, shaders, and reusable assets
+- **[Assets/](mdc:Assets/)**: Audio, textures, and imported assets
+- **[development/](mdc:development/)**: Design documents and implementation plans
+
+### Key Files
+- **[project.godot](mdc:project.godot)**: Project configuration with VR settings
+- **[main.tscn](mdc:main.tscn)**: Main scene entry point
+- **[openxr_action_map.tres](mdc:openxr_action_map.tres)**: VR input mapping
+
+## VR/XR Integration
+- Uses **godot-xr-tools** plugin for VR functionality
+- OpenXR for VR headset compatibility
+- Hand tracking and controller input
+- 3D physics layers for hands, phantoms, and world
+
+## Collision System
+- **Layer 1**: World (static environment)
+- **Layer 2**: Hands (player interaction)
+- **Layer 3**: Phantoms (enemy entities)
+
+## Development Guidelines
+- Follow Godot 4.x best practices
+- Use proper signal connections for gameplay events
+- Implement proper VR comfort features
+- Maintain consistent naming conventions
+- Document complex systems in development/ folder

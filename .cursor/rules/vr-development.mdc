@@ -1,0 +1,60 @@
+---
+globs: *.gd,*XR*,*vr*,*VR*
+description: VR and XR-specific development guidelines for Phantom-Fray
+---
+
+# VR/XR Development Guidelines
+
+## VR-Specific Considerations
+
+### Performance Optimization
+- Target 90+ FPS for smooth VR experience
+- Use efficient collision detection (avoid complex shapes)
+- Optimize draw calls and texture usage
+- Use occlusion culling where appropriate since the player is stationary
+
+### VR Comfort Features
+- **Teleportation**: Use smooth movement transitions
+- **Snap Turning**: Implement comfortable rotation increments
+- **FOV Reduction**: During intense movement sequences
+- **Motion Sickness Prevention**: Avoid rapid camera movements
+- **Ground Plane**: Maintain consistent floor reference
+
+### Input Handling
+- **Hand Tracking**: Use XRHandController for natural hand interactions
+- **Controller Input**: Map VR controller buttons appropriately
+- **Haptic Feedback**: Implement rumble for phantom hits and interactions
+- **Gesture Recognition**: Consider punch velocity and direction
+
+## XR Tools Integration
+
+### Key Components
+- **XROrigin3D**: Main VR player origin
+- **XRCamera3D**: Player head/camera tracking
+- **XRController3D**: Hand controller management
+- **XRHandController**: Hand tracking and physics
+
+### Hand Interaction System
+- Use [hand_collision.gd](mdc:Scripts/Player/hand_collision.gd) for punch detection
+- Implement proper collision layers for hand-phantom interaction
+- Handle grab/punch mechanics with velocity tracking
+- Use Area3D for phantom hit detection
+
+### VR Player Setup
+- Reference [xr_player.gd](mdc:Scripts/Player/xr_player.gd) for player implementation
+- Implement stationary combat with upper body movement
+- Handle dodging, ducking, and jumping mechanics
+- Maintain proper VR camera positioning
+
+## Phantom-VR Interaction
+- Phantoms should face the player's head (XRCamera3D)
+- Implement proper collision detection between hands and phantoms
+- Use dissolve shaders for satisfying destruction effects
+- Consider VR-specific audio positioning and 3D sound
+
+## Development Best Practices
+- Test regularly in VR headset
+- Implement VR-specific debugging tools
+- Use proper VR scene hierarchy
+- Handle VR input state changes gracefully
+- Consider accessibility for VR users

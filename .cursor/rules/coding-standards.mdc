@@ -1,0 +1,100 @@
+---
+globs: *.gd
+description: GDScript coding standards and best practices for Phantom-Fray
+---
+
+# GDScript Coding Standards
+
+## Code Style and Formatting
+
+### Naming Conventions
+- **Variables**: `snake_case` (e.g., `move_speed`, `phantom_health`)
+- **Functions**: `snake_case` (e.g., `handle_punch()`, `spawn_phantom()`)
+- **Constants**: `UPPER_SNAKE_CASE` (e.g., `MAX_PHANTOMS`, `DEFAULT_SPEED`)
+- **Classes**: `PascalCase` (e.g., `Phantom`, `RiftManager`)
+- **Signals**: `snake_case` (e.g., `phantom_hit`, `player_damaged`)
+
+### Variable Declarations
+```gdscript
+# Use @export for inspector-accessible variables
+@export var move_speed: float = 5.0
+@export var max_phantoms: int = 10
+
+# Use @onready for node references
+@onready var mesh_instance = $MeshInstance3D
+@onready var audio_player = $AudioStreamPlayer3D
+
+# Type hints for better code clarity
+var phantom_list: Array[Node3D] = []
+var health: int = 100
+var is_alive: bool = true
+```
+
+### Function Structure
+```gdscript
+# Document complex functions
+func handle_punch(velocity: float, punch_position: Vector3) -> void:
+	"""Handle phantom punch interaction with velocity and position data."""
+	# Implementation here
+```
+
+## Godot-Specific Best Practices
+
+### Signal Usage
+- Connect signals in `_ready()` function
+- Use descriptive signal names
+- Emit signals with relevant data
+```gdscript
+# Signal declaration
+signal phantom_hit(points: int)
+signal player_damaged(damage_amount: int)
+
+# Signal connection
+func _ready():
+	phantom_instance.phantom_hit.connect(_on_phantom_hit)
+	
+# Signal emission
+func _on_phantom_hit(points: int):
+	emit_signal("phantom_hit", points)
+```
+
+### Node References
+- Use `get_node_or_null()` for safe node access
+- Cache frequently accessed nodes in `@onready` variables
+- Check for null before using node references
+
+### Physics and Collision
+- Use appropriate collision layers and masks
+- Implement proper collision detection in `_physics_process()`
+- Use `move_and_slide()` for CharacterBody3D movement
+
+## Project-Specific Patterns
+
+### Phantom System
+- Extend base [phantom.gd](mdc:Scripts/Phantoms/phantom.gd) for variants
+- Implement proper dissolve shader integration
+- Handle collision detection with hands and player
+- Use proper signal emission for game events
+
+### VR Integration
+- Always reference XR nodes properly
+- Handle VR input state changes
+- Implement proper haptic feedback
+- Consider VR comfort and performance
+
+### Shader Integration
+- Use unique material instances for dissolve effects
+- Properly manage shader parameters
+- Handle material cleanup on object destruction
+
+## Error Handling
+- Use `push_warning()` for non-critical issues
+- Use `push_error()` for serious problems
+- Implement graceful degradation for VR features
+- Handle missing nodes gracefully
+
+## Documentation
+- Comment complex logic and algorithms
+- Document VR-specific implementations
+- Explain phantom behavior and scoring systems
+- Document shader parameter usage
