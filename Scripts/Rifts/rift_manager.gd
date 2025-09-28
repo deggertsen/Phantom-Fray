@@ -41,7 +41,7 @@ func _ready():
 	
 	# Add unique material for dissolve effect
 	var portal = $MeshInstance3D
-	var dissolve_material = preload("res://Resources/Materials/rift.tres").duplicate()
+	var dissolve_material = preload("res://Resources/Materials/dissolve.tres").duplicate()
 	portal.material_override = dissolve_material
 	
 	# Add to existing _ready function
@@ -101,7 +101,7 @@ func _initialize_rift_visuals():
 	portal.mesh.height = 4.0
 	
 	# Create and set the dissolve material
-	var dissolve_material = preload("res://Resources/Materials/rift.tres").duplicate()
+	var dissolve_material = preload("res://Resources/Materials/dissolve.tres").duplicate()
 	portal.material_override = dissolve_material
 	
 	# Add the portal to the scene
@@ -112,9 +112,11 @@ func _update_rift_health_visuals():
 	for child in get_children():
 		if child is MeshInstance3D:
 			var material = child.material_override
-			if material:
-				# Update the shader parameter instead of albedo_color
-				material.set_shader_parameter("base_color", Color(0.0, 0.0, 1.0, clamp(rift_health / 100.0, 0.1, 1.0)))
+			if material and material is ShaderMaterial:
+				# Update the shader parameter for health visualization
+				# We'll use the dissolve_amount as a health indicator (inverse relationship)
+				var health_factor = clamp(rift_health / 100.0, 0.1, 1.0)
+				material.set_shader_parameter("dissolve_amount", 1.0 - health_factor)
 
 func _play_rift_closure_effect():
 	# Play particle effects or animations to signify rift closure
