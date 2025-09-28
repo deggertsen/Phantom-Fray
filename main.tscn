@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://clc5dre31iskm" path="res://addons/godot-xr-tools/xr/start_xr.tscn" id="1_vliex"]
 [ext_resource type="PackedScene" uid="uid://b88j32sxks21p" path="res://Scenes/Rifts/rift_manager.tscn" id="2_riftmanager"]
 [ext_resource type="Script" uid="uid://brk235cg30bfi" path="res://Scripts/Rifts/rift_spawn_manager.gd" id="5_spawn"]
-[ext_resource type="PackedScene" uid="uid://b8j3x4y5z6a7b8c9d0e1f2g3h4i5j6" path="res://Scenes/music_manager.tscn" id="6_music"]
+[ext_resource type="PackedScene" path="res://Scenes/music_manager.tscn" id="6_music"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aj3qk"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -54,3 +54,4 @@ rift_manager_scene = ExtResource("2_riftmanager")
 [node name="PhantomContainer" type="Node3D" parent="."]
 
 [node name="MusicManager" parent="." instance=ExtResource("6_music")]
+music_directory = "res://Assets/Audio/Music/"

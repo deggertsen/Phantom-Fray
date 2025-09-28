@@ -32,11 +32,21 @@ var spawn_timer: Timer
 # Reference to the player
 var player: Node3D
 
+# Audio player for rift open sound
+var audio_player: AudioStreamPlayer3D
+
 func _ready():
 	# Get reference to the player (XROrigin3D)
 	player = get_tree().get_root().get_node_or_null("Main/Player")
 	if not player:
 		push_warning("Player not found in scene tree!")
+	
+	# Initialize audio player for rift open sound
+	audio_player = AudioStreamPlayer3D.new()
+	audio_player.stream = load("res://Assets/Audio/SFX/rift_open_sound.wav")
+	audio_player.volume_db = 0.0
+	audio_player.max_distance = 50.0
+	add_child(audio_player)
 	
 	# Initialize and start the spawn timer
 	spawn_timer = Timer.new()
@@ -83,6 +93,10 @@ func _spawn_new_rift():
 	
 	# Connect to the tree_exiting signal
 	new_rift.tree_exiting.connect(_on_rift_closed.bind(new_rift))
+	
+	# Play rift open sound at the rift's position
+	audio_player.global_transform.origin = valid_position
+	audio_player.play()
 	
 	rift_instances.append(new_rift)
 	active_rifts += 1
