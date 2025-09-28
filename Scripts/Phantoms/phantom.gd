@@ -140,7 +140,6 @@ func _physics_process(delta):
 			# Calculate the target angle to face the player
 			var target_angle = atan2(direction_xz.x, direction_xz.z)
 			# Set the rotation directly, keeping the phantom horizontal
-			var current_basis = global_transform.basis
 			var new_basis = Basis(Vector3.UP, target_angle)
 			# Preserve the current orientation of the mesh (so it stays horizontal)
 			global_transform.basis = new_basis
@@ -157,10 +156,10 @@ func _on_Area3D_body_entered(body: Node3D):
 		emit_signal("player_hit")
 		disappear()
 
-func handle_punch(velocity: float, punch_position: Vector3, punch_direction: Vector3 = Vector3.FORWARD):
+func handle_punch(punch_velocity: float, punch_position: Vector3, punch_direction: Vector3 = Vector3.FORWARD):
 	# Create hit info dictionary using the actual punch direction
 	var hit_info = {
-		"velocity": punch_direction * velocity,  # Use actual punch direction
+		"velocity": punch_direction * punch_velocity,  # Use actual punch direction
 		"position": punch_position
 	}
 	
@@ -170,7 +169,7 @@ func handle_punch(velocity: float, punch_position: Vector3, punch_direction: Vec
 	health -= 1
 	if health <= 0:
 		# Pass the velocity as points
-		emit_signal("phantom_hit", velocity)
+		emit_signal("phantom_hit", punch_velocity)
 		disappear()
 
 func disappear():
@@ -183,7 +182,7 @@ func disappear():
 	# Play sound
 	audio_player = AudioStreamPlayer3D.new()
 	audio_player.stream = preload("res://Assets/Audio/SFX/phantom_death.mp3")
-	audio_player.volume_db = -2.5  # Reduced by 25% for less jarring death sounds
+	audio_player.volume_db = -5  # Reduced by 50% for less jarring death sounds
 	add_child(audio_player)
 	audio_player.play()
 	audio_player.finished.connect(_on_audio_finished)

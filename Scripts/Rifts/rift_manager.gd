@@ -39,11 +39,11 @@ func _ready():
 	# Optional: Initialize visual indicators for the rift
 	_initialize_rift_visuals()
 	
-	# Add video material for rift effect
+	# Add rift shader material for rift effect (now with billboard effect)
 	var portal = get_node_or_null("MeshInstance3D")
 	if portal:
-		var video_material = preload("res://Resources/Materials/rift_video.tres").duplicate()
-		portal.material_override = video_material
+		var rift_material = preload("res://Resources/Materials/rift_video.tres").duplicate()
+		portal.material_override = rift_material
 	
 	# Add to existing _ready function
 	phantom_container = get_tree().get_root().get_node_or_null("Main/PhantomContainer")
@@ -100,12 +100,9 @@ func _initialize_rift_visuals():
 	portal.mesh = QuadMesh.new()
 	portal.mesh.size = Vector2(4.0, 4.0)  # 4x4 meter quad
 	
-	# Create and set the video material
-	var video_material = preload("res://Resources/Materials/rift_video.tres").duplicate()
-	portal.material_override = video_material
-	
-	# Enable billboard mode to always face the player
-	portal.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	# Create and set the rift shader material (now with billboard effect)
+	var rift_material = preload("res://Resources/Materials/rift_video.tres").duplicate()
+	portal.material_override = rift_material
 	
 	# Add the portal to the scene
 	add_child(portal)

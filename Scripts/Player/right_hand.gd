@@ -16,7 +16,7 @@ func _on_button_pressed(button_name: String):
 	elif button_name == "trigger_click":
 		print("Interacting with ", name)
 
-func _process(delta):
+func _process(_delta):
 	if is_grabbing:
 		# Check if the grip button is released
 		if !is_button_pressed("grip_click"):

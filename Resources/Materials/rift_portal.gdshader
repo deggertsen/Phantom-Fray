@@ -9,6 +9,17 @@ uniform float spiral_speed : hint_range(0.1, 3.0) = 1.0;
 uniform float spiral_density : hint_range(1.0, 10.0) = 4.0;
 uniform float pulse_speed : hint_range(0.1, 3.0) = 2.0;
 
+void vertex() {
+	// Billboard effect: make the quad always face the camera
+	mat4 modified_model_view = VIEW_MATRIX * mat4(
+		INV_VIEW_MATRIX[0],
+		INV_VIEW_MATRIX[1], 
+		INV_VIEW_MATRIX[2],
+		MODEL_MATRIX[3]
+	);
+	MODELVIEW_MATRIX = modified_model_view;
+}
+
 void fragment() {
 	vec2 center = vec2(0.5, 0.5);
 	vec2 pos = UV - center;

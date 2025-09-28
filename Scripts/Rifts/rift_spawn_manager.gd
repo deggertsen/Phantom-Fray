@@ -44,7 +44,7 @@ func _ready():
 	# Initialize audio player for rift open sound
 	audio_player = AudioStreamPlayer3D.new()
 	audio_player.stream = load("res://Assets/Audio/SFX/rift_open_sound.wav")
-	audio_player.volume_db = 19.0  # 5x louder for dramatic rift opening effect
+	audio_player.volume_db = 100.0
 	audio_player.max_distance = 100.0  # Increased range
 	audio_player.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 	add_child(audio_player)
