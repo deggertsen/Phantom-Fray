@@ -21,6 +21,5 @@ func _ready():
 	print("Viewport use_xr status after delay: ", get_viewport().use_xr)
 
 func _process(_delta):
-	if xr_interface and xr_interface.is_initialized():
-		print("Left hand position: ", $XROrigin3D/LeftHand.global_transform.origin)
-		print("Right hand position: ", $XROrigin3D/RightHand.global_transform.origin)
+	# Hand pose spam disabled — re-enable only while debugging tracking.
+	pass

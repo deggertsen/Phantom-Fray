@@ -50,11 +50,22 @@ func _ready():
 	if not phantom_container:
 		push_warning("PhantomContainer not found in scene tree!")
 
+var spawning_enabled: bool = true
+
+func stop_spawning() -> void:
+	spawning_enabled = false
+	if spawn_timer:
+		spawn_timer.stop()
+
 func _on_SpawnTimer_timeout():
+	if not spawning_enabled:
+		return
 	if current_phantoms < max_phantoms and rift_health > 0:
 		_spawn_phantom()
-		
+
 func _spawn_phantom():
+	if not spawning_enabled or phantom_scene == null:
+		return
 	var phantom_instance = phantom_scene.instantiate()
 	
 	# Add to phantom container instead of self

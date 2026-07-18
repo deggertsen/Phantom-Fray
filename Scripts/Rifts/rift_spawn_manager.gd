@@ -35,7 +35,12 @@ var player: Node3D
 # Audio player for rift open sound
 var audio_player: AudioStreamPlayer3D
 
+# When true, no new rifts will spawn (game over / round end)
+var spawning_enabled: bool = true
+
 func _ready():
+	add_to_group("RiftSpawnManager")
+
 	# Get reference to the player (XROrigin3D)
 	player = get_tree().get_root().get_node_or_null("Main/Player")
 	if not player:
@@ -71,7 +76,19 @@ func _spawn_initial_rifts():
 	while active_rifts < min_rifts:
 		_spawn_new_rift()
 
+func stop_spawning() -> void:
+	spawning_enabled = false
+	if spawn_timer:
+		spawn_timer.stop()
+
+func resume_spawning() -> void:
+	spawning_enabled = true
+	if spawn_timer and spawn_timer.is_stopped():
+		spawn_timer.start()
+
 func _spawn_new_rift():
+	if not spawning_enabled or rift_manager_scene == null:
+		return
 	var new_rift = rift_manager_scene.instantiate()
 	add_child(new_rift)
 	
@@ -151,6 +168,8 @@ func _on_rift_closed(rift):
 	active_rifts -= 1
 
 func _on_spawn_timer_timeout():
+	if not spawning_enabled:
+		return
 	# Only spawn a new rift if we're below the maximum
 	if active_rifts < max_rifts:
-		_spawn_new_rift() 
+		_spawn_new_rift()

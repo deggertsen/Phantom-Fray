@@ -36,6 +36,7 @@ var audio_player: AudioStreamPlayer3D = null
 var is_hit = false
 var hit_velocity = Vector3.ZERO
 var hit_drag = 0.92  # Reduced drag for more satisfying knockback (was 0.95)
+var _has_hit_player: bool = false
 
 func _ready():
 	# Set up collision layers
@@ -148,13 +149,20 @@ func _physics_process(delta):
 		move_and_slide()
 
 func _on_Area3D_body_entered(body: Node3D):
-	print("Collision with: ", body.name, " Groups: ", body.get_groups())  # Debug print
 	if body.is_in_group("PlayerPunch"):
 		handle_punch(body.velocity, body.global_position)
 	elif body.get_parent() is XROrigin3D or body.is_in_group("Player"):
-		print("Phantom hit player!")
-		emit_signal("player_hit")
-		disappear()
+		_apply_player_contact()
+
+func _apply_player_contact() -> void:
+	if _has_hit_player or dissolving or is_hit:
+		return
+	_has_hit_player = true
+	player_hit.emit()
+	var life_force := get_tree().get_first_node_in_group("LifeForceManager")
+	if life_force and life_force.has_method("apply_basic_hit"):
+		life_force.apply_basic_hit()
+	disappear()
 
 func handle_punch(punch_velocity: float, punch_position: Vector3, punch_direction: Vector3 = Vector3.FORWARD):
 	# Create hit info dictionary using the actual punch direction

@@ -62,7 +62,19 @@ The Life Force System represents the player's vital energy and their resistance 
    - Critical state triggers emergency warning sounds
 
 ## Implementation Checklist
-- [ ] Create base Life Force manager class
+
+### Vertical slice (Phase 1A) — shipped 2026-07-18
+- [x] Create base Life Force manager class (`Scripts/Player/life_force_manager.gd`)
+- [x] Add phantom interaction detection (`player_hit` → `apply_basic_hit`)
+- [x] Implement recovery system (+1/s after 3s clear)
+- [x] Minimal HUD meter (left-wrist bar + LIFE label)
+- [x] Camera danger tint (stand-in for infection feedback)
+- [x] Heartbeat audio by state (procedural loop)
+- [x] Drain blip on damage
+- [x] Game over on depletion + trigger restart
+- [x] Debug controls (H = hit, R = reset in debug builds)
+
+### Deferred to presentation pass (Phase 3)
 - [ ] Implement aura shader system
   - [ ] Color transition logic
   - [ ] Particle emission scaling
@@ -72,12 +84,9 @@ The Life Force System represents the player's vital energy and their resistance 
   - [ ] Warning system
   - [ ] Directional indicators
 - [ ] Set up audio system
-  - [ ] Heartbeat manager
   - [ ] Spatial audio effects
-  - [ ] Warning sounds
-- [ ] Add phantom interaction detection
-- [ ] Implement recovery system
-- [ ] Create debug controls/visualization
+  - [ ] Warning sounds (beyond heartbeat / drain blip)
+- [ ] Elite / boss drain tiers
 
 ## Future Enhancements
 - Power-up system integration
