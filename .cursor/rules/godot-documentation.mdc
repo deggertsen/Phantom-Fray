@@ -33,4 +33,4 @@ When implementing or explaining Godot features:
 4. Include relevant code examples from the docs when helpful
 
 ## Project Context
-This is a VR game project using Godot 4.5 with the godot-xr-tools plugin. Always ensure documentation references are compatible with Godot 4.x and consider VR-specific implementations.
+This is a VR game project using Godot 4.7 with the godot-xr-tools plugin. Always ensure documentation references are compatible with Godot 4.x and consider VR-specific implementations.

@@ -124,8 +124,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
-	return name == "XRToolsStaging"
+func is_xr_class(xr_name:  String) -> bool:
+	return xr_name == "XRToolsStaging"
 
 
 ## This function loads the [param p_scene_path] scene file.
@@ -201,7 +201,7 @@ func load_scene(p_scene_path : String, user_data = null) -> void:
 			var progress := []
 			res = ResourceLoader.load_threaded_get_status(p_scene_path, progress)
 			if res != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-				break;
+				break
 
 			$LoadingScreen.progress = progress[0]
 			await get_tree().create_timer(0.1).timeout
@@ -275,12 +275,14 @@ func _add_signals(p_scene : XRToolsSceneBase):
 	p_scene.connect("request_exit_to_main_menu", _on_exit_to_main_menu)
 	p_scene.connect("request_load_scene", _on_load_scene)
 	p_scene.connect("request_reset_scene", _on_reset_scene)
+	p_scene.connect("request_quit", _on_quit)
 
 
 func _remove_signals(p_scene : XRToolsSceneBase):
 	p_scene.disconnect("request_exit_to_main_menu", _on_exit_to_main_menu)
 	p_scene.disconnect("request_load_scene", _on_load_scene)
 	p_scene.disconnect("request_reset_scene", _on_reset_scene)
+	p_scene.disconnect("request_quit", _on_quit)
 
 
 func _on_exit_to_main_menu():
@@ -293,6 +295,10 @@ func _on_load_scene(p_scene_path : String, user_data):
 
 func _on_reset_scene(user_data):
 	load_scene(current_scene_path, user_data)
+
+
+func _on_quit():
+	$StartXR.end_xr()
 
 
 func _on_StartXR_xr_started():

@@ -6,7 +6,7 @@ description: Project structure and architecture guidelines for Phantom-Fray VR g
 # Phantom-Fray Project Architecture
 
 ## Project Overview
-**Phantom-Fray** is a VR combat game where players fight ethereal phantom enemies using energy gauntlets. The game uses Godot 4.5 with the godot-xr-tools plugin for VR functionality.
+**Phantom-Fray** is a VR combat game where players fight ethereal phantom enemies using energy gauntlets. The game uses Godot 4.7 with the godot-xr-tools plugin for VR functionality.
 
 ## Core Game Mechanics
 - **Stationary VR Combat**: Player stays in place but can dodge, duck, and punch
