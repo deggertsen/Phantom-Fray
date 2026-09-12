@@ -7,6 +7,7 @@ const LifeForceManagerScript := preload("res://Scripts/Player/life_force_manager
 @export var life_force_manager_path: NodePath = NodePath("../LifeForceManager")
 @export var meter_offset: Vector3 = Vector3(0.0, 0.08, -0.05)
 @export var tint_distance: float = 0.35
+@export_range(0.0, 1.0, 0.05) var tint_strength: float = 1.0
 
 var _manager: Node
 var _fill_mesh: MeshInstance3D
@@ -14,6 +15,7 @@ var _label: Label3D
 var _tint_mesh: MeshInstance3D
 var _heartbeat: AudioStreamPlayer
 var _drain_blip: AudioStreamPlayer
+var _depletion_stinger: AudioStreamPlayer
 var _fill_material: StandardMaterial3D
 var _tint_material: StandardMaterial3D
 var _base_fill_width: float = 0.12
@@ -38,6 +40,7 @@ func _ready() -> void:
 	_manager.life_force_changed.connect(_on_life_force_changed)
 	_manager.life_force_state_changed.connect(_on_life_force_state_changed)
 	_manager.damage_applied.connect(_on_damage_applied)
+	_manager.life_force_depleted.connect(_on_life_force_depleted)
 
 	_on_life_force_changed(_manager.current_life_force, _manager.max_life_force)
 	_on_life_force_state_changed(_manager.get_state_name())
@@ -109,7 +112,7 @@ func _build_audio() -> void:
 	_heartbeat = AudioStreamPlayer.new()
 	_heartbeat.name = "HeartbeatPlayer"
 	_heartbeat.volume_db = -8.0
-	_heartbeat.bus = &"Master"
+	_heartbeat.bus = &"Critical"
 	add_child(_heartbeat)
 
 	var heartbeat_stream := _load_or_create_heartbeat_stream()
@@ -119,8 +122,16 @@ func _build_audio() -> void:
 	_drain_blip = AudioStreamPlayer.new()
 	_drain_blip.name = "DrainBlipPlayer"
 	_drain_blip.volume_db = -12.0
+	_drain_blip.bus = &"Critical"
 	add_child(_drain_blip)
 	_drain_blip.stream = _create_drain_blip_stream()
+
+	_depletion_stinger = AudioStreamPlayer.new()
+	_depletion_stinger.name = "DepletionStinger"
+	_depletion_stinger.volume_db = 8.0
+	_depletion_stinger.bus = &"Master"
+	_depletion_stinger.stream = _create_depletion_stinger()
+	add_child(_depletion_stinger)
 
 func _on_life_force_changed(current: float, maximum: float) -> void:
 	var ratio := 0.0 if maximum <= 0.0 else clampf(current / maximum, 0.0, 1.0)
@@ -144,6 +155,18 @@ func _on_damage_applied(_amount: float, _current: float) -> void:
 	if _drain_blip:
 		_drain_blip.play()
 
+func _on_life_force_depleted() -> void:
+	if _heartbeat and _heartbeat.playing:
+		_heartbeat.stop()
+	if _drain_blip and _drain_blip.playing:
+		_drain_blip.stop()
+	if _depletion_stinger:
+		_depletion_stinger.play()
+	if _tint_material:
+		_tint_material.albedo_color = Color(0.45, 0.0, 0.08, 0.38)
+		var tween := create_tween()
+		tween.tween_property(_tint_material, "albedo_color:a", 0.08, 1.1).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+
 func _update_tint(state: StringName) -> void:
 	if _tint_material == null:
 		return
@@ -157,7 +180,9 @@ func _update_tint(state: StringName) -> void:
 			alpha = 0.12
 		&"critical", &"depleted":
 			alpha = 0.22
-	_tint_material.albedo_color.a = alpha
+	var settings := get_node_or_null("/root/GameSettings")
+	var accessibility_scale := 0.45 if settings and settings.reduced_flashes else 1.0
+	_tint_material.albedo_color.a = alpha * tint_strength * accessibility_scale
 
 func _update_heartbeat(state: StringName) -> void:
 	if _heartbeat == null or _heartbeat.stream == null:
@@ -174,9 +199,13 @@ func _update_heartbeat(state: StringName) -> void:
 		&"danger":
 			_heartbeat.volume_db = -10.0
 			_heartbeat.pitch_scale = 1.05
-		&"critical", &"depleted":
+		&"critical":
 			_heartbeat.volume_db = -4.0
 			_heartbeat.pitch_scale = 1.25
+		&"depleted":
+			if _heartbeat.playing:
+				_heartbeat.stop()
+			return
 
 	if not _heartbeat.playing:
 		_heartbeat.play()
@@ -236,6 +265,26 @@ func _create_drain_blip_stream() -> AudioStreamWAV:
 		var env := exp(-t * 28.0)
 		var sample := sin(TAU * 180.0 * t) * env * 0.45
 		data.encode_s16(i * 2, int(clampf(sample, -1.0, 1.0) * 32767.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	return stream
+
+func _create_depletion_stinger() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 1.25
+	var sample_count := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i in sample_count:
+		var t := float(i) / sample_rate
+		var env := exp(-t * 2.4)
+		var low := sin(TAU * (62.0 - t * 18.0) * t) * env * 0.55
+		var pulse := sin(TAU * 180.0 * t) * exp(-t * 10.0) * 0.22
+		var noise := sin(TAU * 37.0 * t + sin(t * 41.0)) * exp(-t * 4.0) * 0.12
+		data.encode_s16(i * 2, int(clampf(low + pulse + noise, -1.0, 1.0) * 32767.0))
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = sample_rate

@@ -1,5 +1,42 @@
-[gd_scene load_steps=2 format=3 uid="uid://drfoaoui21cln"]
+[gd_scene load_steps=7 format=3 uid="uid://bkr8rchbej3vt"]
 
-[ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="1_bu6p4"]
+[ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="1_base"]
+[ext_resource type="Script" path="res://Scripts/Phantoms/blue_phantom.gd" id="2_script"]
 
-[node name="BasePhantom" instance=ExtResource("1_bu6p4")]
+[sub_resource type="SphereMesh" id="SphereMesh_sweet"]
+radius = 0.3
+height = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Material_sweet"]
+transparency = 1
+albedo_color = Color(0.05, 0.55, 1, 0.28)
+emission_enabled = true
+emission = Color(0.05, 0.55, 1, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="ParticleProcessMaterial" id="Particles_sweet"]
+emission_shape = 1
+emission_sphere_radius = 0.3
+gravity = Vector3(0, 0.35, 0)
+scale_min = 0.04
+scale_max = 0.09
+color = Color(0.05, 0.55, 1, 0.65)
+
+[sub_resource type="SphereMesh" id="SphereMesh_particle"]
+radius = 0.04
+height = 0.08
+
+[node name="BluePhantom" instance=ExtResource("1_base")]
+script = ExtResource("2_script")
+
+[node name="SweetSpotVisual" type="MeshInstance3D" parent="." index="3"]
+position = Vector3(0.3, 0, 0)
+mesh = SubResource("SphereMesh_sweet")
+surface_material_override/0 = SubResource("Material_sweet")
+
+[node name="SweetSpotParticles" type="GPUParticles3D" parent="SweetSpotVisual" index="0"]
+emitting = false
+one_shot = true
+amount = 16
+process_material = SubResource("Particles_sweet")
+draw_pass_1 = SubResource("SphereMesh_particle")

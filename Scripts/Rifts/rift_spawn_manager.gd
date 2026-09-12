@@ -1,175 +1,122 @@
 extends Node3D
+class_name RiftDirector
 
-# Path to the RiftManager scene
+signal rift_spawned(rift_id: int, rift: Node3D)
+signal rift_closed(rift_id: int, closed_count: int, total_count: int)
+signal phantom_resolved(result: Dictionary)
+signal player_damaged(amount: float)
+signal all_rifts_closed
+
 @export var rift_manager_scene: PackedScene
+@export var total_rifts: int = 3
+@export var max_concurrent_rifts: int = 1
+@export var min_player_distance: float = 11.0
+@export var max_player_distance: float = 16.0
+@export var min_rift_distance: float = 8.0
+@export var rift_height: float = 2.2
 
-# Minimum and maximum number of rifts to maintain
-@export var min_rifts: int = 2
-@export var max_rifts: int = 3
+var spawning_enabled: bool = false
+var spawned_rifts: int = 0
+var closed_rifts: int = 0
+var rift_instances: Array[Node3D] = []
+var _next_rift_id: int = 1
+var _player: Node3D
 
-# Minimum distance between rifts
-@export var min_rift_distance: float = 10.0
-
-# Minimum and maximum distance from player
-@export var min_player_distance: float = 15.0
-@export var max_player_distance: float = 25.0
-
-# Spawn area dimensions (centered around player)
-@export var spawn_area_size: Vector3 = Vector3(50, 0, 50)
-
-# Spawn timer duration in seconds
-@export var spawn_timer_duration: float = 45.0
-
-# Current number of active rifts
-var active_rifts: int = 0
-
-# Array to store active rift instances
-var rift_instances: Array = []
-
-# Timer for spawning new rifts
-var spawn_timer: Timer
-
-# Reference to the player
-var player: Node3D
-
-# Audio player for rift open sound
-var audio_player: AudioStreamPlayer3D
-
-# When true, no new rifts will spawn (game over / round end)
-var spawning_enabled: bool = true
-
-func _ready():
+func _ready() -> void:
 	add_to_group("RiftSpawnManager")
+	_player = get_tree().get_first_node_in_group("Player") as Node3D
 
-	# Get reference to the player (XROrigin3D)
-	player = get_tree().get_root().get_node_or_null("Main/Player")
-	if not player:
-		push_warning("Player not found in scene tree!")
-	
-	# Initialize audio player for rift open sound
-	audio_player = AudioStreamPlayer3D.new()
-	audio_player.stream = load("res://Assets/Audio/SFX/rift_open_sound.wav")
-	audio_player.volume_db = 100.0
-	audio_player.max_distance = 100.0  # Increased range
-	audio_player.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
-	add_child(audio_player)
-	
-	# Initialize and start the spawn timer
-	spawn_timer = Timer.new()
-	spawn_timer.wait_time = spawn_timer_duration
-	spawn_timer.one_shot = false
-	spawn_timer.autostart = true
-	spawn_timer.timeout.connect(_on_spawn_timer_timeout)
-	add_child(spawn_timer)
-	
-	# Connect to the tree_exiting signal of any existing rifts
-	for child in get_children():
-		if child is Node3D and "RiftManager" in child.name:
-			child.tree_exiting.connect(_on_rift_closed.bind(child))
-			rift_instances.append(child)
-			active_rifts += 1
-	
-	# Spawn initial rifts if needed
-	_spawn_initial_rifts()
-
-func _spawn_initial_rifts():
-	while active_rifts < min_rifts:
-		_spawn_new_rift()
+func start_round() -> void:
+	spawning_enabled = true
+	_fill_rift_slots()
 
 func stop_spawning() -> void:
 	spawning_enabled = false
-	if spawn_timer:
-		spawn_timer.stop()
+	for rift in rift_instances:
+		if is_instance_valid(rift) and rift.has_method("stop_spawning"):
+			rift.stop_spawning()
 
 func resume_spawning() -> void:
 	spawning_enabled = true
-	if spawn_timer and spawn_timer.is_stopped():
-		spawn_timer.start()
+	for rift in rift_instances:
+		if is_instance_valid(rift) and rift.has_method("start_spawning"):
+			rift.start_spawning()
+	_fill_rift_slots()
 
-func _spawn_new_rift():
-	if not spawning_enabled or rift_manager_scene == null:
+func cleanup_round() -> void:
+	spawning_enabled = false
+	for rift in rift_instances.duplicate():
+		if is_instance_valid(rift) and rift.has_method("force_cleanup"):
+			rift.force_cleanup()
+	rift_instances.clear()
+	spawned_rifts = 0
+	closed_rifts = 0
+	_next_rift_id = 1
+
+func _fill_rift_slots() -> void:
+	while spawning_enabled and rift_instances.size() < max_concurrent_rifts and spawned_rifts < total_rifts:
+		_spawn_new_rift()
+
+func _spawn_new_rift() -> void:
+	if rift_manager_scene == null:
+		push_error("RiftDirector: rift_manager_scene is missing")
 		return
-	var new_rift = rift_manager_scene.instantiate()
-	add_child(new_rift)
-	
-	# Position the new rift
-	var valid_position = _find_valid_position()
-	new_rift.global_transform.origin = valid_position
-	
-	# Make the rift face the player
-	if player:
-		# Only create a look transform if the positions are different
-		if not valid_position.is_equal_approx(player.global_transform.origin):
-			# Create a transform that looks at the player from the valid position
-			var look_transform = Transform3D()
-			look_transform.origin = valid_position
-			look_transform = look_transform.looking_at(player.global_transform.origin, Vector3.UP)
-			new_rift.global_transform = look_transform
-		else:
-			# If positions are the same, just set the position without rotation
-			new_rift.global_transform.origin = valid_position
-	
-	# Connect to the tree_exiting signal
-	new_rift.tree_exiting.connect(_on_rift_closed.bind(new_rift))
-	
-	# Play rift open sound at the rift's position
-	audio_player.global_transform.origin = valid_position
-	audio_player.play()
-	
-	rift_instances.append(new_rift)
-	active_rifts += 1
+	var rift := rift_manager_scene.instantiate() as Node3D
+	var id := _next_rift_id
+	_next_rift_id += 1
+	rift.rift_id = id
+	add_child(rift)
+	rift.global_position = _find_valid_position()
+	if _player and not rift.global_position.is_equal_approx(_player.global_position):
+		rift.look_at(_player.global_position + Vector3.UP * 1.4, Vector3.UP)
+	rift.closed.connect(_on_rift_closed.bind(id, rift))
+	rift.phantom_resolved.connect(_on_phantom_resolved)
+	rift.player_damaged.connect(_on_player_damaged)
+	rift_instances.append(rift)
+	spawned_rifts += 1
+	_play_open_sound(rift.global_position)
+	rift_spawned.emit(id, rift)
+	rift.start_spawning()
+
+func _on_rift_closed(rift_id: int, rift: Node3D) -> void:
+	rift_instances.erase(rift)
+	closed_rifts += 1
+	rift_closed.emit(rift_id, closed_rifts, total_rifts)
+	if closed_rifts >= total_rifts:
+		spawning_enabled = false
+		all_rifts_closed.emit()
+	else:
+		var replacement_delay := get_tree().create_timer(1.35)
+		replacement_delay.timeout.connect(_fill_rift_slots)
+
+func _on_phantom_resolved(result: Dictionary) -> void:
+	phantom_resolved.emit(result)
+
+func _on_player_damaged(amount: float) -> void:
+	player_damaged.emit(amount)
 
 func _find_valid_position() -> Vector3:
-	var attempts = 0
-	var max_attempts = 50  # Increased attempts for better spawn success
-	
-	# Get player position, default to origin if player not found
-	var player_pos = Vector3.ZERO
-	if player:
-		player_pos = player.global_transform.origin
-	
-	while attempts < max_attempts:
-		# Generate random position within spawn area centered on player
-		var random_offset = Vector3(
-			randf_range(-spawn_area_size.x/2, spawn_area_size.x/2),
-			3.0, # Keep at a consistent height
-			randf_range(-spawn_area_size.z/2, spawn_area_size.z/2)
-		)
-		var random_pos = player_pos + random_offset
-		
-		# Check if position is valid (far enough from other rifts and player)
-		var is_valid = true
-		
-		# Check distance from other rifts
-		for rift in rift_instances:
-			if rift.global_transform.origin.distance_to(random_pos) < min_rift_distance:
-				is_valid = false
+	var player_position := _player.global_position if _player else Vector3.ZERO
+	for _attempt in range(40):
+		var angle := randf_range(0.0, TAU)
+		var distance := randf_range(min_player_distance, max_player_distance)
+		var candidate := player_position + Vector3(sin(angle) * distance, rift_height, cos(angle) * distance)
+		var valid := true
+		for existing in rift_instances:
+			if is_instance_valid(existing) and existing.global_position.distance_to(candidate) < min_rift_distance:
+				valid = false
 				break
-		
-		# Check distance from player
-		if player and is_valid:
-			var distance_to_player = player_pos.distance_to(random_pos)
-			if distance_to_player < min_player_distance or distance_to_player > max_player_distance:
-				is_valid = false
-		
-		if is_valid:
-			print("Valid rift position found: ", random_pos, " (distance from player: ", player_pos.distance_to(random_pos), ")")
-			return random_pos
-		
-		attempts += 1
-	
-	# If we couldn't find a valid position, try a fallback position
-	var fallback_pos = player_pos + Vector3(min_player_distance, 3.0, 0)
-	print("Using fallback rift position: ", fallback_pos)
-	return fallback_pos
+		if valid:
+			return candidate
+	return player_position + Vector3(0.0, rift_height, -min_player_distance)
 
-func _on_rift_closed(rift):
-	rift_instances.erase(rift)
-	active_rifts -= 1
-
-func _on_spawn_timer_timeout():
-	if not spawning_enabled:
-		return
-	# Only spawn a new rift if we're below the maximum
-	if active_rifts < max_rifts:
-		_spawn_new_rift()
+func _play_open_sound(position: Vector3) -> void:
+	var audio := AudioStreamPlayer3D.new()
+	audio.stream = preload("res://Assets/Audio/SFX/rift_open_sound.wav")
+	audio.bus = &"SFX"
+	audio.volume_db = -9.0
+	audio.max_distance = 35.0
+	audio.global_position = position
+	add_child(audio)
+	audio.finished.connect(audio.queue_free)
+	audio.play()

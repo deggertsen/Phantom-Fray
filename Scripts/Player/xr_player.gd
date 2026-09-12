@@ -1,26 +1,30 @@
 extends CharacterBody3D
 
-var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
+@export var hurtbox_radius: float = 0.28
+@export var minimum_height: float = 0.9
+@export var maximum_height: float = 2.1
 
-func _physics_process(delta):
-	# Add the gravity.
-	if not is_on_floor():
-		velocity.y -= gravity * delta
+@onready var camera: XRCamera3D = get_parent().get_node("XRCamera3D")
+@onready var collision_shape: CollisionShape3D = $CollisionShape3D
 
-	# Apply the velocity (for gravity only)
-	move_and_slide()
+var _capsule: CapsuleShape3D
+var _last_height: float = -1.0
 
-func _ready():
-	# Set up collision for the player body
-	add_to_group("Player")
-	
-	# Set collision layer and mask
-	collision_layer = 1  # Default layer for player
-	collision_mask = 4   # Layer 3 for phantoms
+func _ready() -> void:
+	add_to_group("PlayerBody")
+	collision_layer = 1
+	collision_mask = 4
+	_capsule = collision_shape.shape as CapsuleShape3D
+	if _capsule:
+		_capsule.radius = hurtbox_radius
 
-	# Make sure collision shape is properly sized
-	if $CollisionShape3D:
-		var capsule = $CollisionShape3D.shape as CapsuleShape3D
-		if capsule:
-			capsule.radius = 0.3  # Increased for better phantom detection
-			capsule.height = 1.8  # Typical player height
+func _physics_process(_delta: float) -> void:
+	if camera == null:
+		return
+	var tracked_height := clampf(camera.position.y, minimum_height, maximum_height)
+	position.x = camera.position.x
+	position.z = camera.position.z
+	position.y = tracked_height * 0.5
+	if _capsule and absf(tracked_height - _last_height) > 0.01:
+		_last_height = tracked_height
+		_capsule.height = tracked_height

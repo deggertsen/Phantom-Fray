@@ -1,210 +1,186 @@
 # Phantom-Fray — Production Roadmap
 
 **Last updated:** 2026-07-18  
-**Current stage:** Playable mechanics prototype (pre-vertical-slice)  
-**Engine:** Godot 4.5 + OpenXR / godot-xr-tools  
-**Target:** Ship a focused VR combat experience (Quest-class headset first)
+**Current stage:** Software-complete launch candidate; Quest hardware/store gates outstanding
+**Engine:** Godot 4.7.1 + OpenXR / godot-xr-tools 4.5.1
+**Target:** Meta Quest-class standalone headset
 
 ---
 
-## Where We Are (Snapshot)
+## Scope Freeze for v1
+
+One short, replayable RSF operation:
+
+`Main Menu → Tutorial or Deploy → 3–5 minute three-rift mission → Results → Retry`
+
+The player is stationary, physically punches, blocks, ducks, and side-steps. There is no artificial locomotion. Full campaign progression, bosses, powers, multiplayer, online leaderboards, and hand tracking as the primary input remain post-launch work.
+
+---
+
+## Current Status
 
 | Area | Status |
-|------|--------|
-| VR bootstrap (OpenXR, controllers, gloves) | Working |
-| Punch → kill → dissolve loop | Working |
-| Rift spawn / damage / close | Working (base phantoms only) |
-| Music + basic SFX | Working |
-| Life force / fail state | Not started |
-| HUD / menus / win condition | Not started |
-| Colored phantom variants | Yellow partial; Blue/Green/Pink shells |
-| Custom art (phantoms, arena, gauntlets) | Placeholders |
-| Platform build / store readiness | Not started |
+|---|---|
+| OpenXR bootstrap, tracked controllers, ERM glove overlays | Implemented; headset verification required |
+| Life force, recovery, infection feedback, fail state | Implemented |
+| Finite round, score, combo, timer, win/lose/timeout, retry | Implemented |
+| Yellow/Blue/Green/Pink mechanics | Implemented; headset balance required |
+| Rift weakening and closure shader | Implemented |
+| Wrist HUD and world-space messaging | Implemented |
+| Main menu, tutorial, pause, settings, results flow | Implemented |
+| RSF arena presentation and audio buses/intensity | Implemented procedural launch-candidate pass |
+| Automated import/rule validation and CI | Implemented |
+| Android/Quest export and signed package | Blocked on local Android/export toolchain |
+| Meta VRC/store submission and closed playtest | External release gate |
 
-The combat sandbox exists. What turns it into a *game* — stakes, feedback, variety, and a clear round — mostly does not.
-
----
-
-## Guiding Principles
-
-1. **Vertical slice before breadth.** One complete round that feels good beats four half-built systems.
-2. **Mechanics before Meshy.** Capsule phantoms are fine until the loop is addictive.
-3. **Quest-first performance.** Every feature must survive a mobile VR budget.
-4. **Ship a short, sharp experience.** Training + one mission + score chase is enough for v1. Story campaigns and DLC wait.
+See [Production_Status.md](Production_Status.md) and [Known_Issues.md](Known_Issues.md) for the exact boundary between implemented work and external gates.
 
 ---
 
-## Phase 0 — Reorientation (1–2 sessions)
+## Phase 0 — Reorientation
 
-Get the headset on and confirm nothing bit-rotted after the Godot 4.5 upgrade and the long pause.
+- [x] Upgrade and clean-import under Godot 4.7.1
+- [x] Confirm desktop fallback startup and gameplay scene loading
+- [x] Audit orphaned architecture, variant shells, shader paths, audio, UI, and build configuration
+- [x] Freeze the focused v1 scope
+- [ ] Launch and verify on the minimum supported Quest headset
 
-- [ ] Launch on target headset; confirm OpenXR session, hands, punch haptics
-- [ ] Play a few minutes: spawn → punch → rift close → music
-- [ ] Note jank (rift health visuals, orphan scripts, yellow stubs)
-- [ ] Decide v1 scope freeze (recommended below)
-
-**Exit criteria:** Confident the prototype still runs; agreed v1 feature cut.
-
----
-
-## Phase 1 — Vertical Slice: “One Round That Matters”
-
-**Goal:** A player can start a round, take damage, die or win, and understand why — without menus polish.
-
-### 1A. Life Force + Fail State ✅ *(implemented — verify in headset)*
-- [x] Wire `player_hit` → life force drain → recovery → game over
-- [x] Minimal visual + audio feedback (wrist meter + heartbeat + camera tint)
-- See [Next_Step_Life_Force_Breakdown.md](Next_Step_Life_Force_Breakdown.md) for package details
-- **Next:** 1B Win Condition + Round Loop
-
-### 1B. Win Condition + Round Loop
-- Stop infinite rift refill; define win (e.g. close N rifts, or survive X minutes while closing rifts)
-- Restart / return-to-ready after win or death
-- Simple score tally (rift points already flow from punches)
-
-### 1C. Minimal HUD
-- Life force meter (peripheral, VR-safe)
-- Score + rifts remaining (or progress)
-- Brief win / lose messaging in world space
-
-### 1D. First Real Variant — Yellow Phantom
-- Finish left-hand + sweet-spot scoring
-- Spawn Yellow from rifts (mix with base)
-- Visible hit quality feedback
-
-### 1E. Rift Visual Honesty
-- Health/close effects use actual `ShaderMaterial` / dissolve path (current StandardMaterial checks are dead)
-- Portal reads as weakening as health drops
-
-**Exit criteria:** A friend can play a 3–5 minute round, understand life/death, and want one more try.
+**Status:** Software complete; hardware check remains.
 
 ---
 
-## Phase 2 — Combat Depth (Core Fantasy)
+## Phase 1 — Vertical Slice: One Round That Matters
 
-Make punching feel intentional, not just “touch to delete.”
+### Life force and fail state
 
-- [ ] Blue Phantom (right hand + sweet spot)
-- [ ] Green Phantom (two-hand block)
-- [ ] Pink Phantom (dodge / projectile)
-- [ ] Punch SFX + stronger hit feedback (particles, rumble tiers)
-- [ ] Combo / multiplier (light version — consecutive sweet spots)
-- [ ] Difficulty curve (spawn rates, mix weights, rift HP)
+- [x] Phantom contact drains life force
+- [x] Recovery after a clear interval
+- [x] Wrist meter, heartbeat, danger tint, damage cue
+- [x] Clear depletion state
 
-**Exit criteria:** All four color fantasies readable in VR within 30 seconds of first encounter.
+### Win condition and round loop
+
+- [x] Three-rift finite mission; no infinite refill
+- [x] Countdown, four-minute window, victory, defeat, and timeout
+- [x] Score, combo multiplier, rift progress, and retry
+
+### Minimal HUD
+
+- [x] Life force
+- [x] Score and multiplier
+- [x] Rifts closed and remaining time
+- [x] World-space mission/result messaging
+
+### Yellow and rift visual honesty
+
+- [x] Yellow requires the left hand
+- [x] Visible resonance point and bonus score/rift damage
+- [x] Rift shader reads health, damage flash, and closure dissolve
+
+**Status:** Implemented. The 3–5 minute feel target requires headset playtesting.
+
+---
+
+## Phase 2 — Combat Depth
+
+- [x] Blue: right-hand resonance strike
+- [x] Green: two-hand timed block
+- [x] Pink: telegraphed locked-lane physical dodge
+- [x] Normal/sweet/rejected haptic tiers
+- [x] Sweet-spot combo multiplier
+- [x] Bounded mixed spawn pool and global launch load
+- [ ] Tune timings, sensor alignment, and mix weights through headset playtests
+
+**Status:** Mechanically implemented; ergonomic balance remains.
 
 ---
 
 ## Phase 3 — Presentation Pass
 
-Still not “AAA art,” but no longer placeholder-void.
+- [x] Variant colors and mechanic-specific silhouettes/telegraphs
+- [x] ERM energy overlays on the low-poly glove rigs
+- [x] RSF training-chamber identity, safe-space ring, pylons, and briefing
+- [x] Rift and phantom dissolve correction
+- [x] Life-force tint/heartbeat presentation
+- [x] Music/SFX/Critical/UI bus architecture and pressure hooks
+- [ ] Replace procedural launch-candidate art with final authored models/key art if budget permits
+- [ ] Final impact/UI/proximity sound design and mastering
 
-- [ ] Phantom models or strong stylized meshes (Meshy prompts already drafted)
-- [ ] ERM gauntlet look (even if collision stays the same)
-- [ ] Arena identity (training room / black box with atmosphere)
-- [ ] Life force aura / infection look (from Life Force design doc)
-- [ ] SFX completeness: punch, hit, proximity, UI confirm
-- [ ] Music intensity hooks (low life / climax) — hooks already sketched in music controller
-
-**Exit criteria:** Screenshots/trailer look like a *product*, not a physics demo.
-
----
-
-## Phase 4 — Meta & UX (Ship Shape)
-
-- [ ] Main menu (VR laser/point or simple gaze/button)
-- [ ] Pause + settings (comfort: vignette?, turn mode if any locomotion added, volume)
-- [ ] Short tutorial / training room (no fail, phantom select optional)
-- [ ] Session flow: Menu → Play → Results → Retry
-- [ ] Accessibility / comfort options appropriate for stationary combat
-
-**Exit criteria:** Someone who never saw the project can play without you narrating.
+**Status:** Coherent procedural product pass implemented. Bespoke production art/audio is a quality upgrade, not silently marked complete.
 
 ---
 
-## Phase 5 — Platform & Production Hardening
+## Phase 4 — Meta and UX
 
-- [ ] Quest (or primary store) export pipeline documented
-- [ ] Performance budget: consistent frame rate under max phantom/rift load
-- [ ] Crash / edge-case pass (XR session loss, pause during dissolve, etc.)
-- [ ] Build automation or at least a release checklist
-- [ ] Store assets: trailer, screenshots, description, age rating notes
-- [ ] Closed playtest → balance pass → open beta if desired
+- [x] Main menu
+- [x] Tutorial explaining stationary space, grip punches, all four variants, rifts, and life force
+- [x] Menu → Play → Results → Retry flow
+- [x] Pause and explicit resume
+- [x] Persistent music and haptic settings
+- [x] Keyboard fallbacks for desktop validation
+- [ ] Validate controller button labels, text distance, readability, and seated use in headset
+- [ ] Optional laser-pointer panel polish after hardware UX findings
 
-**Exit criteria:** Installable build on a clean headset; known issues list only contains non-blockers.
-
----
-
-## Phase 6 — Launch & Immediate Post-Launch
-
-- [ ] v1.0 release
-- [ ] Hotfix window for comfort / crash / progression bugs
-- [ ] Telemetry-lite or playtest notes → backlog for 1.1
-
-**Explicitly out of v1 (park for later):**
-- Full story campaign / Overseer finale
-- Hand tracking as primary input
-- Boss phantoms, power-ups, environmental hazards
-- Leaderboards / achievements / mod support
-- Multiplayer
+**Status:** Implemented with controller-button world-space UI; hardware UX pass remains.
 
 ---
 
-## Suggested Sequencing (Broad)
+## Phase 5 — Platform and Production Hardening
 
-```
-Phase 0  Reorient
-   ↓
-Phase 1  Vertical slice  ←── you are about to enter here
-   ↓
-Phase 2  Combat depth
-   ↓
-Phase 3  Presentation
-   ↓
-Phase 4  Meta UX
-   ↓
-Phase 5  Platform hardening
-   ↓
-Phase 6  Launch
-```
+- [x] Compatibility renderer and Quest-first content budget
+- [x] Explicit audio buses
+- [x] XR focus/session-loss suspension hooks
+- [x] Debug performance monitor and documented 72/90 Hz gates
+- [x] Automated resource/rule validation runner
+- [x] GitHub Actions validation workflow pinned to Godot 4.7.1
+- [x] Quest export guide, release checklist, store asset plan, and known issues
+- [x] Signing/build-output ignore rules and portable editor configuration
+- [x] Install JDK/Android SDK/NDK/export templates/OpenXR Vendors plugin
+- [x] Generate tracked Godot Android export presets from the pinned toolchain
+- [x] Produce a signed, ARM64 Meta Quest debug APK
+- [x] Produce the release-signed package with the private production keystore
+- [ ] Complete on-device performance, suspend/resume, soak, and clean-install matrices
+- [x] Record release artifact signing, package, ABI, and Meta/OpenXR manifest evidence
+- [ ] Run closed playtest and balance pass
 
-Phases 2 and 3 can overlap lightly (e.g. Blue phantom + better SFX), but **do not start Phase 4 menus until Phase 1 exit criteria are met.** Menus without a round are a trap.
-
----
-
-## Rough Effort Framing (Solo / small team)
-
-| Phase | Relative size | Notes |
-|-------|---------------|-------|
-| 0 | XS | Hours |
-| 1 | M | Highest ROI; unblocks everything |
-| 2 | L | Most design iteration |
-| 3 | L | Art + audio bandwidth |
-| 4 | M | UX polish |
-| 5 | M–L | Headset/store unknowns dominate |
-| 6 | S | Ops + hotfix |
-
-Absolute calendar time depends on hours/week; the order matters more than the dates.
+**Status:** Build tooling and a Meta-packaged debug artifact are complete. Hardware validation, private release signing, playtesting, and store-account operations remain external gates.
 
 ---
 
-## Definition of “Production Ready” (v1)
+## Phase 6 — Launch and Immediate Post-Launch
 
-A build is production-ready when:
+- [ ] Complete the Meta Quest VRC test plan against the exact signed release build
+- [ ] Submit store listing, privacy/age-rating declarations, screenshots, and trailer
+- [ ] Release v1.0.0
+- [ ] Monitor the hotfix window for comfort, crash, input, and progression defects
+- [ ] Convert playtest/support evidence into a 1.1 backlog
 
-1. Player can complete a full session without developer intervention  
-2. Win and lose states are clear and restartable  
-3. All four phantom types teach their fantasy  
-4. Frame rate holds on the target headset at intended spawn density  
-5. Comfort and input feel acceptable to non-developer playtesters  
-6. Store package installs and launches cleanly  
+Phase 6 is not representable as complete from source code alone. The repository contains the launch procedure; release requires an authorized Meta developer account, signing identity, target hardware, store assets, and human playtest evidence.
 
 ---
 
-## Related Docs
+## Definition of Production Ready
 
-- [Next Step: Life Force Breakdown](Next_Step_Life_Force_Breakdown.md) — Phase 1A detailed tasks
-- [Life Force System Design](Life_Force_System.md) — original design intent
-- [High Level Implementation Plan](High_level_implementation_plan.md) — older checklist (partially stale)
-- [Phantom Enemy Breakdown](Phantom_Enemy_Breakdown.md) — variant design
-- [Phantom Implementation Checklist](Phantom_Implementation_Checklist.md) — older checklist (partially stale)
+A release build is ready when:
+
+1. A first-time player can learn and complete the mission without developer narration.
+2. Victory, defeat, timeout, pause, resume, results, and retry are reliable.
+3. All four Phantom rules are readable and physically comfortable.
+4. The maximum-load mission meets the documented frame budget on the minimum headset.
+5. Three retries and a ten-minute soak do not leak gameplay nodes, timers, or audio voices.
+6. The signed package installs and launches cleanly on a factory-clean Quest profile.
+7. The exact release build passes Meta's current VRC test plan.
+8. Known issues contain non-blockers only.
+
+---
+
+## Production References
+
+- [Production status](Production_Status.md)
+- [Quest export guide](Quest_Export_Guide.md)
+- [Performance budget](Performance_Budget.md)
+- [Release checklist](Release_Checklist.md)
+- [Store asset plan](Store_Asset_Plan.md)
+- [Known issues](Known_Issues.md)
+- [Life force design](Life_Force_System.md)
+- [Phantom enemy design](Phantom_Enemy_Breakdown.md)

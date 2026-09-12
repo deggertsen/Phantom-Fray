@@ -1,0 +1,35 @@
+extends Phantom
+
+@export var block_window_seconds: float = 0.45
+
+var _first_hand: StringName = &""
+var _block_window_remaining: float = 0.0
+
+func _ready() -> void:
+	variant_id = &"green"
+	phantom_color = Color(0.12, 1.0, 0.4, 0.9)
+	move_speed *= 1.15
+	base_score = 180
+	rift_damage = 16
+	super()
+
+func _process(delta: float) -> void:
+	super(delta)
+	if _block_window_remaining > 0.0:
+		_block_window_remaining -= delta
+		if _block_window_remaining <= 0.0:
+			_first_hand = &""
+
+func _evaluate_strike(strike: Dictionary) -> Dictionary:
+	var hand_id: StringName = strike.get("hand_id", &"")
+	if _first_hand == &"":
+		_first_hand = hand_id
+		_block_window_remaining = block_window_seconds
+		return _make_result(false, false, &"block_half", 0, 0, strike)
+	if hand_id == _first_hand or _block_window_remaining <= 0.0:
+		_first_hand = hand_id
+		_block_window_remaining = block_window_seconds
+		return _make_result(false, false, &"need_both_hands", 0, 0, strike)
+	_first_hand = &""
+	_block_window_remaining = 0.0
+	return _make_result(true, false, &"two_hand_block", base_score, rift_damage, strike)

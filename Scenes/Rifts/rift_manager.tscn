@@ -1,8 +1,14 @@
-[gd_scene load_steps=3 format=3 uid="uid://b88j32sxks21p"]
+[gd_scene load_steps=7 format=3 uid="uid://b88j32sxks21p"]
 
 [ext_resource type="Script" uid="uid://cw86jlto2s4fn" path="res://Scripts/Rifts/rift_manager.gd" id="1_eyexh"]
 [ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="2_phantom"]
+[ext_resource type="PackedScene" uid="uid://dfjs75v4og1r2" path="res://Scenes/Phantoms/yellow_phantom.tscn" id="3_yellow"]
+[ext_resource type="PackedScene" uid="uid://bkr8rchbej3vt" path="res://Scenes/Phantoms/blue_phantom.tscn" id="4_blue"]
+[ext_resource type="PackedScene" uid="uid://drfoaoui21cln" path="res://Scenes/Phantoms/green_phantom.tscn" id="5_green"]
+[ext_resource type="PackedScene" uid="uid://diw6ch678tdbi" path="res://Scenes/Phantoms/pink_phantom.tscn" id="6_pink"]
 
 [node name="RiftManager" type="Node3D"]
 script = ExtResource("1_eyexh")
-phantom_scene = ExtResource("2_phantom")
+phantom_scenes = Array[PackedScene]([ExtResource("2_phantom"), ExtResource("3_yellow"), ExtResource("3_yellow"), ExtResource("4_blue"), ExtResource("4_blue"), ExtResource("5_green"), ExtResource("6_pink")])
+spawn_interval = 3.5
+max_live_phantoms = 4

@@ -1,82 +1,74 @@
 extends XRController3D
+class_name CombatHandController
 
-signal punch_hit(velocity: float, direction: Vector3)
+@export var hand_id: StringName = &"left"
+@export var punch_strength_threshold: float = 1.0
+@export_range(0.1, 20.0, 0.1) var max_punch_velocity: float = 10.0
 
 var punch_area: Area3D
-var previous_position: Vector3
 var current_velocity: Vector3
-var punch_strength_threshold: float = 1.0
+var _strike_active: bool = false
+var _last_target_id: int = 0
+var _last_hit_msec: int = 0
 
-# Haptic feedback settings
-@export_range(0.0, 1.0, 0.01) var min_haptic_magnitude: float = 0.3
-@export_range(0.0, 1.0, 0.01) var max_haptic_magnitude: float = 1.0
-@export_range(0.1, 20.0, 0.1) var min_punch_velocity: float = 1.0
-@export_range(1.0, 50.0, 0.1) var max_punch_velocity: float = 10.0
-@export_range(10, 300, 10) var min_haptic_duration_ms: int = 75
-@export_range(50, 500, 10) var max_haptic_duration_ms: int = 200
-
-func _ready():
-	# Create collision area if it doesn't exist
-	if !punch_area:
-		punch_area = Area3D.new()
-		var collision_shape = CollisionShape3D.new()
-		var sphere_shape = SphereShape3D.new()
-		sphere_shape.radius = 0.05  # Small sphere for punch detection
-		collision_shape.shape = sphere_shape
-		punch_area.add_child(collision_shape)
-		add_child(punch_area)
-	
-	# Set collision layer and mask
-	punch_area.collision_layer = 2  # Layer 2 for hands
-	punch_area.collision_mask = 4   # Layer 3 for phantoms
-	
-	# Add to punch group
-	add_to_group("PlayerPunch")
-	
-	# Connect area signals
+func _ready() -> void:
+	punch_area = Area3D.new()
+	punch_area.name = "PunchArea"
+	var collision_shape := CollisionShape3D.new()
+	var sphere_shape := SphereShape3D.new()
+	sphere_shape.radius = 0.075
+	collision_shape.shape = sphere_shape
+	punch_area.add_child(collision_shape)
+	add_child(punch_area)
+	punch_area.collision_layer = 2
+	punch_area.collision_mask = 4
+	punch_area.monitoring = true
 	punch_area.body_entered.connect(_on_punch_area_body_entered)
-	
-	# Initialize position tracking
-	previous_position = global_position
+	add_to_group("%s_hand" % hand_id)
 
-func _physics_process(delta):
-	# Calculate velocity manually
-	current_velocity = (global_position - previous_position) / delta
-	previous_position = global_position
-	
-	if is_button_pressed("grip_click"):
-		var speed = current_velocity.length()
-		if speed > punch_strength_threshold:
-			punch_area.set_meta("current_velocity", speed)
-			punch_area.set_meta("current_direction", current_velocity.normalized())
+func _physics_process(_delta: float) -> void:
+	var pose := get_pose()
+	current_velocity = pose.linear_velocity if pose else Vector3.ZERO
+	_strike_active = is_button_pressed("grip_click") and current_velocity.length() > punch_strength_threshold
+	if not _strike_active:
+		_last_target_id = 0
+		return
+	for body in punch_area.get_overlapping_bodies():
+		_try_strike(body)
 
-func _on_punch_area_body_entered(body: Node3D):
-	if body.is_in_group("phantom") or body.is_in_group("Phantom"):
-		var velocity = punch_area.get_meta("current_velocity", 0.0)
-		var direction = punch_area.get_meta("current_direction", Vector3.ZERO)
-		if velocity > punch_strength_threshold:
-			# Trigger haptic feedback proportional to punch velocity
-			trigger_haptic_feedback(velocity)
-			emit_signal("punch_hit", velocity, direction)
-			body.handle_punch(velocity, global_position, direction)
+func _on_punch_area_body_entered(body: Node3D) -> void:
+	_try_strike(body)
 
-## Trigger haptic feedback scaled by punch velocity
-func trigger_haptic_feedback(punch_velocity: float) -> void:
-	# Calculate haptic magnitude based on velocity
-	var normalized_velocity = clamp(
-		(punch_velocity - min_punch_velocity) / (max_punch_velocity - min_punch_velocity),
-		0.0, 1.0
-	)
-	
-	var haptic_magnitude = lerp(min_haptic_magnitude, max_haptic_magnitude, normalized_velocity)
-	
-	# Create a rumble event for this punch
-	var rumble_event = XRToolsRumbleEvent.new()
-	rumble_event.magnitude = haptic_magnitude
-	rumble_event.duration_ms = int(lerp(min_haptic_duration_ms, max_haptic_duration_ms, normalized_velocity))
+func _try_strike(body: Node3D) -> void:
+	if not _strike_active or not body.has_method("receive_strike"):
+		return
+	var round := get_tree().get_first_node_in_group("RoundController") as RoundController
+	if round and not round.is_round_active():
+		return
+	var now := Time.get_ticks_msec()
+	if body.get_instance_id() == _last_target_id and now - _last_hit_msec < 250:
+		return
+	_last_target_id = body.get_instance_id()
+	_last_hit_msec = now
+	var speed := current_velocity.length()
+	var strike := {
+		"hand_id": hand_id,
+		"speed": speed,
+		"position": global_position,
+		"direction": current_velocity.normalized(),
+		"quality": clampf((speed - punch_strength_threshold) / maxf(max_punch_velocity - punch_strength_threshold, 0.1), 0.0, 1.0),
+	}
+	var result: Dictionary = body.receive_strike(strike)
+	if result.get("valid", false):
+		_trigger_haptic(1.0 if result.get("sweet_spot", false) else 0.65, 140 if result.get("sweet_spot", false) else 90)
+	else:
+		_trigger_haptic(0.2, 45)
+
+func _trigger_haptic(magnitude: float, duration_ms: int) -> void:
+	var rumble_event := XRToolsRumbleEvent.new()
+	rumble_event.magnitude = clampf(magnitude, 0.0, 1.0)
+	rumble_event.duration_ms = duration_ms
 	rumble_event.active_during_pause = false
 	rumble_event.indefinite = false
-	
-	# Add the rumble event to the controller
-	var event_key = "punch_hit_" + str(get_instance_id()) + "_" + str(Time.get_unix_time_from_system())
+	var event_key := "combat_%s_%s" % [hand_id, Time.get_ticks_usec()]
 	XRToolsRumbleManager.add(event_key, rumble_event, [tracker])

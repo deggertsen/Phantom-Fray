@@ -11,10 +11,25 @@ signal music_finished()
 @export var music_directory: String = "res://Assets/Audio/Music/"
 @export var auto_play: bool = true
 @export var shuffle_mode: bool = true
-@export var volume_db: float = -5
+@export var volume_db: float = 0.0
 
 var audio_player: AudioStreamPlayer
-var available_tracks: Array[String] = []
+var available_tracks: Array[AudioStream] = [
+	preload("res://Assets/Audio/Music/galactic_dawn.mp3"),
+	preload("res://Assets/Audio/Music/galactic_shadows.mp3"),
+	preload("res://Assets/Audio/Music/galactic_showdown.mp3"),
+	preload("res://Assets/Audio/Music/galactic_showdown_2.mp3"),
+	preload("res://Assets/Audio/Music/phantom_fall.mp3"),
+	preload("res://Assets/Audio/Music/starlight_clash.mp3"),
+]
+var track_names: Array[String] = [
+	"galactic_dawn",
+	"galactic_shadows",
+	"galactic_showdown",
+	"galactic_showdown_2",
+	"phantom_fall",
+	"starlight_clash",
+]
 var current_track_index: int = 0
 var is_playing: bool = false
 
@@ -22,6 +37,7 @@ func _ready() -> void:
 	# Create audio player
 	audio_player = AudioStreamPlayer.new()
 	audio_player.name = "AudioStreamPlayer"
+	audio_player.bus = &"Music"
 	audio_player.volume_db = volume_db
 	add_child(audio_player)
 	
@@ -36,26 +52,8 @@ func _ready() -> void:
 		_play_random_track()
 
 func _load_music_tracks() -> void:
-	"""Load all audio files from the music directory"""
-	var dir = DirAccess.open(music_directory)
-	if dir == null:
-		push_error("Music directory not found: " + music_directory)
-		return
-	
-	dir.list_dir_begin()
-	var file_name = dir.get_next()
-	
-	while file_name != "":
-		if file_name.ends_with(".mp3") or file_name.ends_with(".wav") or file_name.ends_with(".ogg"):
-			available_tracks.append(file_name)
-		file_name = dir.get_next()
-	
-	dir.list_dir_end()
-	
-	if available_tracks.size() == 0:
-		push_warning("No music files found in: " + music_directory)
-	else:
-		print("Loaded ", available_tracks.size(), " music tracks")
+	# Explicit preloads guarantee every launch track is included in Android exports.
+	print("Loaded ", available_tracks.size(), " music tracks")
 
 func _play_random_track() -> void:
 	"""Play a random track from the available list"""
@@ -72,20 +70,15 @@ func _play_random_track() -> void:
 
 func _play_current_track() -> void:
 	"""Play the currently selected track"""
-	var track_path = music_directory + available_tracks[current_track_index]
-	var audio_stream = load(track_path)
-	
+	var audio_stream := available_tracks[current_track_index]
 	if audio_stream == null:
-		push_error("Failed to load audio file: " + track_path)
-		# Try next track
-		_play_random_track()
+		push_error("Music catalog contains an invalid stream at index %d" % current_track_index)
 		return
-	
 	audio_player.stream = audio_stream
 	audio_player.play()
 	is_playing = true
 	
-	var track_name = available_tracks[current_track_index].get_basename()
+	var track_name := track_names[current_track_index]
 	music_changed.emit(track_name)
 	print("Now playing: ", track_name)
 
@@ -129,8 +122,8 @@ func set_volume(new_volume_db: float) -> void:
 
 func get_current_track_name() -> String:
 	"""Get the name of the currently playing track"""
-	if available_tracks.size() > 0 and current_track_index < available_tracks.size():
-		return available_tracks[current_track_index].get_basename()
+	if track_names.size() > 0 and current_track_index < track_names.size():
+		return track_names[current_track_index]
 	return ""
 
 func get_track_count() -> int:

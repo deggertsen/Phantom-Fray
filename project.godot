@@ -8,17 +8,23 @@
 
 config_version=5
 
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
 [application]
 
 config/name="Phantom Fray"
+config/version="0.9.0"
 run/main_scene="res://main.tscn"
-config/features=PackedStringArray("4.7", "Forward Plus")
+config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
 
 XRToolsUserSettings="*uid://bqgb8i74tm0t"
 XRToolsRumbleManager="*uid://by853dk86g1qw"
+GameSettings="*res://Scripts/Core/game_settings.gd"
 
 [editor_plugins]
 
@@ -33,6 +39,15 @@ Player=""
 3d_physics/layer_1="world"
 3d_physics/layer_2="hands"
 3d_physics/layer_3="phantoms"
+3d_physics/layer_4="phantom_sensors"
+3d_physics/layer_5="ui"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_3d=1
 
 [xr]
 

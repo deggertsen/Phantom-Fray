@@ -1,9 +1,11 @@
 shader_type spatial;
 render_mode blend_mix, cull_back;
 
-uniform float dissolve_amount : hint_range(0, 1) = 0;
-uniform vec3 impact_point;
-uniform vec3 dissolve_direction;
+uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.0;
+uniform vec3 impact_point = vec3(0.0);
+uniform vec3 dissolve_direction = vec3(0.0, 1.0, 0.0);
+uniform vec4 base_color : source_color = vec4(0.55, 0.25, 1.0, 0.88);
+uniform vec4 edge_color : source_color = vec4(0.9, 0.65, 1.0, 1.0);
 
 varying vec3 world_vertex;
 
@@ -12,33 +14,19 @@ void vertex() {
 }
 
 void fragment() {
-	// Get world position for directional effect
-	vec3 dir_to_point = world_vertex - impact_point;
-	float distance_along_direction = dot(dir_to_point, normalize(dissolve_direction));
-	
-	// Create very chunky noise pattern
-	vec2 base_uv = UV * 0.4; // Much larger scale for bigger chunks
-	float noise1 = fract(sin(dot(base_uv, vec2(12.9898, 78.233))) * 43758.5453);
-	float noise2 = fract(sin(dot(base_uv * 1.5 + distance_along_direction * 0.1, vec2(78.233, 12.9898))) * 43758.5453);
-	float noise = mix(noise1, noise2, 0.7);
-	
-	// Sharper thresholds for more defined chunks
-	float edge_width = 0.15;
-	float threshold = dissolve_amount;
-	float edge = smoothstep(threshold - edge_width, threshold, noise);
-	
-	// Discard dissolved pixels
-	if (edge < 0.01) {
+	vec3 direction = length(dissolve_direction) > 0.001 ? normalize(dissolve_direction) : vec3(0.0, 1.0, 0.0);
+	float directional = dot(world_vertex - impact_point, direction) * 0.08;
+	vec2 grid = floor(UV * 18.0) / 18.0;
+	float noise_a = fract(sin(dot(grid, vec2(12.9898, 78.233))) * 43758.5453);
+	float noise_b = fract(sin(dot(grid * 1.7 + directional, vec2(39.3468, 11.135))) * 24634.6345);
+	float noise = mix(noise_a, noise_b, 0.55);
+	float threshold = dissolve_amount * 1.2 - 0.1;
+	float visible = smoothstep(threshold - 0.12, threshold + 0.04, noise) * (1.0 - step(0.999, dissolve_amount));
+	if (visible < 0.02) {
 		discard;
 	}
-	
-	// Keep original color but add fire effect
-	ALBEDO = mix(vec3(1.0, 0.2, 0.0), vec3(0.5, 0.2, 1.0), edge);
-	
-	// Strong emission at the edges
-	float glow = (1.0 - edge) * 3.0;
-	EMISSION = mix(vec3(1.0, 0.5, 0.0), vec3(0.7, 0.0, 0.0), edge) * glow;
-	
-	// Add some alpha for better blending
-	ALPHA = edge;
+	float edge = 1.0 - smoothstep(threshold + 0.01, threshold + 0.16, noise);
+	ALBEDO = mix(base_color.rgb, edge_color.rgb, edge);
+	EMISSION = edge_color.rgb * edge * 2.2 + base_color.rgb * 0.25;
+	ALPHA = base_color.a * visible;
 }

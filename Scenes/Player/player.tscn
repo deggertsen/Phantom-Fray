@@ -1,7 +1,9 @@
-[gd_scene load_steps=9 format=3 uid="uid://cpty7xivtp6y2"]
+[gd_scene load_steps=10 format=3 uid="uid://cpty7xivtp6y2"]
 
-[ext_resource type="Script" uid="uid://d3vfm8tlhrlk8" path="res://Scripts/Player/left_hand.gd" id="1_0pktb"]
-[ext_resource type="Script" uid="uid://ww42vmcd0eku" path="res://Scripts/Player/right_hand.gd" id="2_iu2wh"]
+[ext_resource type="Script" path="res://Scripts/Player/hand_collision.gd" id="1_0pktb"]
+[ext_resource type="Script" path="res://Scripts/UI/round_hud.gd" id="2_iu2wh"]
+[ext_resource type="Script" path="res://Scripts/Presentation/erm_gauntlet.gd" id="7_gauntlet"]
+[ext_resource type="PackedScene" uid="uid://cqhw276realc" path="res://addons/godot-xr-tools/functions/function_pointer.tscn" id="8_pointer"]
 [ext_resource type="PackedScene" uid="uid://bq86r4yll8po" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/left_fullglove_low.tscn" id="2_x0fyp"]
 [ext_resource type="Script" uid="uid://dj5kqlyhyp365" path="res://Scripts/Player/xr_player.gd" id="3_yvoa5"]
 [ext_resource type="PackedScene" uid="uid://xqimcf20s2jp" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_fullglove_low.tscn" id="4_o1mwp"]
@@ -17,19 +19,50 @@
 [node name="LeftHandController" type="XRController3D" parent="."]
 tracker = &"left_hand"
 script = ExtResource("1_0pktb")
+hand_id = &"left"
 
 [node name="LeftHand" parent="LeftHandController" instance=ExtResource("2_x0fyp")]
+
+[node name="ERMGauntlet" type="Node3D" parent="LeftHandController"]
+script = ExtResource("7_gauntlet")
+hand_color = Color(1.0, 0.78, 0.08, 1.0)
+mirror_x = true
+
+[node name="MenuPointer" parent="LeftHandController" instance=ExtResource("8_pointer")]
+enabled = false
+distance = 8.0
+show_laser = 2
+laser_length = 1
+show_target = true
+target_radius = 0.018
 
 [node name="LifeForceMeter" type="Node3D" parent="LeftHandController"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, -0.05)
 script = ExtResource("6_feedback")
 life_force_manager_path = NodePath("../../LifeForceManager")
 
-[node name="RightHandController" type="XRController3D" parent="."]
-tracker = &"right_hand"
+[node name="RoundHUD" type="Node3D" parent="LeftHandController"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.12, -0.075)
 script = ExtResource("2_iu2wh")
 
+[node name="RightHandController" type="XRController3D" parent="."]
+tracker = &"right_hand"
+script = ExtResource("1_0pktb")
+hand_id = &"right"
+
 [node name="RightHand" parent="RightHandController" instance=ExtResource("4_o1mwp")]
+
+[node name="ERMGauntlet" type="Node3D" parent="RightHandController"]
+script = ExtResource("7_gauntlet")
+hand_color = Color(0.05, 0.55, 1.0, 1.0)
+
+[node name="MenuPointer" parent="RightHandController" instance=ExtResource("8_pointer")]
+enabled = false
+distance = 8.0
+show_laser = 2
+laser_length = 1
+show_target = true
+target_radius = 0.018
 
 [node name="CharacterBody3D" type="CharacterBody3D" parent="."]
 script = ExtResource("3_yvoa5")

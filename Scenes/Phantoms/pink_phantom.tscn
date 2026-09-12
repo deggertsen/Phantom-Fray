@@ -1,5 +1,27 @@
-[gd_scene load_steps=2 format=3 uid="uid://diw6ch678tdbi"]
+[gd_scene load_steps=5 format=3 uid="uid://diw6ch678tdbi"]
 
-[ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="1_6bx0f"]
+[ext_resource type="PackedScene" uid="uid://cstxepa784o20" path="res://Scenes/Phantoms/base_phantom.tscn" id="1_base"]
+[ext_resource type="Script" path="res://Scripts/Phantoms/pink_phantom.gd" id="2_script"]
 
-[node name="BasePhantom" instance=ExtResource("1_6bx0f")]
+[sub_resource type="CylinderMesh" id="LaneMesh"]
+top_radius = 0.035
+bottom_radius = 0.16
+height = 3.0
+radial_segments = 10
+
+[sub_resource type="StandardMaterial3D" id="LaneMaterial"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.12, 0.58, 0.24)
+emission_enabled = true
+emission = Color(1, 0.12, 0.58, 1)
+emission_energy_multiplier = 1.0
+
+[node name="PinkPhantom" instance=ExtResource("1_base")]
+script = ExtResource("2_script")
+
+[node name="DodgeTelegraph" type="MeshInstance3D" parent="." index="3"]
+position = Vector3(0, 0, -1.5)
+rotation = Vector3(1.5708, 0, 0)
+mesh = SubResource("LaneMesh")
+material_override = SubResource("LaneMaterial")

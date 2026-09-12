@@ -11,7 +11,7 @@ signal damage_applied(amount: float, current: float)
 enum State { HEALTHY, CAUTION, DANGER, CRITICAL, DEPLETED }
 
 @export var max_life_force: float = 100.0
-@export var drain_on_basic_hit: float = 5.0
+@export var drain_on_basic_hit: float = 20.0
 @export var recovery_per_second: float = 1.0
 @export var recovery_delay: float = 3.0
 @export var enable_debug_keys: bool = true

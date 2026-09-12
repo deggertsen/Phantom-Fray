@@ -1,3 +1,13 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+export_credentials.cfg
+*.keystore
+*.jks
+*.apk
+*.aab
+builds/
+reports/
+
+.vscode/settings.local.json
+.claude/settings.local.json

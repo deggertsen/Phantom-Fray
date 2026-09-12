@@ -7,5 +7,5 @@ script = ExtResource("1_0abc2")
 music_directory = &"res://Assets/Audio/Music/"
 auto_play = true
 shuffle_mode = true
-volume_db = -10.0
+volume_db = 0.0
 

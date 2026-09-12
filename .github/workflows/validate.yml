@@ -1,0 +1,21 @@
+name: Validate Godot Project
+
+on:
+  push:
+    branches: [main, production-roadmap-through-phase-5]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          python3 -c "import zipfile; zipfile.ZipFile('godot.zip').extractall('.')"
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+      - name: Validate project
+        env:
+          GODOT_BIN: ${{ github.workspace }}/Godot_v4.7.1-stable_linux.x86_64
+        run: bash tools/validate_project.sh

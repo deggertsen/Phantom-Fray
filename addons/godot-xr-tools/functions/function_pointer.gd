@@ -284,6 +284,31 @@ func _process(delta):
 	last_collided_at = new_at
 
 
+func reset_pointer_state() -> void:
+	if last_target:
+		XRToolsPointerEvent.exited(self, last_target, last_collided_at)
+	last_target = null
+	last_collided_at = Vector3.ZERO
+	target = null
+	_active_controller = _controller if _controller else _controller_right_node
+	if is_inside_tree():
+		_update_pointer()
+
+
+func click_current_target() -> bool:
+	if not enabled or not $RayCast.is_colliding():
+		return false
+	var clicked_target: Object = $RayCast.get_collider()
+	var clicked_at: Vector3 = $RayCast.get_collision_point()
+	if clicked_target == null:
+		return false
+	XRToolsPointerEvent.pressed(self, clicked_target, clicked_at)
+	XRToolsPointerEvent.released(self, clicked_target, clicked_at)
+	target = null
+	last_collided_at = Vector3.ZERO
+	return true
+
+
 # Set pointer enabled property
 func set_enabled(p_enabled : bool) -> void:
 	enabled = p_enabled
