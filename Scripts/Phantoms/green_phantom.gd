@@ -1,6 +1,6 @@
 extends Phantom
 
-@export var block_window_seconds: float = 0.45
+@export var block_window_seconds: float = 0.55
 
 var _first_hand: StringName = &""
 var _block_window_remaining: float = 0.0
@@ -11,6 +11,16 @@ func _ready() -> void:
 	move_speed *= 1.15
 	base_score = 180
 	rift_damage = 16
+	lateral_bias = 0.0
+	height_bias = -0.28
+	lateral_reach_min = 0.0
+	lateral_reach_max = 0.16
+	height_jitter = 0.22
+	engage_distance = 2.05
+	pattern_telegraph_seconds = 0.72
+	pattern_commit_speed = 5.4
+	pattern_commit_seconds = 0.5
+	body_widen = 1.5
 	super()
 
 func _process(delta: float) -> void:

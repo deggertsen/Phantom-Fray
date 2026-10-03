@@ -36,9 +36,16 @@ func _process(delta: float) -> void:
 		if material:
 			material.emission_energy_multiplier = 1.1 + sin(_holo_time * 1.8 + index) * 0.35
 
-func show_main_menu() -> void:
+func show_main_menu(deploy_detail: String = "") -> void:
 	_show()
-	_menu.show_main_menu()
+	if deploy_detail == "":
+		_menu.show_main_menu()
+	else:
+		_menu.show_main_menu(deploy_detail)
+
+func show_operations(entries: Array[Dictionary]) -> void:
+	_show()
+	_menu.show_operations(entries)
 
 func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
 	_show()
@@ -60,9 +67,14 @@ func show_suspended() -> void:
 	_show()
 	_menu.show_suspended()
 
-func show_results(outcome: StringName, score: int) -> void:
+func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "") -> void:
 	_show()
-	_menu.show_results(outcome, score)
+	_menu.show_results(outcome, score, debrief, next_title)
+
+func activate_at_viewport_point(point: Vector2) -> bool:
+	if _menu == null or not _is_visible:
+		return false
+	return _menu.activate_at_viewport_point(point)
 
 func hide_menu() -> void:
 	_is_visible = false

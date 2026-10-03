@@ -13,6 +13,9 @@ var _manager: Node
 var _fill_mesh: MeshInstance3D
 var _label: Label3D
 var _tint_mesh: MeshInstance3D
+var _distort_mesh: MeshInstance3D
+var _distort_material: ShaderMaterial
+var _distort_tween: Tween
 var _heartbeat: AudioStreamPlayer
 var _drain_blip: AudioStreamPlayer
 var _depletion_stinger: AudioStreamPlayer
@@ -107,6 +110,23 @@ func _build_camera_tint() -> void:
 	_tint_mesh.material_override = _tint_material
 	_tint_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	camera.add_child(_tint_mesh)
+	_build_damage_distort(camera)
+
+func _build_damage_distort(camera: XRCamera3D) -> void:
+	_distort_mesh = MeshInstance3D.new()
+	_distort_mesh.name = "DamageDistort"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.6, 2.6)
+	_distort_mesh.mesh = quad
+	_distort_mesh.position = Vector3(0.0, 0.0, -0.2)
+	_distort_material = ShaderMaterial.new()
+	_distort_material.shader = preload("res://Resources/Materials/damage_distort.gdshader")
+	_distort_material.render_priority = 12
+	_distort_material.set_shader_parameter("strength", 0.0)
+	_distort_mesh.material_override = _distort_material
+	_distort_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_distort_mesh.visible = false
+	camera.add_child(_distort_mesh)
 
 func _build_audio() -> void:
 	_heartbeat = AudioStreamPlayer.new()
@@ -154,6 +174,50 @@ func _on_life_force_state_changed(state: StringName) -> void:
 func _on_damage_applied(_amount: float, _current: float) -> void:
 	if _drain_blip:
 		_drain_blip.play()
+	_flash_possession()
+	_distort_vision()
+	_rumble_possession()
+
+func _flash_possession() -> void:
+	if _tint_material == null:
+		return
+	var settings := get_node_or_null("/root/GameSettings")
+	var scale := 0.4 if settings and settings.reduced_flashes else 1.0
+	var resting := _tint_material.albedo_color.a
+	_tint_material.albedo_color = Color(0.62, 0.02, 0.08, 0.34 * scale)
+	var tween := create_tween()
+	tween.tween_property(_tint_material, "albedo_color:a", resting, 0.55).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+
+func _distort_vision() -> void:
+	if _distort_material == null or _distort_mesh == null:
+		return
+	var settings := get_node_or_null("/root/GameSettings")
+	var reduced: bool = settings != null and bool(settings.reduced_flashes)
+	var peak := 0.38 if reduced else 1.0
+	var duration := 0.34 if reduced else 0.68
+	_distort_mesh.visible = true
+	_set_distort_strength(peak)
+	if _distort_tween != null and _distort_tween.is_valid():
+		_distort_tween.kill()
+	_distort_tween = create_tween()
+	_distort_tween.tween_method(_set_distort_strength, peak, 0.0, duration).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	_distort_tween.tween_callback(_hide_distort)
+
+func _set_distort_strength(value: float) -> void:
+	if _distort_material:
+		_distort_material.set_shader_parameter("strength", value)
+
+func _hide_distort() -> void:
+	if _distort_mesh:
+		_distort_mesh.visible = false
+
+func _rumble_possession() -> void:
+	var rumble := XRToolsRumbleEvent.new()
+	rumble.magnitude = 0.9
+	rumble.duration_ms = 180
+	rumble.active_during_pause = false
+	rumble.indefinite = false
+	XRToolsRumbleManager.add("possession_%s" % Time.get_ticks_usec(), rumble)
 
 func _on_life_force_depleted() -> void:
 	if _heartbeat and _heartbeat.playing:

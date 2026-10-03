@@ -59,10 +59,15 @@ func _try_strike(body: Node3D) -> void:
 		"quality": clampf((speed - punch_strength_threshold) / maxf(max_punch_velocity - punch_strength_threshold, 0.1), 0.0, 1.0),
 	}
 	var result: Dictionary = body.receive_strike(strike)
-	if result.get("valid", false):
-		_trigger_haptic(1.0 if result.get("sweet_spot", false) else 0.65, 140 if result.get("sweet_spot", false) else 90)
+	var kind: StringName = result.get("resolution_kind", &"")
+	if kind == &"block_half":
+		_trigger_haptic(0.55, 80)
+	elif result.get("valid", false):
+		var sweet: bool = result.get("sweet_spot", false)
+		var on_beat: bool = result.get("on_beat", false)
+		_trigger_haptic(1.0 if sweet or on_beat else 0.7, 150 if sweet else 100)
 	else:
-		_trigger_haptic(0.2, 45)
+		_trigger_haptic(0.18 if kind == &"not_open" else 0.28, 40)
 
 func _trigger_haptic(magnitude: float, duration_ms: int) -> void:
 	var rumble_event := XRToolsRumbleEvent.new()

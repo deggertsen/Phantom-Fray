@@ -6,6 +6,7 @@ uniform vec3 impact_point = vec3(0.0);
 uniform vec3 dissolve_direction = vec3(0.0, 1.0, 0.0);
 uniform vec4 base_color : source_color = vec4(0.55, 0.25, 1.0, 0.88);
 uniform vec4 edge_color : source_color = vec4(0.9, 0.65, 1.0, 1.0);
+uniform float alert : hint_range(0.0, 1.0) = 0.0;
 
 varying vec3 world_vertex;
 
@@ -26,7 +27,7 @@ void fragment() {
 		discard;
 	}
 	float edge = 1.0 - smoothstep(threshold + 0.01, threshold + 0.16, noise);
-	ALBEDO = mix(base_color.rgb, edge_color.rgb, edge);
-	EMISSION = edge_color.rgb * edge * 2.2 + base_color.rgb * 0.25;
+	ALBEDO = mix(base_color.rgb, edge_color.rgb, max(edge, alert * 0.35));
+	EMISSION = edge_color.rgb * edge * (2.2 + alert * 3.4) + base_color.rgb * (0.25 + alert * 1.15);
 	ALPHA = base_color.a * visible;
 }

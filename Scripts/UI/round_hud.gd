@@ -16,6 +16,7 @@ func _ready() -> void:
 	if controller:
 		controller.score_changed.connect(_on_score_changed)
 		controller.rift_progress_changed.connect(_on_progress_changed)
+		controller.mission_status_changed.connect(_on_mission_status)
 		controller.combo_changed.connect(_on_combo_changed)
 		controller.time_changed.connect(_on_time_changed)
 
@@ -42,7 +43,11 @@ func _on_score_changed(total: int, _delta: int, _reason: StringName) -> void:
 	_score_label.text = "SCORE %06d" % total
 
 func _on_progress_changed(closed: int, total: int) -> void:
-	_progress_label.text = "RIFTS %d/%d" % [closed, total]
+	if _progress_label.text.begins_with("RIFTS"):
+		_progress_label.text = "RIFTS %d/%d" % [closed, total]
+
+func _on_mission_status(text: String) -> void:
+	_progress_label.text = text
 
 func _on_combo_changed(_streak: int, multiplier: float) -> void:
 	_combo_label.text = "x%.2f" % multiplier

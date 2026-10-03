@@ -5,6 +5,8 @@ signal score_changed(total: int, delta: int, reason: StringName)
 signal combo_changed(streak: int, multiplier: float)
 signal rift_progress_changed(closed: int, total: int)
 signal time_changed(seconds_remaining: float)
+signal mission_status_changed(text: String)
+signal pressure_changed(ratio: float)
 signal round_finished(outcome: StringName, score: int)
 
 @export var round_duration: float = 240.0
@@ -28,6 +30,7 @@ var _director: RiftDirector
 var _life_force: LifeForceManager
 var _player: Node3D
 var _message: Label3D
+var _mission: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("RoundController")
@@ -41,7 +44,9 @@ func _ready() -> void:
 		return
 	_director.phantom_resolved.connect(_on_phantom_resolved)
 	_director.player_damaged.connect(_on_player_damaged)
+	_director.strike_rejected.connect(_on_strike_rejected)
 	_director.rift_closed.connect(_on_rift_closed)
+	_director.rift_spawned.connect(_on_rift_spawned)
 	_director.all_rifts_closed.connect(_on_all_rifts_closed)
 	_life_force.life_force_depleted.connect(_on_life_force_depleted)
 	# GameFlowController starts the round after the player selects Deploy.
@@ -55,9 +60,12 @@ func is_round_in_progress() -> bool:
 func can_resume_round() -> bool:
 	return _paused and not _finished
 
-func begin_round() -> void:
+func begin_round(mission: Dictionary = {}) -> void:
 	if _round_active or _countdown_active or _finished or _director == null:
 		return
+	_mission = mission
+	if mission.has("duration"):
+		round_duration = float(mission.get("duration", round_duration))
 	seconds_remaining = round_duration
 	_last_emitted_second = -1
 	_emit_time_if_changed()
@@ -114,9 +122,12 @@ func _process(delta: float) -> void:
 			_show_message("MISSION STARTS IN %d" % displayed, Color(0.35, 0.85, 1.0), 0.0)
 		if _countdown_remaining <= 0.0:
 			_countdown_active = false
-			_show_message("CLOSE THREE RIFTS", Color(0.7, 0.95, 1.0), 1.2)
+			var bark := String(_mission.get("start_line", _mission.get("objective", "CLOSE THE RIFTS")))
+			_show_message(bark, Color(0.7, 0.95, 1.0), 1.8)
 			_round_active = true
-			_director.start_round()
+			_director.start_round(_mission)
+			_emit_status()
+			_emit_pressure()
 		return
 	if not _round_active:
 		return
@@ -133,12 +144,15 @@ func _on_phantom_resolved(result: Dictionary) -> void:
 	if not _round_active:
 		return
 	var sweet: bool = result.get("sweet_spot", false)
+	var on_beat: bool = result.get("on_beat", false)
+	sweet_streak += 1
+	var gain := 0.15
 	if sweet:
-		sweet_streak += 1
-		multiplier = minf(1.0 + sweet_streak * 0.25, maximum_multiplier)
-		_combo_remaining = combo_timeout
-	else:
-		_reset_combo()
+		gain += 0.2
+	if on_beat:
+		gain += 0.1
+	multiplier = minf(multiplier + gain, maximum_multiplier)
+	_combo_remaining = combo_timeout
 	var base_points: int = result.get("base_score", 0)
 	var awarded := int(round(base_points * multiplier))
 	score += awarded
@@ -151,9 +165,33 @@ func _on_player_damaged(amount: float) -> void:
 	_reset_combo()
 	_life_force.apply_damage(amount)
 
+func _on_strike_rejected(_reason: StringName) -> void:
+	if not _round_active:
+		return
+	_reset_combo()
+
+func _on_rift_spawned(_rift_id: int, _rift: Node3D) -> void:
+	if not _round_active or _director == null:
+		return
+	var index := _director.spawned_rifts - 1
+	var barks: Array = _mission.get("open_barks", [])
+	if index > 0 and index < barks.size():
+		var bark := String(barks[index])
+		if bark != "":
+			_show_message(bark, Color(1.0, 0.78, 0.35), 1.6)
+	_emit_status()
+	_emit_pressure()
+
 func _on_rift_closed(_rift_id: int, closed: int, total: int) -> void:
 	rift_progress_changed.emit(closed, total)
-	_show_message("RIFT %d OF %d SEALED" % [closed, total], Color(0.3, 1.0, 0.8), 1.4)
+	_emit_status()
+	if closed >= total:
+		return
+	var lines: Array = _mission.get("seal_lines", [])
+	var text := "RIFT %d OF %d SEALED" % [closed, total]
+	if closed - 1 < lines.size():
+		text = String(lines[closed - 1])
+	_show_message(text, Color(0.3, 1.0, 0.8), 1.5)
 
 func _on_all_rifts_closed() -> void:
 	_finish_round(&"victory")
@@ -187,6 +225,41 @@ func _emit_time_if_changed() -> void:
 		return
 	_last_emitted_second = displayed_second
 	time_changed.emit(seconds_remaining)
+
+func get_debrief(outcome: StringName) -> String:
+	match outcome:
+		&"victory":
+			return String(_mission.get("victory_line", "All rifts sealed."))
+		&"defeat":
+			return String(_mission.get("defeat_line", "Life force collapsed before the seal."))
+		_:
+			return String(_mission.get("timeout_line", "The window closed with rifts still open."))
+
+func _emit_status() -> void:
+	mission_status_changed.emit(_status_text())
+
+func _emit_pressure() -> void:
+	if _director == null:
+		return
+	var total := maxi(_director.total_rifts, 1)
+	var index := maxi(_director.spawned_rifts - 1, 0)
+	var ratio := 0.0 if total <= 1 else float(index) / float(total - 1)
+	pressure_changed.emit(ratio)
+
+func _status_text() -> String:
+	var total := _director.total_rifts if _director else 3
+	var closed := _director.closed_rifts if _director else 0
+	var codename := String(_mission.get("codename", "RIFTS"))
+	if closed >= total and total > 0:
+		return "%s  SEALED" % codename
+	var current := mini(closed + 1, total)
+	var labels: Array = _mission.get("pressure_labels", [])
+	var pressure := ""
+	if closed < labels.size():
+		pressure = "  •  %s" % String(labels[closed])
+	if _mission.is_empty():
+		return "RIFTS %d/%d" % [closed, total]
+	return "%s  %d/%d%s" % [codename, current, total, pressure]
 
 func _reset_combo() -> void:
 	if sweet_streak == 0 and is_equal_approx(multiplier, 1.0):

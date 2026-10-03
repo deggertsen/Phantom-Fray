@@ -17,8 +17,12 @@ var _tutorial_step: int = 0
 var _settings: Node
 var _last_outcome: StringName = &""
 var _last_score: int = 0
+var _active_mission_id: String = ""
+var _last_debrief: String = ""
+var _next_mission_title: String = ""
 var _menu_input_armed: bool = false
 var _results_pointer_warmup: float = 0.0
+var _results_action_locked: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -32,8 +36,15 @@ func _ready() -> void:
 	if _presenter:
 		_presenter.action_requested.connect(_on_menu_action)
 	_connect_controller_buttons()
-	_show_main_menu()
-	_arm_menu_input_after_release()
+	var pending := ""
+	if _settings:
+		pending = String(_settings.pending_mission_id)
+		_settings.pending_mission_id = ""
+	if pending != "" and not MissionCatalog.get_mission(pending).is_empty():
+		_start_mission(pending)
+	else:
+		_show_main_menu()
+		_arm_menu_input_after_release()
 
 func _process(delta: float) -> void:
 	if _state != STATE_RESULTS or _results_pointer_warmup <= 0.0:
@@ -49,14 +60,13 @@ func _connect_controller_buttons() -> void:
 	for path in [NodePath("LeftHandController"), NodePath("RightHandController")]:
 		var controller := _player.get_node_or_null(path) as XRController3D
 		if controller:
-			controller.button_pressed.connect(_on_controller_button_pressed)
+			controller.button_pressed.connect(_on_controller_button_pressed.bind(controller))
 
-func _on_controller_button_pressed(button: String) -> void:
+func _on_controller_button_pressed(button: String, controller: XRController3D = null) -> void:
 	if button == "trigger_click" and _state == STATE_RESULTS:
-		for controller_name in ["LeftHandController", "RightHandController"]:
-			var pointer := _player.get_node_or_null(NodePath("%s/MenuPointer" % controller_name)) as XRToolsFunctionPointer
-			if pointer and pointer.click_current_target():
-				return
+		if _menu_input_armed and controller:
+			_activate_results_from_controller(controller)
+		return
 	# The Meta system button owns recentering. We only consume the app-menu action for pause.
 	if button == "menu_button" and _state == STATE_PLAYING and _round and _round.is_round_in_progress():
 		_pause_game()
@@ -67,9 +77,16 @@ func _on_menu_action(action: StringName) -> void:
 			return
 		_menu_input_armed = false
 		get_tree().create_timer(0.25).timeout.connect(_arm_menu_input_after_release)
+	if String(action).begins_with("mission_"):
+		_start_mission(String(action).trim_prefix("mission_"))
+		return
 	match action:
 		&"deploy":
-			_start_mission()
+			_start_mission("")
+		&"operations":
+			_show_operations()
+		&"operations_back":
+			_show_main_menu()
 		&"training", &"results_training":
 			_start_tutorial()
 		&"settings":
@@ -130,9 +147,14 @@ func _on_menu_action(action: StringName) -> void:
 			_show_pause_menu()
 		&"abort_confirm":
 			get_tree().reload_current_scene()
-		&"retry":
-			get_tree().reload_current_scene()
-		&"results_menu":
+		&"retry", &"next_mission", &"results_menu":
+			if _results_action_locked:
+				return
+			_results_action_locked = true
+			if action == &"retry" and _settings:
+				_settings.pending_mission_id = _active_mission_id
+			elif action == &"next_mission" and _settings:
+				_settings.pending_mission_id = MissionCatalog.unlocked_followup(_active_mission_id, _settings)
 			get_tree().reload_current_scene()
 
 func _arm_menu_input_after_release() -> void:
@@ -170,13 +192,25 @@ func _show_main_menu() -> void:
 	_state = STATE_MENU
 	_set_menu_visible(true)
 	if _presenter:
-		_presenter.show_main_menu()
+		_presenter.show_main_menu(MissionCatalog.deploy_detail(_settings))
 
-func _start_mission() -> void:
+func _show_operations() -> void:
+	_state = STATE_MENU
+	_set_menu_visible(true)
+	if _presenter:
+		_presenter.show_operations(MissionCatalog.operation_entries(_settings))
+
+func _start_mission(mission_id: String = "") -> void:
+	var resolved_id := mission_id if mission_id != "" else MissionCatalog.next_unlocked_id(_settings)
+	var mission := MissionCatalog.get_mission(resolved_id)
+	if mission.is_empty() or not MissionCatalog.is_unlocked(resolved_id, _settings):
+		_show_main_menu()
+		return
+	_active_mission_id = resolved_id
 	_state = STATE_PLAYING
 	_set_menu_visible(false)
 	if _round:
-		_round.begin_round()
+		_round.begin_round(mission)
 
 func _start_tutorial() -> void:
 	_state = STATE_TUTORIAL
@@ -219,29 +253,29 @@ func _tutorial_pages() -> Array[Dictionary]:
 		{
 			"eyebrow": "MODULE 03 // RESONANCE PHANTOMS",
 			"title": "MATCH THE GAUNTLET",
-			"body": "YELLOW = LEFT hand. BLUE = RIGHT hand. Hit the glowing point for bonus score and rift damage.",
-			"callout": "Wrong-hand strikes are rejected. Aim—do not swing wildly.",
+			"body": "YELLOW rears back and lunges at your LEFT. BLUE lunges RIGHT. Strike during the glow. The bright point is a crit.",
+			"callout": "A clean answer keeps your chain. A sweet hit on the lunge builds it faster. The wrong hand breaks it.",
 			"color": Color("a26cff"),
 		},
 		{
 			"eyebrow": "MODULE 04 // DEFENSIVE RESPONSES",
 			"title": "BLOCK GREEN • DODGE PINK",
-			"body": "GREEN = strike with both hands quickly. PINK = move out of its locked attack lane.",
-			"callout": "Pink cannot be punched. Side-step or duck with controlled movement.",
+			"body": "GREEN widens, then crashes your chest. Catch it with both hands on that beat. PINK paints a lane, then charges it.",
+			"callout": "The first hand on a Green is a catch, not a miss. Pink cannot be punched. Leave the lane.",
 			"color": Color("ffc85a"),
 		},
 		{
 			"eyebrow": "MODULE 05 // LIFE FORCE",
 			"title": "DO NOT LET THEM INSIDE",
-			"body": "Phantom contact drains life force. Your wrist shows life, score, multiplier, rifts, and time.",
-			"callout": "Life recovers when clear. Low life increases heartbeat and danger tint.",
+			"body": "If a phantom reaches your head, it possesses you: it vanishes and drains a chunk of life force. Your vision blurs for a moment and the wrist meter drops.",
+			"callout": "Life recovers when the air is clear. Low life raises the heartbeat.",
 			"color": Color("ff5d78"),
 		},
 		{
 			"eyebrow": "MODULE 06 // MISSION OBJECTIVE",
-			"title": "SEAL THREE RIFTS",
-			"body": "Defeat Phantoms to weaken their rift. Seal three rifts before the four-minute window closes.",
-			"callout": "Training complete. Return to Main Menu, then select Deploy Mission for live combat.",
+			"title": "SEAL THE RIFT, THEN THE NEXT",
+			"body": "A column of light marks each open rift. If it is outside your view, a RIFT chevron sits at the edge of your sight until you turn to face it.",
+			"callout": "Each rift hits harder than the last. Deploy First Light when you are ready.",
 			"color": Color("56dff5"),
 		},
 	]
@@ -314,6 +348,13 @@ func recenter_current_panel() -> void:
 func _on_round_finished(outcome: StringName, score: int) -> void:
 	_last_outcome = outcome
 	_last_score = score
+	_last_debrief = _round.get_debrief(outcome) if _round else ""
+	_next_mission_title = ""
+	if outcome == &"victory" and _settings:
+		_settings.mark_mission_cleared(_active_mission_id)
+		var follow_id := MissionCatalog.unlocked_followup(_active_mission_id, _settings)
+		if follow_id != "":
+			_next_mission_title = String(MissionCatalog.get_mission(follow_id).get("title", ""))
 	_state = STATE_RESULTS
 	_menu_input_armed = false
 	_show_results()
@@ -321,14 +362,32 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 
 func _show_results() -> void:
 	_state = STATE_RESULTS
-	_rebuild_menu_pointers()
+	_results_action_locked = false
 	_set_menu_visible(true)
 	_menu_input_armed = false
-	_results_pointer_warmup = 1.0
+	_results_pointer_warmup = 0.35
 	if _presenter:
-		_presenter.show_results(_last_outcome, _last_score)
-	_set_menu_pointers_enabled(true)
+		_presenter.show_results(_last_outcome, _last_score, _last_debrief, _next_mission_title)
+	_refresh_menu_pointers()
 	call_deferred("_reset_results_pointers_after_render")
+
+func _activate_results_from_controller(controller: XRController3D) -> void:
+	var pointer := controller.get_node_or_null("MenuPointer") as XRToolsFunctionPointer
+	if pointer == null or _presenter == null:
+		return
+	pointer.enabled = true
+	# https://docs.godotengine.org/en/stable/classes/class_raycast3d.html#class-raycast3d-method-force-raycast-update
+	var ray := pointer.get_node_or_null("RayCast") as RayCast3D
+	if ray == null:
+		return
+	ray.force_raycast_update()
+	if not ray.is_colliding():
+		return
+	var body := ray.get_collider()
+	if body == null or not body.has_method("global_to_viewport"):
+		return
+	var point: Vector2 = body.global_to_viewport(ray.get_collision_point())
+	_presenter.activate_at_viewport_point(point)
 
 func _reset_results_pointers_after_render() -> void:
 	await get_tree().process_frame
@@ -345,28 +404,21 @@ func _set_menu_visible(is_visible: bool) -> void:
 	else:
 		_presenter.hide_menu()
 
-func _rebuild_menu_pointers() -> void:
+func _refresh_menu_pointers() -> void:
 	if _player == null:
 		return
 	for controller_name in ["LeftHandController", "RightHandController"]:
-		var controller := _player.get_node_or_null(NodePath(controller_name)) as XRController3D
-		if controller == null:
+		var pointer := _player.get_node_or_null(NodePath("%s/MenuPointer" % controller_name)) as XRToolsFunctionPointer
+		if pointer == null:
 			continue
-		var old_pointer := controller.get_node_or_null("MenuPointer")
-		if old_pointer:
-			controller.remove_child(old_pointer)
-			old_pointer.queue_free()
-		var pointer := preload("res://addons/godot-xr-tools/functions/function_pointer.tscn").instantiate() as XRToolsFunctionPointer
-		pointer.name = "MenuPointer"
-		pointer.enabled = true
-		pointer.distance = 8.0
-		pointer.show_laser = XRToolsFunctionPointer.LaserShow.SHOW
-		pointer.laser_length = XRToolsFunctionPointer.LaserLength.COLLIDE
-		pointer.show_target = true
-		pointer.target_radius = 0.018
 		pointer.process_mode = Node.PROCESS_MODE_ALWAYS
-		controller.add_child(pointer)
-		pointer.call_deferred("reset_pointer_state")
+		pointer.enabled = true
+		if pointer.has_method("reset_pointer_state"):
+			pointer.reset_pointer_state()
+		var ray := pointer.get_node_or_null("RayCast") as RayCast3D
+		if ray:
+			ray.enabled = true
+			ray.force_raycast_update()
 
 func _set_menu_pointers_enabled(enabled: bool) -> void:
 	if _player == null:

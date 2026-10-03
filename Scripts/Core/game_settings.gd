@@ -9,6 +9,8 @@ var critical_db: float = -3.0
 var haptic_scale: float = 1.0
 var reduced_flashes: bool = false
 var tutorial_completed: bool = false
+var cleared_missions: PackedStringArray = PackedStringArray()
+var pending_mission_id: String = ""
 
 func _ready() -> void:
 	load_settings()
@@ -27,6 +29,11 @@ func load_settings() -> void:
 	XRToolsUserSettings.haptics_scale = haptic_scale
 	reduced_flashes = config.get_value("comfort", "reduced_flashes", reduced_flashes)
 	tutorial_completed = config.get_value("progress", "tutorial_completed", tutorial_completed)
+	var saved_clears: Variant = config.get_value("progress", "cleared_missions", PackedStringArray())
+	if saved_clears is PackedStringArray:
+		cleared_missions = saved_clears
+	elif saved_clears is Array:
+		cleared_missions = PackedStringArray(saved_clears)
 
 func save_settings() -> void:
 	var config := ConfigFile.new()
@@ -37,6 +44,7 @@ func save_settings() -> void:
 	config.set_value("comfort", "haptic_scale", haptic_scale)
 	config.set_value("comfort", "reduced_flashes", reduced_flashes)
 	config.set_value("progress", "tutorial_completed", tutorial_completed)
+	config.set_value("progress", "cleared_missions", cleared_missions)
 	config.save(SETTINGS_PATH)
 	apply_audio()
 
@@ -71,6 +79,15 @@ func adjust_haptics(direction: int) -> void:
 	haptic_scale = levels[clampi(index + direction, 0, levels.size() - 1)]
 	XRToolsUserSettings.haptics_scale = haptic_scale
 	XRToolsUserSettings.save()
+	save_settings()
+
+func has_cleared_mission(mission_id: String) -> bool:
+	return mission_id in cleared_missions
+
+func mark_mission_cleared(mission_id: String) -> void:
+	if mission_id == "" or mission_id in cleared_missions:
+		return
+	cleared_missions.append(mission_id)
 	save_settings()
 
 func cycle_music_volume() -> void:

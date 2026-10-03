@@ -55,15 +55,21 @@ func _update_thumbstick_scroll(delta: float) -> void:
 		return
 	_settings_scroll.scroll_vertical += int(-scroll_input * 620.0 * delta)
 
-func show_main_menu() -> void:
+func show_main_menu(deploy_detail: String = "Seal the next live rift before the window collapses") -> void:
 	_begin_view(&"DEPLOYMENT", "RSF // OPERATOR INTERFACE", "PHANTOM FRAY", "RESONANCE RISING", COLOR_CYAN)
-	_add_copy("THE BREACH IS ACTIVE", "Choose an operation. Nothing starts until you select it.", COLOR_MUTED)
+	_add_copy("THE BREACH IS ACTIVE", "Deploy the next contract, or open Operations and choose.", COLOR_MUTED)
 	_content.add_child(_make_action_button(
 		&"deploy",
-		"⚡  DEPLOY MISSION\nLIVE COMBAT OPERATION\nSeal three active rifts before the window collapses",
+		"⚡  DEPLOY MISSION\nLIVE COMBAT OPERATION\n%s" % deploy_detail,
 		COLOR_MAGENTA,
-		Vector2(0, 176),
+		Vector2(0, 150),
 		true
+	))
+	_content.add_child(_make_action_button(
+		&"operations",
+		"◉  OPERATIONS\nCHOOSE A CONTRACT\nThree live operations from Dr. Chen",
+		COLOR_AMBER,
+		Vector2(0, 96)
 	))
 	var secondary := HBoxContainer.new()
 	secondary.add_theme_constant_override("separation", 22)
@@ -71,17 +77,37 @@ func show_main_menu() -> void:
 	_content.add_child(secondary)
 	secondary.add_child(_make_action_button(
 		&"training",
-		"◈  TRAINING\nLEARN THE COMBAT SYSTEM\nRecommended before first deployment",
+		"◈  START TRAINING\nLEARN THE COMBAT SYSTEM\nRecommended before first deployment",
 		COLOR_VIOLET,
-		Vector2(0, 132)
+		Vector2(0, 118)
 	))
 	secondary.add_child(_make_action_button(
 		&"settings",
-		"⌁  SETTINGS\nAUDIO • HAPTICS • COMFORT\nCustomize your operator profile",
+		"⌁  OPEN SETTINGS\nAUDIO • HAPTICS • COMFORT\nCustomize your operator profile",
 		COLOR_BLUE,
-		Vector2(0, 132)
+		Vector2(0, 118)
 	))
 	_set_footer("POINT AT A BUTTON  •  PULL TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
+
+func show_operations(entries: Array[Dictionary]) -> void:
+	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "EACH SEAL TEACHES THE NEXT", COLOR_AMBER)
+	for entry in entries:
+		var unlocked: bool = entry.get("unlocked", false)
+		var cleared: bool = entry.get("cleared", false)
+		var accent := COLOR_GREEN if cleared else COLOR_MAGENTA if unlocked else COLOR_MUTED
+		var detail := String(entry.get("summary", "")) if unlocked else String(entry.get("lock_reason", "Locked"))
+		var state := "SEALED" if cleared else "OPEN" if unlocked else "LOCKED"
+		var button := _make_action_button(
+			StringName("mission_%s" % entry.get("id", "")),
+			"%s  %s\n%s\n%s" % [entry.get("codename", ""), entry.get("title", ""), state, detail],
+			accent,
+			Vector2(0, 108),
+			unlocked and not cleared
+		)
+		button.disabled = not unlocked
+		_content.add_child(button)
+	_content.add_child(_make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 68)))
+	_set_footer("LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
 
 func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
 	var page: Dictionary = pages[page_index]
@@ -140,7 +166,7 @@ func show_settings(music_text: String, haptics_text: String, reduced_flashes: bo
 	settings_stack.add_child(_make_toggle(
 		"REDUCED FLASHES",
 		"ON" if reduced_flashes else "OFF",
-		"Lower damage flashes and danger tint",
+		"Lower damage flashes, blur, and danger tint",
 		&"settings_flashes",
 		COLOR_GREEN if reduced_flashes else COLOR_AMBER
 	))
@@ -173,26 +199,52 @@ func show_suspended() -> void:
 	_content.add_child(_make_action_button(&"resume", "RESUME WHEN READY", COLOR_GREEN, Vector2(0, 96), true))
 	_set_footer("FACE FORWARD AND HOLD META BUTTON TO RECENTER BEFORE RESUMING")
 
-func show_results(outcome: StringName, score: int) -> void:
+func activate_at_viewport_point(point: Vector2) -> bool:
+	var best: Array = [null, 1.0e9]
+	_closest_button(self, point, best)
+	var button := best[0] as Button
+	if button == null:
+		return false
+	button.pressed.emit()
+	return true
+
+func _closest_button(node: Node, point: Vector2, best: Array) -> void:
+	if node is Button:
+		var button := node as Button
+		var rect := button.get_global_rect().grow(18.0)
+		if button.visible and not button.disabled and rect.has_point(point):
+			var distance := rect.get_center().distance_to(point)
+			if distance < float(best[1]):
+				best[0] = button
+				best[1] = distance
+	for child in node.get_children():
+		_closest_button(child, point, best)
+
+func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "") -> void:
 	var victory := outcome == &"victory"
 	var title := "MISSION COMPLETE" if victory else "OPERATION ENDED"
 	var subtitle := "ALL RIFTS SEALED" if victory else "LIFE FORCE DEPLETED" if outcome == &"defeat" else "RIFT WINDOW LOST"
 	var accent := COLOR_GREEN if victory else COLOR_RED
 	_begin_view(&"RESULTS", "RSF // AFTER-ACTION REPORT", title, subtitle, accent)
 	var outcome_banner := ColorRect.new()
-	outcome_banner.custom_minimum_size.y = 10
+	outcome_banner.custom_minimum_size.y = 8
 	outcome_banner.color = accent
 	outcome_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(outcome_banner)
 	var score_panel := PanelContainer.new()
-	score_panel.add_theme_stylebox_override("panel", _style_box(COLOR_PANEL_SOFT, accent, 2, 22))
+	score_panel.add_theme_stylebox_override("panel", _style_box(COLOR_PANEL_SOFT, accent, 2, 18))
 	_content.add_child(score_panel)
-	var score_label := _label("FINAL SCORE\n%06d" % score, 38, accent, true)
+	var score_label := _label("FINAL SCORE  %06d" % score, 32, accent, true)
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	score_panel.add_child(score_label)
-	_content.add_child(_make_action_button(&"retry", "RETRY MISSION", COLOR_CYAN, Vector2(0, 86), true))
-	_content.add_child(_make_action_button(&"results_training", "REVIEW TRAINING", COLOR_VIOLET, Vector2(0, 76)))
-	_content.add_child(_make_action_button(&"results_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 76)))
+	if debrief != "":
+		var debrief_label := _label(debrief, 20, COLOR_TEXT)
+		debrief_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_content.add_child(debrief_label)
+	if next_title != "":
+		_content.add_child(_make_action_button(&"next_mission", "NEXT OPERATION\n%s" % next_title, COLOR_GREEN, Vector2(0, 78), true))
+	_content.add_child(_make_action_button(&"retry", "RETRY MISSION", COLOR_CYAN, Vector2(0, 68), next_title == ""))
+	_content.add_child(_make_action_button(&"results_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 68)))
 	_set_footer("POINT + TRIGGER TO SELECT YOUR NEXT OPERATION")
 
 func _build_shell() -> void:
