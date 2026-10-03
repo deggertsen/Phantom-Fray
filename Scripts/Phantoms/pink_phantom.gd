@@ -7,6 +7,7 @@ extends Phantom
 var _telegraph_remaining: float
 var _charging: bool = false
 var _previous_target_distance: float = INF
+var _pink_bow: float = 1.2
 
 func _ready() -> void:
 	uses_attack_pattern = false
@@ -16,6 +17,7 @@ func _ready() -> void:
 	rift_damage = 18
 	super()
 	_telegraph_remaining = telegraph_seconds
+	_pink_bow = randf_range(0.45, 2.6) * (-1.0 if randf() < 0.5 else 1.0)
 	_lock_pink_target()
 
 func apply_pressure(speed_scale: float, telegraph_scale: float) -> void:
@@ -30,23 +32,30 @@ func _physics_process(delta: float) -> void:
 		return
 	if _try_possess_between(global_position, global_position):
 		return
+	var told := 1.0
 	if _telegraph_remaining > 0.0:
-		_telegraph_remaining -= delta
-		velocity = Vector3.ZERO
-		if _locked_target.distance_squared_to(global_position) > 0.001:
-			_aim_at(self, _locked_target)
-		var strength := 1.0 - clampf(_telegraph_remaining / maxf(telegraph_seconds, 0.01), 0.0, 1.0)
-		_set_alert(lerpf(0.4, 1.0, strength))
-		_update_commit_lane(_locked_target, true, strength)
-		return
-	_charging = true
-	_set_alert(1.0)
-	_update_commit_lane(_locked_target, true, 1.0)
+		_telegraph_remaining = maxf(_telegraph_remaining - delta, 0.0)
+		told = 1.0 - clampf(_telegraph_remaining / maxf(telegraph_seconds, 0.01), 0.0, 1.0)
+	var blend := told * told
+	var aim := _locked_target
+	if _player_camera:
+		aim += _flat_right() * _pink_bow * (1.0 - blend)
+	var direction := aim - global_position
+	if direction.length_squared() < 0.0001:
+		direction = Vector3.FORWARD
+	else:
+		direction = direction.normalized()
+	var speed := lerpf(1.7, charge_speed, blend)
+	velocity = velocity.lerp(direction * speed, clampf(acceleration * delta, 0.0, 1.0))
+	_face_direction(velocity)
 	var origin := global_position
-	var direction := (_locked_target - global_position).normalized()
-	velocity = direction * charge_speed
 	move_and_slide()
+	_set_alert(lerpf(0.35, 1.0, blend))
+	_charging = blend > 0.8
 	if _try_possess_between(origin, global_position):
+		return
+	if blend < 0.8:
+		_previous_target_distance = global_position.distance_to(_locked_target)
 		return
 	var distance := global_position.distance_to(_locked_target)
 	var passed_target := distance > _previous_target_distance and _previous_target_distance < dodge_radius * 1.8

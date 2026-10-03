@@ -33,6 +33,9 @@ func _ready() -> void:
 	var compass := preload("res://Scripts/Presentation/rift_compass.gd").new()
 	compass.name = "RiftCompass"
 	add_child(compass)
+	var bearings := preload("res://Scripts/Presentation/phantom_bearings.gd").new()
+	bearings.name = "PhantomBearings"
+	add_child(bearings)
 
 func start_round(mission: Dictionary = {}) -> void:
 	_mission = mission

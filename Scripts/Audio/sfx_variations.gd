@@ -1,12 +1,28 @@
 extends RefCounted
 
-## Loads numbered takes from Assets/Audio/SFX and picks one per play.
-## phantom_death matches phantom_death_1.mp3. A bare stem.mp3 is a single take.
-## https://docs.godotengine.org/en/stable/classes/class_diraccess.html
+## Numbered takes, preloaded so the Quest export actually packs them.
+## A runtime folder scan stays on the desktop and never reaches the APK.
+## https://docs.godotengine.org/en/stable/tutorials/export/exporting_projects.html
 
-const FOLDER := "res://Assets/Audio/SFX"
+const DEATH: Array[AudioStream] = [
+	preload("res://Assets/Audio/SFX/phantom_death_1.mp3"),
+	preload("res://Assets/Audio/SFX/phantom_death_2.mp3"),
+	preload("res://Assets/Audio/SFX/phantom_death_3.mp3"),
+	preload("res://Assets/Audio/SFX/phantom_death_4.mp3"),
+]
+const POSSESS: Array[AudioStream] = [
+	preload("res://Assets/Audio/SFX/phantom_possess_1.mp3"),
+	preload("res://Assets/Audio/SFX/phantom_possess_2.mp3"),
+]
+const RIFT_CLOSE: Array[AudioStream] = [
+	preload("res://Assets/Audio/SFX/rift_close_sound_1.mp3"),
+	preload("res://Assets/Audio/SFX/rift_close_sound_2.mp3"),
+	preload("res://Assets/Audio/SFX/rift_close_sound_3.mp3"),
+]
+const RIFT_OPEN: Array[AudioStream] = [
+	preload("res://Assets/Audio/SFX/rift_open_sound.mp3"),
+]
 
-static var _streams: Dictionary = {}
 static var _last_index: Dictionary = {}
 
 
@@ -29,27 +45,14 @@ static func variation_count(stem: String) -> int:
 
 
 static func streams_for(stem: String) -> Array[AudioStream]:
-	if _streams.has(stem):
-		return _streams[stem]
-	var loaded: Array[AudioStream] = []
-	var dir := DirAccess.open(FOLDER)
-	if dir == null:
-		_streams[stem] = loaded
-		return loaded
-	var prefix := stem + "_"
-	var names := dir.get_files()
-	names.sort()
-	for file_name in names:
-		var extension := file_name.get_extension().to_lower()
-		if extension not in ["mp3", "wav", "ogg"]:
-			continue
-		var base := file_name.get_basename()
-		var suffix := base.substr(prefix.length())
-		var numbered := base.begins_with(prefix) and suffix.is_valid_int()
-		if base != stem and not numbered:
-			continue
-		var stream := load("%s/%s" % [FOLDER, file_name]) as AudioStream
-		if stream:
-			loaded.append(stream)
-	_streams[stem] = loaded
-	return loaded
+	match stem:
+		"phantom_death":
+			return DEATH
+		"phantom_possess":
+			return POSSESS
+		"rift_close_sound":
+			return RIFT_CLOSE
+		"rift_open_sound":
+			return RIFT_OPEN
+		_:
+			return []

@@ -61,19 +61,24 @@ func _try_strike(body: Node3D) -> void:
 	var result: Dictionary = body.receive_strike(strike)
 	var kind: StringName = result.get("resolution_kind", &"")
 	if kind == &"block_half":
-		_trigger_haptic(0.55, 80)
+		_pulse_hand(0.7, 0.12)
 	elif result.get("valid", false):
 		var sweet: bool = result.get("sweet_spot", false)
 		var on_beat: bool = result.get("on_beat", false)
-		_trigger_haptic(1.0 if sweet or on_beat else 0.7, 150 if sweet else 100)
+		_pulse_hand(1.0, 0.22 if sweet or on_beat else 0.16)
 	else:
-		_trigger_haptic(0.18 if kind == &"not_open" else 0.28, 40)
+		_pulse_hand(0.4 if kind == &"not_open" else 0.55, 0.07)
 
-func _trigger_haptic(magnitude: float, duration_ms: int) -> void:
+func _pulse_hand(magnitude: float, duration_sec: float) -> void:
+	## OpenXR haptic on the punching controller, the same frame the strike resolves.
+	## https://docs.godotengine.org/en/stable/classes/class_xrinterface.html#class-xrinterface-method-trigger-haptic-pulse
+	var amplitude := clampf(magnitude * XRToolsUserSettings.haptics_scale, 0.0, 1.0)
+	var interface := XRServer.primary_interface
+	if interface and amplitude > 0.0:
+		interface.trigger_haptic_pulse(&"haptic", tracker, 0.0, amplitude, duration_sec, 0.0)
 	var rumble_event := XRToolsRumbleEvent.new()
 	rumble_event.magnitude = clampf(magnitude, 0.0, 1.0)
-	rumble_event.duration_ms = duration_ms
+	rumble_event.duration_ms = int(duration_sec * 1000.0)
 	rumble_event.active_during_pause = false
 	rumble_event.indefinite = false
-	var event_key := "combat_%s_%s" % [hand_id, Time.get_ticks_usec()]
-	XRToolsRumbleManager.add(event_key, rumble_event, [tracker])
+	XRToolsRumbleManager.add("combat_%s_%s" % [hand_id, Time.get_ticks_usec()], rumble_event, [tracker])

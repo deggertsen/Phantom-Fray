@@ -23,6 +23,7 @@ var _next_mission_title: String = ""
 var _menu_input_armed: bool = false
 var _results_pointer_warmup: float = 0.0
 var _results_action_locked: bool = false
+var _menu_trigger_down: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -47,12 +48,13 @@ func _ready() -> void:
 		_arm_menu_input_after_release()
 
 func _process(delta: float) -> void:
-	if _state != STATE_RESULTS or _results_pointer_warmup <= 0.0:
-		return
-	_results_pointer_warmup -= delta
-	_set_menu_pointers_enabled(true)
-	if _results_pointer_warmup <= 0.0:
-		_arm_menu_input_after_release()
+	if _state == STATE_RESULTS and _results_pointer_warmup > 0.0:
+		_results_pointer_warmup -= delta
+		_set_menu_pointers_enabled(true)
+		if _results_pointer_warmup <= 0.0:
+			_sync_menu_trigger_baseline()
+			_arm_menu_input_after_release()
+	_poll_menu_trigger()
 
 func _connect_controller_buttons() -> void:
 	if _player == null:
@@ -63,9 +65,9 @@ func _connect_controller_buttons() -> void:
 			controller.button_pressed.connect(_on_controller_button_pressed.bind(controller))
 
 func _on_controller_button_pressed(button: String, controller: XRController3D = null) -> void:
-	if button == "trigger_click" and _state == STATE_RESULTS:
-		if _menu_input_armed and controller:
-			_activate_results_from_controller(controller)
+	if button == "trigger_click" and _menu_input_armed and controller and _presenter and _presenter.is_menu_visible():
+		_menu_trigger_down = true
+		_activate_menu_from_controller(controller)
 		return
 	# The Meta system button owns recentering. We only consume the app-menu action for pause.
 	if button == "menu_button" and _state == STATE_PLAYING and _round and _round.is_round_in_progress():
@@ -151,11 +153,16 @@ func _on_menu_action(action: StringName) -> void:
 			if _results_action_locked:
 				return
 			_results_action_locked = true
-			if action == &"retry" and _settings:
-				_settings.pending_mission_id = _active_mission_id
-			elif action == &"next_mission" and _settings:
-				_settings.pending_mission_id = MissionCatalog.unlocked_followup(_active_mission_id, _settings)
-			get_tree().reload_current_scene()
+			_menu_input_armed = false
+			if action == &"results_menu":
+				_return_to_operations_menu()
+			else:
+				var mission_id := _active_mission_id
+				if action == &"next_mission" and _settings:
+					var follow := MissionCatalog.unlocked_followup(_active_mission_id, _settings)
+					if follow != "":
+						mission_id = follow
+				_restart_mission(mission_id)
 
 func _arm_menu_input_after_release() -> void:
 	if _player == null:
@@ -253,8 +260,8 @@ func _tutorial_pages() -> Array[Dictionary]:
 		{
 			"eyebrow": "MODULE 03 // RESONANCE PHANTOMS",
 			"title": "MATCH THE GAUNTLET",
-			"body": "YELLOW rears back and lunges at your LEFT. BLUE lunges RIGHT. Strike during the glow. The bright point is a crit.",
-			"callout": "A clean answer keeps your chain. A sweet hit on the lunge builds it faster. The wrong hand breaks it.",
+			"body": "YELLOW arcs in from your LEFT. BLUE arcs from the RIGHT. They speed up as they arrive. Punch when they reach you. The bright point is a crit.",
+			"callout": "An edge marker tells you where to turn. A clean hit keeps your chain. The wrong hand breaks it.",
 			"color": Color("a26cff"),
 		},
 		{
@@ -371,7 +378,33 @@ func _show_results() -> void:
 	_refresh_menu_pointers()
 	call_deferred("_reset_results_pointers_after_render")
 
-func _activate_results_from_controller(controller: XRController3D) -> void:
+func _poll_menu_trigger() -> void:
+	if not _menu_input_armed or _player == null or _presenter == null or not _presenter.is_menu_visible():
+		return
+	if _state == STATE_PLAYING:
+		return
+	var down := false
+	var pressed_controller: XRController3D = null
+	for path in [NodePath("LeftHandController"), NodePath("RightHandController")]:
+		var controller := _player.get_node_or_null(path) as XRController3D
+		if controller and controller.is_button_pressed("trigger_click"):
+			down = true
+			pressed_controller = controller
+	var rising := down and not _menu_trigger_down
+	_menu_trigger_down = down
+	if rising and pressed_controller:
+		_activate_menu_from_controller(pressed_controller)
+
+func _sync_menu_trigger_baseline() -> void:
+	_menu_trigger_down = false
+	if _player == null:
+		return
+	for path in [NodePath("LeftHandController"), NodePath("RightHandController")]:
+		var controller := _player.get_node_or_null(path) as XRController3D
+		if controller and controller.is_button_pressed("trigger_click"):
+			_menu_trigger_down = true
+
+func _activate_menu_from_controller(controller: XRController3D) -> void:
 	var pointer := controller.get_node_or_null("MenuPointer") as XRToolsFunctionPointer
 	if pointer == null or _presenter == null:
 		return
@@ -381,22 +414,51 @@ func _activate_results_from_controller(controller: XRController3D) -> void:
 	if ray == null:
 		return
 	ray.force_raycast_update()
-	if not ray.is_colliding():
+	var body: Object = pointer.last_target
+	var hit: Vector3 = pointer.last_collided_at
+	if ray.is_colliding():
+		body = ray.get_collider()
+		hit = ray.get_collision_point()
+	if body != null and body.has_method("activate"):
+		body.activate()
 		return
-	var body := ray.get_collider()
 	if body == null or not body.has_method("global_to_viewport"):
 		return
-	var point: Vector2 = body.global_to_viewport(ray.get_collision_point())
+	var point: Vector2 = body.global_to_viewport(hit)
 	_presenter.activate_at_viewport_point(point)
+
+func _restart_mission(mission_id: String) -> void:
+	var mission := MissionCatalog.get_mission(mission_id)
+	if mission.is_empty() or _round == null or not MissionCatalog.is_unlocked(mission_id, _settings):
+		_results_action_locked = false
+		_return_to_operations_menu()
+		return
+	_active_mission_id = mission_id
+	_round.abandon_round()
+	_state = STATE_PLAYING
+	_set_menu_visible(false)
+	_round.begin_round(mission)
+
+func _return_to_operations_menu() -> void:
+	if _round:
+		_round.abandon_round()
+	_results_action_locked = false
+	_show_main_menu()
+	_menu_input_armed = false
+	_sync_menu_trigger_baseline()
+	_arm_menu_input_after_release()
 
 func _reset_results_pointers_after_render() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_set_menu_pointers_enabled(true)
-	_menu_input_armed = true
+	_sync_menu_trigger_baseline()
+	_arm_menu_input_after_release()
 
 func _set_menu_visible(is_visible: bool) -> void:
 	_set_menu_pointers_enabled(is_visible)
+	if is_visible:
+		_sync_menu_trigger_baseline()
 	if _presenter == null:
 		return
 	if is_visible:

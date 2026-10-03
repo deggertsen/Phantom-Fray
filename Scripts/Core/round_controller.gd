@@ -60,6 +60,27 @@ func is_round_in_progress() -> bool:
 func can_resume_round() -> bool:
 	return _paused and not _finished
 
+func abandon_round() -> void:
+	_finished = false
+	_round_active = false
+	_countdown_active = false
+	_paused = false
+	score = 0
+	sweet_streak = 0
+	multiplier = 1.0
+	_combo_remaining = 0.0
+	if _director:
+		_director.cleanup_round()
+	if _life_force:
+		_life_force.set_process(true)
+		_life_force.reset()
+	score_changed.emit(score, 0, &"reset")
+	combo_changed.emit(sweet_streak, multiplier)
+	rift_progress_changed.emit(0, _director.total_rifts if _director else 0)
+	if is_instance_valid(_message):
+		_message.queue_free()
+	_message = null
+
 func begin_round(mission: Dictionary = {}) -> void:
 	if _round_active or _countdown_active or _finished or _director == null:
 		return

@@ -211,7 +211,7 @@ func activate_at_viewport_point(point: Vector2) -> bool:
 func _closest_button(node: Node, point: Vector2, best: Array) -> void:
 	if node is Button:
 		var button := node as Button
-		var rect := button.get_global_rect().grow(18.0)
+		var rect := button.get_global_rect().grow(42.0)
 		if button.visible and not button.disabled and rect.has_point(point):
 			var distance := rect.get_center().distance_to(point)
 			if distance < float(best[1]):
@@ -225,26 +225,31 @@ func show_results(outcome: StringName, score: int, debrief: String = "", next_ti
 	var title := "MISSION COMPLETE" if victory else "OPERATION ENDED"
 	var subtitle := "ALL RIFTS SEALED" if victory else "LIFE FORCE DEPLETED" if outcome == &"defeat" else "RIFT WINDOW LOST"
 	var accent := COLOR_GREEN if victory else COLOR_RED
-	_begin_view(&"RESULTS", "RSF // AFTER-ACTION REPORT", title, subtitle, accent)
+	_begin_view(&"RESULTS", "RSF // AFTER-ACTION REPORT", title, subtitle, accent, 34)
 	var outcome_banner := ColorRect.new()
-	outcome_banner.custom_minimum_size.y = 8
+	outcome_banner.custom_minimum_size.y = 6
 	outcome_banner.color = accent
 	outcome_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(outcome_banner)
 	var score_panel := PanelContainer.new()
 	score_panel.add_theme_stylebox_override("panel", _style_box(COLOR_PANEL_SOFT, accent, 2, 18))
 	_content.add_child(score_panel)
-	var score_label := _label("FINAL SCORE  %06d" % score, 32, accent, true)
+	var score_label := _label("FINAL SCORE  %06d" % score, 28, accent, true)
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	score_panel.add_child(score_label)
 	if debrief != "":
-		var debrief_label := _label(debrief, 20, COLOR_TEXT)
+		var debrief_label := _label(debrief, 18, COLOR_TEXT)
 		debrief_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_content.add_child(debrief_label)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer.custom_minimum_size.y = 8
+	_content.add_child(spacer)
 	if next_title != "":
-		_content.add_child(_make_action_button(&"next_mission", "NEXT OPERATION\n%s" % next_title, COLOR_GREEN, Vector2(0, 78), true))
-	_content.add_child(_make_action_button(&"retry", "RETRY MISSION", COLOR_CYAN, Vector2(0, 68), next_title == ""))
-	_content.add_child(_make_action_button(&"results_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 68)))
+		_content.add_child(_make_action_button(&"next_mission", "NEXT OPERATION\n%s" % next_title, COLOR_GREEN, Vector2(0, 64), true))
+	_content.add_child(_make_action_button(&"retry", "RETRY MISSION", COLOR_CYAN, Vector2(0, 58), next_title == ""))
+	_content.add_child(_make_action_button(&"results_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 58)))
 	_set_footer("POINT + TRIGGER TO SELECT YOUR NEXT OPERATION")
 
 func _build_shell() -> void:
@@ -291,7 +296,9 @@ func _build_shell() -> void:
 	outer.add_theme_constant_override("margin_bottom", 44)
 	add_child(outer)
 	_content = VBoxContainer.new()
-	_content.add_theme_constant_override("separation", 18)
+	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content.add_theme_constant_override("separation", 14)
 	outer.add_child(_content)
 
 func _build_corner_brackets() -> void:
@@ -331,7 +338,7 @@ func _build_cyber_grid() -> void:
 		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(line)
 
-func _begin_view(section: StringName, system_title: String, title: String, subtitle: String, accent: Color) -> void:
+func _begin_view(section: StringName, system_title: String, title: String, subtitle: String, accent: Color, title_size: int = 54) -> void:
 	_clear_content()
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 16)
@@ -355,7 +362,7 @@ func _begin_view(section: StringName, system_title: String, title: String, subti
 	divider.color = accent
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(divider)
-	var heading := _label(title, 54, COLOR_TEXT, true)
+	var heading := _label(title, title_size, COLOR_TEXT, true)
 	heading.add_theme_color_override("font_shadow_color", Color(accent, 0.4))
 	heading.add_theme_constant_override("shadow_offset_x", 3)
 	heading.add_theme_constant_override("shadow_offset_y", 3)
@@ -388,6 +395,7 @@ func _make_action_button(action: StringName, text: String, accent: Color, minimu
 	button.add_theme_stylebox_override("hover", _style_box(Color(accent, 0.19), accent, 4, 18, 12))
 	button.add_theme_stylebox_override("pressed", _style_box(Color(accent, 0.34), Color.WHITE, 4, 18, 6))
 	button.add_theme_stylebox_override("disabled", _style_box(Color(0.02, 0.025, 0.04, 0.8), Color(0.2, 0.25, 0.32, 0.4), 1, 18))
+	button.set_meta(&"menu_action", action)
 	button.pressed.connect(_on_action_pressed.bind(action))
 	button.mouse_entered.connect(_on_button_hovered.bind(button))
 	return button

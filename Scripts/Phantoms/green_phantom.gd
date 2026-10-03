@@ -16,6 +16,8 @@ func _ready() -> void:
 	lateral_reach_min = 0.0
 	lateral_reach_max = 0.16
 	height_jitter = 0.22
+	arc_scale = 1.5
+	acceleration = 2.1
 	engage_distance = 2.05
 	pattern_telegraph_seconds = 0.72
 	pattern_commit_speed = 5.4

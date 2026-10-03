@@ -15,6 +15,7 @@ func _run_validation() -> void:
 	await _validate_attack_window()
 	_validate_mission_catalog()
 	await _validate_menu_surface()
+	await _validate_results_menu()
 	await _validate_pink_dodge()
 	await process_frame
 	if failures.is_empty():
@@ -44,6 +45,13 @@ func _validate_resources() -> void:
 		var material := ShaderMaterial.new()
 		material.shader = distort
 		material.set_shader_parameter("strength", 1.0)
+	var impact := load("res://Resources/Materials/damage_impact.gdshader") as Shader
+	if impact == null:
+		failures.append("Damage impact shader failed to load")
+	else:
+		var impact_material := ShaderMaterial.new()
+		impact_material.shader = impact
+		impact_material.set_shader_parameter("strength", 1.0)
 
 func _validate_sfx_variations() -> void:
 	var expected := {
@@ -63,6 +71,10 @@ func _validate_sfx_variations() -> void:
 			break
 	if first == null or not varied:
 		failures.append("Possession takes did not vary")
+	for stem in expected:
+		var stream := SfxVariations.pick(stem)
+		if stream == null:
+			failures.append("%s pick returned no stream" % stem)
 
 func _validate_variant_rules() -> void:
 	var yellow_scene := load("res://Scenes/Phantoms/yellow_phantom.tscn") as PackedScene
@@ -161,7 +173,126 @@ func _validate_attack_window() -> void:
 	if not hit.get("valid", false) or not hit.get("sweet_spot", false) or not hit.get("on_beat", false):
 		failures.append("Yellow commit window did not score an on-beat sweet spot")
 	yellow.queue_free()
+	await _validate_arc_motion(yellow_scene)
+	await _validate_green_arrival()
 	await _validate_possession(yellow_scene)
+
+func _validate_arc_motion(yellow_scene: PackedScene) -> void:
+	var yellow := yellow_scene.instantiate()
+	root.add_child(yellow)
+	await process_frame
+	var head := Node3D.new()
+	root.add_child(head)
+	head.global_position = Vector3(0.0, 1.6, 0.0)
+	yellow.global_position = Vector3(0.0, 1.3, 8.0)
+	yellow._player_camera = head
+	var start: Vector3 = yellow.global_position
+	for _step in 120:
+		yellow._physics_process(0.016)
+	if yellow.global_position.distance_to(start) < 1.0 or yellow.velocity.length() < 0.3:
+		failures.append("Yellow arc stalled during approach")
+	if yellow.get_node_or_null("ApproachColumn") != null:
+		failures.append("Approach column is still attached")
+	yellow.queue_free()
+	head.queue_free()
+	await process_frame
+
+func _validate_green_arrival() -> void:
+	var green_scene := load("res://Scenes/Phantoms/green_phantom.tscn") as PackedScene
+	var green := green_scene.instantiate()
+	root.add_child(green)
+	await process_frame
+	var head := Node3D.new()
+	root.add_child(head)
+	head.global_position = Vector3(0.0, 1.6, 0.0)
+	var green_body: Node3D = green
+	green_body.global_position = Vector3(0.0, 1.2, 5.0)
+	green._player_camera = head
+	var stalled := false
+	var slow_frames := 0
+	for _step in 320:
+		if green._terminal:
+			break
+		var before: float = green_body.global_position.distance_to(head.global_position)
+		green._physics_process(0.016)
+		var after: float = green_body.global_position.distance_to(head.global_position)
+		var still_closing := after < before - 0.001 and before < 2.0
+		if still_closing and green.velocity.length() < 0.35:
+			slow_frames += 1
+			if slow_frames >= 10:
+				stalled = true
+				break
+		else:
+			slow_frames = 0
+	if stalled:
+		failures.append("Green phantom stopped while closing")
+	green.queue_free()
+	head.queue_free()
+	await process_frame
+
+func _validate_results_menu() -> void:
+	var player := Node3D.new()
+	player.add_to_group("Player")
+	var camera := Node3D.new()
+	camera.name = "XRCamera3D"
+	player.add_child(camera)
+	root.add_child(player)
+	camera.global_position = Vector3(0.0, 1.6, 0.0)
+	var presenter := VRMenuPresenter.new()
+	root.add_child(presenter)
+	for _frame in 3:
+		await process_frame
+	presenter.show_results(
+		&"victory",
+		12840,
+		"Chen: It knows your resonance now. This was the opening move. Not the end of the war.",
+		"WIDEN THE RING"
+	)
+	for _frame in 4:
+		await process_frame
+	var panel_rect := Rect2(Vector2.ZERO, Vector2(1280, 780))
+	for label in ["NEXT OPERATION", "RETRY MISSION", "MAIN MENU"]:
+		var button := _find_button(presenter, label)
+		if button == null:
+			failures.append("Results action missing: %s" % label)
+			continue
+		var rect := button.get_global_rect()
+		if rect.size.y < 20.0 or not panel_rect.encloses(rect):
+			failures.append("Results button %s sits outside the panel %s" % [label, rect])
+	var retry := _find_button(presenter, "RETRY MISSION")
+	var body := presenter.get_node_or_null("MenuScreen/StaticBody3D")
+	if retry == null or body == null or not body.has_method("global_to_viewport"):
+		failures.append("Results pointer target is missing")
+	else:
+		var screen_size: Vector2 = body.get("screen_size")
+		var viewport_size: Vector2 = body.get("viewport_size")
+		var center: Vector2 = retry.get_global_rect().get_center()
+		var local := Vector3(
+			(center.x / viewport_size.x - 0.5) * screen_size.x,
+			(0.5 - center.y / viewport_size.y) * screen_size.y,
+			0.0
+		)
+		var shape := body.get_node("CollisionShape3D") as Node3D
+		var world_point: Vector3 = shape.global_transform * local
+		var mapped: Vector2 = body.call("global_to_viewport", world_point)
+		if mapped.distance_to(center) > 24.0:
+			failures.append("Results pointer map missed retry by %s px" % mapped.distance_to(center))
+		var activated := [false]
+		presenter.action_requested.connect(func(action: StringName) -> void:
+			activated[0] = action == &"retry"
+		)
+		if not presenter.activate_at_viewport_point(mapped) or not activated[0]:
+			failures.append("Pointing at retry did not activate it")
+	var pads := presenter.get_node("MenuScreen").get_children()
+	var pad_actions: Array[String] = []
+	for child in pads:
+		if child.has_method("activate"):
+			pad_actions.append(String(child.get("action")))
+	if pad_actions.size() < 3 or not pad_actions.has("retry"):
+		failures.append("Results buttons have no laser hit pads: %s" % str(pad_actions))
+	presenter.queue_free()
+	player.queue_free()
+	await process_frame
 
 func _validate_possession(yellow_scene: PackedScene) -> void:
 	var yellow := yellow_scene.instantiate()

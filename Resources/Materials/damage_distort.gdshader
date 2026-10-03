@@ -26,7 +26,7 @@ void fragment() {
 	}
 	blurred /= 6.0;
 
-	float presence = strength * mix(0.2, 0.82, edge);
+	float presence = strength * mix(0.45, 0.95, edge);
 	ALBEDO = blurred.rgb;
 	ALPHA = presence;
 }

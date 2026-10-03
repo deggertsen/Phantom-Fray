@@ -3,8 +3,8 @@ class_name Phantom
 
 const SfxVariations := preload("res://Scripts/Audio/sfx_variations.gd")
 
-## Approach, telegraph, commit, recover.
-## Strike resolution stays closed until the telegraph so a punch is an answer, not a color check.
+## One continuous arc into reach. Speed ramps by acceleration, never a stop-then-dash.
+## A punch counts once the body is in reach, because that is when the fist can meet it.
 ## Movement uses CharacterBody3D.move_and_slide():
 ## https://docs.godotengine.org/en/stable/classes/class_characterbody3d.html#class-characterbody3d-method-move-and-slide
 
@@ -17,7 +17,7 @@ enum Phase { APPROACH, TELEGRAPH, COMMIT, RECOVER }
 
 @export var variant_id: StringName = &"neutral"
 @export var move_speed: float = 3.2
-@export var acceleration: float = 5.0
+@export var acceleration: float = 2.6
 @export var wobble_strength: float = 0.18
 @export var wobble_speed: float = 2.0
 @export var hover_height: float = 1.25
@@ -42,6 +42,10 @@ enum Phase { APPROACH, TELEGRAPH, COMMIT, RECOVER }
 @export var lateral_reach_max: float = 0.28
 @export var height_jitter: float = 0.16
 @export var body_widen: float = 1.0
+## How far the arc bows off the straight line. Yellow bows left, blue bows right.
+@export var arc_scale: float = 2.4
+## Punches land once the phantom is this close. The arrival itself is the timing.
+@export var strike_reach: float = 1.7
 
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var contact_area: Area3D = $Area3D
@@ -62,7 +66,18 @@ var _locked_target: Vector3 = Vector3.ZERO
 var _commit_closest: float = INF
 var _alert: float = 0.0
 var _mesh_basis_scale: Vector3 = Vector3.ONE
-var _lane: MeshInstance3D
+var _curve_ready: bool = false
+var _curve_start: Vector3 = Vector3.ZERO
+var _curve_control: Vector3 = Vector3.ZERO
+var _curve_control_b: Vector3 = Vector3.ZERO
+var _curve_end: Vector3 = Vector3.ZERO
+var _curve_progress: float = 0.0
+var _curve_length: float = 1.0
+var _camera_closest: float = INF
+var _coast_time: float = 0.0
+var _stall_time: float = 0.0
+var _stalls: int = 0
+var _alive_time: float = 0.0
 
 func _ready() -> void:
 	# The body is punchable but does not physically block on the player's hurtbox.
@@ -115,16 +130,15 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_time += delta
+	_alive_time += delta
+	if _alive_time > 22.0:
+		force_cleanup()
+		return
 	var origin := global_position
-	match _phase:
-		Phase.APPROACH:
-			_tick_approach(delta)
-		Phase.TELEGRAPH:
-			_tick_telegraph(delta)
-		Phase.COMMIT:
-			_tick_commit(delta)
-		Phase.RECOVER:
-			_tick_recover(delta)
+	if _phase == Phase.RECOVER:
+		_tick_recover(delta)
+	else:
+		_tick_arc(delta)
 	if not _terminal:
 		_try_possess_between(origin, global_position)
 
@@ -142,14 +156,21 @@ func _process(delta: float) -> void:
 func apply_pressure(speed_scale: float, telegraph_scale: float) -> void:
 	move_speed *= speed_scale
 	pattern_commit_speed *= speed_scale
+	## A longer tell is a gentler acceleration, not a pause before a dash.
+	acceleration = clampf(acceleration / clampf(telegraph_scale, 0.55, 1.5), 1.15, 5.5)
 	pattern_telegraph_seconds = maxf(pattern_telegraph_seconds * telegraph_scale, 0.35)
-	if _phase == Phase.TELEGRAPH:
-		_phase_remaining *= telegraph_scale
 
 func is_strike_window_open() -> bool:
 	if not uses_attack_pattern:
 		return true
-	return _phase == Phase.TELEGRAPH or _phase == Phase.COMMIT
+	if _phase == Phase.COMMIT:
+		return true
+	if _player_camera == null:
+		return false
+	return global_position.distance_to(_player_camera.global_position) <= strike_reach
+
+func shows_approach_cue() -> bool:
+	return not _terminal and not _dissolving
 
 func receive_strike(strike: Dictionary) -> Dictionary:
 	if _terminal:
@@ -235,66 +256,110 @@ func force_cleanup() -> void:
 	_dissolving = true
 	dissolve_speed = maxf(dissolve_speed, 3.0)
 
-func _tick_approach(delta: float) -> void:
-	var to_player := _player_camera.global_position - global_position
-	if to_player.length() <= engage_distance:
-		_begin_telegraph()
-		return
-	var right := _flat_right()
-	var wobble := Vector3(
-		sin(_time * wobble_speed) * wobble_strength * 0.45,
-		cos(_time * wobble_speed * 0.7) * wobble_strength * 0.2,
-		sin(_time * wobble_speed * 1.3) * wobble_strength * 0.45
-	)
-	var desired := (to_player + right * lateral_bias * 0.85 + wobble).normalized() * move_speed
+func _tick_arc(delta: float) -> void:
+	if not _curve_ready:
+		_build_curve()
+	var ramp := smoothstep(0.1, 0.85, _curve_progress)
+	var speed := lerpf(move_speed, pattern_commit_speed, ramp)
+	# The parameter is a carrot. Reaching 1 must not freeze the body still on the way in.
+	_curve_progress = minf(_curve_progress + speed * delta / _curve_length, 1.0)
+	var steer := _steer_point()
+	var to_steer := steer - global_position
+	if to_steer.length_squared() < 0.05:
+		to_steer = _curve_end - global_position
+	var desired: Vector3
+	if to_steer.length_squared() > 0.04:
+		desired = to_steer.normalized() * speed
+	else:
+		var through := _curve_end - _curve_start
+		if through.length_squared() < 0.0001:
+			through = velocity if velocity.length_squared() > 0.01 else Vector3.FORWARD
+		desired = through.normalized() * speed
+	# https://docs.godotengine.org/en/stable/classes/class_characterbody3d.html#class-characterbody3d-method-move-and-slide
 	velocity = velocity.lerp(desired, clampf(acceleration * delta, 0.0, 1.0))
-	_face_direction(Vector3(desired.x, 0.0, desired.z))
+	_face_direction(desired)
 	move_and_slide()
-
-func _begin_telegraph() -> void:
-	_phase = Phase.TELEGRAPH
-	_phase_remaining = pattern_telegraph_seconds
-	_lock_target()
-	_set_alert(0.45)
-
-func _tick_telegraph(delta: float) -> void:
-	_phase_remaining -= delta
-	var away := global_position - _locked_target
-	away.y = 0.0
-	velocity = away.normalized() * 0.42 if away.length_squared() > 0.001 else Vector3.ZERO
-	_face_direction(_locked_target - global_position)
-	move_and_slide()
-	var strength := 1.0 - clampf(_phase_remaining / maxf(pattern_telegraph_seconds, 0.01), 0.0, 1.0)
-	_set_alert(lerpf(0.45, 1.0, strength))
-	_update_commit_lane(_locked_target, true, strength)
-	if _phase_remaining <= 0.0:
-		_begin_commit()
-
-func _begin_commit() -> void:
-	_phase = Phase.COMMIT
-	_phase_remaining = pattern_commit_seconds
-	_commit_closest = global_position.distance_to(_locked_target)
-	_set_alert(1.0)
-
-func _tick_commit(delta: float) -> void:
-	_phase_remaining -= delta
-	var to_target := _locked_target - global_position
-	var distance := to_target.length()
-	if distance > 0.05:
-		velocity = to_target.normalized() * pattern_commit_speed
-		_face_direction(to_target)
-	move_and_slide()
-	_update_commit_lane(_locked_target, true, 1.0)
-	var new_distance := global_position.distance_to(_locked_target)
-	var passed_target := new_distance > _commit_closest and _commit_closest < 0.4
-	_commit_closest = minf(_commit_closest, new_distance)
-	if passed_target or _phase_remaining <= 0.0:
+	var camera_distance := global_position.distance_to(_player_camera.global_position)
+	var closing_in := camera_distance < strike_reach * 1.4
+	if velocity.length() < 0.2 and _curve_progress > 0.08 and not closing_in:
+		_stall_time += delta
+		if _stall_time > 0.5:
+			_stalls += 1
+			_stall_time = 0.0
+			if _stalls >= 2:
+				force_cleanup()
+				return
+			_curve_ready = false
+			return
+	else:
+		_stall_time = maxf(_stall_time - delta, 0.0)
+	var in_reach := camera_distance <= strike_reach
+	_phase = Phase.COMMIT if in_reach else Phase.APPROACH
+	_set_alert(lerpf(0.2, 1.0, maxf(ramp, 1.0 if in_reach else 0.0)))
+	# Turn around only after the body has passed the player, not when the carrot finishes early.
+	var passed_player := _camera_closest <= strike_reach and camera_distance > _camera_closest + 0.22
+	_camera_closest = minf(_camera_closest, camera_distance)
+	var arrived := _curve_progress > 0.85 and global_position.distance_to(_curve_end) < 0.4
+	_coast_time = _coast_time + delta if arrived else 0.0
+	if passed_player or _coast_time > 0.2:
 		_begin_recover()
+
+func _steer_point() -> Vector3:
+	var sample := _curve_progress
+	for _step in 8:
+		var point := _bezier(sample)
+		if point.distance_to(global_position) >= 1.2:
+			return point
+		sample = minf(sample + 0.08, 1.0)
+	return _curve_end
+
+func _build_curve() -> void:
+	_lock_target()
+	_curve_start = global_position
+	var travel := _locked_target - _curve_start
+	if travel.length_squared() < 0.04:
+		travel = -_player_camera.global_transform.basis.z
+	if travel.length_squared() < 0.0001:
+		travel = Vector3.FORWARD
+	# Finish past the strike so they are still moving when they reach you.
+	_curve_end = _locked_target + travel.normalized() * randf_range(1.25, 1.9)
+	var side := lateral_bias
+	if absf(side) < 0.01:
+		side = -1.0 if randf() < 0.5 else 1.0
+	else:
+		side = signf(side)
+	var right := _flat_right()
+	var along := randf_range(0.22, 0.68)
+	var bow := randf_range(arc_scale * 0.35, arc_scale * 1.2)
+	var early := _curve_start.lerp(_curve_end, along)
+	_curve_control = early + right * side * bow + Vector3.UP * randf_range(-0.45, 0.7)
+	var late_along := clampf(along + randf_range(0.12, 0.28), 0.4, 0.84)
+	var late := _curve_start.lerp(_curve_end, late_along)
+	var counter := -0.4 if randf() < 0.45 else randf_range(0.2, 0.7)
+	_curve_control_b = late + right * side * bow * counter + Vector3.UP * randf_range(-0.3, 0.45)
+	_curve_length = maxf(
+		_curve_start.distance_to(_curve_control)
+		+ _curve_control.distance_to(_curve_control_b)
+		+ _curve_control_b.distance_to(_curve_end),
+		0.5
+	)
+	_curve_progress = 0.0
+	_camera_closest = INF
+	_coast_time = 0.0
+	_curve_ready = true
+
+func _bezier(t: float) -> Vector3:
+	var u := 1.0 - t
+	return (
+		u * u * u * _curve_start
+		+ 3.0 * u * u * t * _curve_control
+		+ 3.0 * u * t * t * _curve_control_b
+		+ t * t * t * _curve_end
+	)
 
 func _begin_recover() -> void:
 	_phase = Phase.RECOVER
 	_phase_remaining = recover_seconds
-	_update_commit_lane(_locked_target, false, 0.0)
 	_set_alert(0.12)
 
 func _tick_recover(delta: float) -> void:
@@ -308,6 +373,7 @@ func _tick_recover(delta: float) -> void:
 	move_and_slide()
 	if _phase_remaining <= 0.0:
 		_phase = Phase.APPROACH
+		_curve_ready = false
 		_set_alert(0.0)
 
 func _lock_target() -> void:
@@ -336,15 +402,6 @@ func _flat_right() -> Vector3:
 		return Vector3.RIGHT
 	return right.normalized()
 
-func _aim_at(node: Node3D, target: Vector3) -> void:
-	var direction := target - node.global_position
-	if direction.length_squared() < 0.0001:
-		return
-	var up := Vector3.UP
-	if absf(direction.normalized().dot(up)) > 0.98:
-		up = Vector3.FORWARD
-	node.look_at(target, up)
-
 func _face_direction(direction: Vector3) -> void:
 	var horizontal := Vector3(direction.x, 0.0, direction.z)
 	if horizontal.length_squared() < 0.001:
@@ -369,50 +426,8 @@ func _update_pattern_visual() -> void:
 		_mesh_basis_scale.z * pulse
 	)
 
-func _update_commit_lane(target: Vector3, active: bool, strength: float) -> void:
-	_ensure_lane()
-	if not active:
-		_lane.visible = false
-		return
-	var origin := global_position + Vector3.UP * 0.12
-	var delta := target - origin
-	var length := delta.length()
-	if length < 0.2:
-		_lane.visible = false
-		return
-	_lane.visible = true
-	_lane.global_position = origin + delta * 0.5
-	_aim_at(_lane, target)
-	_lane.scale = Vector3(1.0, 1.0, length)
-	var material := _lane.material_override as StandardMaterial3D
-	if material:
-		var alpha := lerpf(0.18, 0.62, strength)
-		material.albedo_color = Color(phantom_color.r, phantom_color.g, phantom_color.b, alpha)
-		material.emission = phantom_color
-		material.emission_energy_multiplier = lerpf(0.7, 3.2, strength)
-
-func _ensure_lane() -> void:
-	if _lane != null:
-		return
-	_lane = MeshInstance3D.new()
-	_lane.name = "CommitLane"
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(0.07, 0.07, 1.0)
-	_lane.mesh = mesh
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.albedo_color = Color(phantom_color, 0.35)
-	material.emission_enabled = true
-	material.emission = phantom_color
-	material.emission_energy_multiplier = 1.6
-	_lane.material_override = material
-	_lane.visible = false
-	add_child(_lane)
-
 func _begin_dissolve(impact_position: Vector3, direction: Vector3, play_death_sound: bool = true) -> void:
 	_dissolving = true
-	_update_commit_lane(_locked_target, false, 0.0)
 	var material := mesh_instance.material_override as ShaderMaterial
 	if material:
 		material.set_shader_parameter("impact_point", impact_position)

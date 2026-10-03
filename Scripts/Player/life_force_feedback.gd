@@ -16,6 +16,9 @@ var _tint_mesh: MeshInstance3D
 var _distort_mesh: MeshInstance3D
 var _distort_material: ShaderMaterial
 var _distort_tween: Tween
+var _impact_mesh: MeshInstance3D
+var _impact_material: ShaderMaterial
+var _impact_tween: Tween
 var _heartbeat: AudioStreamPlayer
 var _drain_blip: AudioStreamPlayer
 var _depletion_stinger: AudioStreamPlayer
@@ -127,6 +130,24 @@ func _build_damage_distort(camera: XRCamera3D) -> void:
 	_distort_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_distort_mesh.visible = false
 	camera.add_child(_distort_mesh)
+	_build_damage_impact(camera)
+
+func _build_damage_impact(camera: XRCamera3D) -> void:
+	_impact_mesh = MeshInstance3D.new()
+	_impact_mesh.name = "DamageImpact"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.8, 2.8)
+	_impact_mesh.mesh = quad
+	_impact_mesh.position = Vector3(0.0, 0.0, -0.16)
+	_impact_material = ShaderMaterial.new()
+	_impact_material.shader = preload("res://Resources/Materials/damage_impact.gdshader")
+	_impact_material.render_priority = 14
+	_impact_material.set_shader_parameter("strength", 0.0)
+	_impact_material.set_shader_parameter("hit_color", Color(1.0, 0.05, 0.1, 1.0))
+	_impact_mesh.material_override = _impact_material
+	_impact_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_impact_mesh.visible = false
+	camera.add_child(_impact_mesh)
 
 func _build_audio() -> void:
 	_heartbeat = AudioStreamPlayer.new()
@@ -176,6 +197,7 @@ func _on_damage_applied(_amount: float, _current: float) -> void:
 		_drain_blip.play()
 	_flash_possession()
 	_distort_vision()
+	_slam_impact()
 	_rumble_possession()
 
 func _flash_possession() -> void:
@@ -184,7 +206,7 @@ func _flash_possession() -> void:
 	var settings := get_node_or_null("/root/GameSettings")
 	var scale := 0.4 if settings and settings.reduced_flashes else 1.0
 	var resting := _tint_material.albedo_color.a
-	_tint_material.albedo_color = Color(0.62, 0.02, 0.08, 0.34 * scale)
+	_tint_material.albedo_color = Color(0.95, 0.08, 0.1, 0.78 * scale)
 	var tween := create_tween()
 	tween.tween_property(_tint_material, "albedo_color:a", resting, 0.55).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 
@@ -193,8 +215,8 @@ func _distort_vision() -> void:
 		return
 	var settings := get_node_or_null("/root/GameSettings")
 	var reduced: bool = settings != null and bool(settings.reduced_flashes)
-	var peak := 0.38 if reduced else 1.0
-	var duration := 0.34 if reduced else 0.68
+	var peak := 0.55 if reduced else 1.0
+	var duration := 0.4 if reduced else 0.85
 	_distort_mesh.visible = true
 	_set_distort_strength(peak)
 	if _distort_tween != null and _distort_tween.is_valid():
@@ -211,10 +233,35 @@ func _hide_distort() -> void:
 	if _distort_mesh:
 		_distort_mesh.visible = false
 
+func _slam_impact() -> void:
+	if _impact_material == null or _impact_mesh == null:
+		return
+	var settings := get_node_or_null("/root/GameSettings")
+	var reduced: bool = settings != null and bool(settings.reduced_flashes)
+	var peak := 0.42 if reduced else 1.0
+	var duration := 0.28 if reduced else 0.55
+	_impact_mesh.visible = true
+	_impact_mesh.scale = Vector3.ONE * 0.72
+	_impact_material.set_shader_parameter("strength", peak)
+	if _impact_tween != null and _impact_tween.is_valid():
+		_impact_tween.kill()
+	_impact_tween = create_tween()
+	_impact_tween.tween_method(_set_impact_strength, peak, 0.0, duration).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	_impact_tween.parallel().tween_property(_impact_mesh, "scale", Vector3.ONE * 1.2, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_impact_tween.tween_callback(_hide_impact)
+
+func _set_impact_strength(value: float) -> void:
+	if _impact_material:
+		_impact_material.set_shader_parameter("strength", value)
+
+func _hide_impact() -> void:
+	if _impact_mesh:
+		_impact_mesh.visible = false
+
 func _rumble_possession() -> void:
 	var rumble := XRToolsRumbleEvent.new()
-	rumble.magnitude = 0.9
-	rumble.duration_ms = 180
+	rumble.magnitude = 1.0
+	rumble.duration_ms = 360
 	rumble.active_during_pause = false
 	rumble.indefinite = false
 	XRToolsRumbleManager.add("possession_%s" % Time.get_ticks_usec(), rumble)
