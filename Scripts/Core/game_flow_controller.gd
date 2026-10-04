@@ -54,10 +54,11 @@ func _process(delta: float) -> void:
 		_menu_action_cooldown = maxf(_menu_action_cooldown - delta, 0.0)
 	if _state == STATE_RESULTS and _results_pointer_warmup > 0.0:
 		_results_pointer_warmup -= delta
-		_set_menu_pointers_enabled(true)
 		if _results_pointer_warmup <= 0.0:
 			_sync_menu_trigger_baseline()
-			_arm_menu_input_after_release()
+			_menu_input_armed = true
+	if _presenter != null and _presenter.is_menu_visible():
+		_hold_menu_pointers()
 	_poll_menu_trigger()
 
 func _connect_controller_buttons() -> void:
@@ -431,20 +432,23 @@ func _sync_menu_trigger_baseline() -> void:
 			_menu_trigger_down = true
 
 func _activate_menu_from_controller(controller: XRController3D) -> void:
-	var pointer := controller.get_node_or_null("MenuPointer") as XRToolsFunctionPointer
-	if pointer == null or _presenter == null:
+	if _presenter == null:
 		return
-	pointer.enabled = true
+	var pointer := controller.get_node_or_null("MenuPointer") as Node3D
+	var aim_from: Node3D = pointer if pointer != null else controller
+	var direction := -aim_from.global_transform.basis.z
+	if _presenter.activate_from_aim(aim_from.global_position, direction):
+		return
+	if pointer == null:
+		return
 	# https://docs.godotengine.org/en/stable/classes/class_raycast3d.html#class-raycast3d-method-force-raycast-update
 	var ray := pointer.get_node_or_null("RayCast") as RayCast3D
 	if ray == null:
 		return
+	ray.enabled = true
 	ray.force_raycast_update()
-	var body: Object = pointer.last_target
-	var hit: Vector3 = pointer.last_collided_at
-	if ray.is_colliding():
-		body = ray.get_collider()
-		hit = ray.get_collision_point()
+	var body: Object = ray.get_collider() if ray.is_colliding() else null
+	var hit: Vector3 = ray.get_collision_point() if ray.is_colliding() else Vector3.ZERO
 	if body == null or not body.has_method("global_to_viewport"):
 		return
 	var point: Vector2 = body.global_to_viewport(hit)
@@ -505,6 +509,23 @@ func _refresh_menu_pointers() -> void:
 			ray.enabled = true
 			ray.force_raycast_update()
 
+func _hold_menu_pointers() -> void:
+	if _player == null:
+		return
+	for controller_name in ["LeftHandController", "RightHandController"]:
+		var pointer := _player.get_node_or_null(NodePath("%s/MenuPointer" % controller_name)) as XRToolsFunctionPointer
+		if pointer == null:
+			continue
+		pointer.process_mode = Node.PROCESS_MODE_ALWAYS
+		pointer.show_laser = XRToolsFunctionPointer.LaserShow.SHOW
+		pointer.enabled = true
+		var laser := pointer.get_node_or_null("Laser") as MeshInstance3D
+		if laser:
+			laser.visible = true
+		var ray := pointer.get_node_or_null("RayCast") as RayCast3D
+		if ray:
+			ray.enabled = true
+
 func _set_menu_pointers_enabled(enabled: bool) -> void:
 	if _player == null:
 		return
@@ -512,7 +533,9 @@ func _set_menu_pointers_enabled(enabled: bool) -> void:
 		var pointer := _player.get_node_or_null(NodePath("%s/MenuPointer" % controller_name)) as XRToolsFunctionPointer
 		if pointer:
 			pointer.process_mode = Node.PROCESS_MODE_ALWAYS if enabled else Node.PROCESS_MODE_INHERIT
+			# COLLIDE hides the beam until the ray hits. The results collider wakes
+			# a frame late, so the beam has to be visible as soon as the menu is.
+			pointer.show_laser = XRToolsFunctionPointer.LaserShow.SHOW if enabled else XRToolsFunctionPointer.LaserShow.COLLIDE
 			if enabled and pointer.has_method("reset_pointer_state"):
 				pointer.reset_pointer_state()
-			pointer.set_process(enabled)
 			pointer.enabled = enabled

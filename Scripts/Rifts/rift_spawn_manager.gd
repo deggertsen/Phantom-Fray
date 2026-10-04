@@ -26,6 +26,7 @@ var _next_rift_id: int = 1
 var _player: Node3D
 var _mission: Dictionary = {}
 var _wave_cursor: int = 0
+var _cluster_rifts: bool = false
 
 func _ready() -> void:
 	add_to_group("RiftSpawnManager")
@@ -42,6 +43,8 @@ func start_round(mission: Dictionary = {}) -> void:
 	var waves: Array = mission.get("rifts", [])
 	if not waves.is_empty():
 		total_rifts = waves.size()
+	max_concurrent_rifts = maxi(int(mission.get("max_concurrent", 1)), 1)
+	_cluster_rifts = bool(mission.get("cluster_rifts", false))
 	_wave_cursor = spawned_rifts
 	spawning_enabled = true
 	_fill_rift_slots()
@@ -94,11 +97,14 @@ func _spawn_new_rift() -> void:
 	rift.player_damaged.connect(_on_player_damaged)
 	if rift.has_signal("strike_rejected"):
 		rift.strike_rejected.connect(_on_strike_rejected)
+	var stagger := _cluster_rifts and not rift_instances.is_empty()
 	rift_instances.append(rift)
 	spawned_rifts += 1
 	_play_open_sound(rift.global_position)
 	rift_spawned.emit(id, rift)
-	rift.start_spawning(true)
+	rift.start_spawning(not stagger)
+	if stagger and rift.has_method("delay_first_spawn"):
+		rift.delay_first_spawn(float(rift.get("spawn_interval")) * 0.5)
 
 func _on_rift_closed(rift_id: int, rift: Node3D) -> void:
 	rift_instances.erase(rift)
@@ -122,6 +128,14 @@ func _on_strike_rejected(reason: StringName) -> void:
 
 func _find_valid_position() -> Vector3:
 	var player_position := _player.global_position if _player else Vector3.ZERO
+	var forward := _player_forward()
+	if _cluster_rifts and not rift_instances.is_empty():
+		return _position_beside(rift_instances[rift_instances.size() - 1], player_position, forward)
+	if _cluster_rifts:
+		var angle := randf_range(-0.35, 0.35)
+		var distance := randf_range(10.0, 12.5)
+		var facing := forward.rotated(Vector3.UP, angle)
+		return player_position + Vector3(facing.x * distance, rift_height, facing.z * distance)
 	for _attempt in range(40):
 		var angle := randf_range(0.0, TAU)
 		var distance := randf_range(min_player_distance, max_player_distance)
@@ -134,6 +148,37 @@ func _find_valid_position() -> Vector3:
 		if valid:
 			return candidate
 	return player_position + Vector3(0.0, rift_height, -min_player_distance)
+
+func _player_forward() -> Vector3:
+	var source: Node3D = _player
+	if _player:
+		var camera := _player.get_node_or_null("XRCamera3D") as Node3D
+		if camera:
+			source = camera
+	if source == null:
+		return Vector3.FORWARD
+	var forward := -source.global_transform.basis.z
+	forward.y = 0.0
+	if forward.length_squared() < 0.001:
+		return Vector3.FORWARD
+	return forward.normalized()
+
+func _position_beside(anchor: Node3D, player_position: Vector3, forward: Vector3) -> Vector3:
+	var right := forward.cross(Vector3.UP)
+	if right.length_squared() < 0.001:
+		right = Vector3.RIGHT
+	else:
+		right = right.normalized()
+	var gap := randf_range(3.4, 4.6)
+	var sign := -1.0 if randf() < 0.5 else 1.0
+	var candidate := anchor.global_position + right * gap * sign
+	candidate.y = rift_height
+	var to_candidate := candidate - player_position
+	to_candidate.y = 0.0
+	if to_candidate.length_squared() > 0.001 and to_candidate.normalized().dot(forward) < 0.55:
+		candidate = anchor.global_position - right * gap * sign
+		candidate.y = rift_height
+	return candidate
 
 func _play_open_sound(position: Vector3) -> void:
 	var stream := SfxVariations.pick("rift_open_sound")

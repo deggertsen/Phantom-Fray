@@ -76,6 +76,12 @@ func stop_spawning() -> void:
 	if _spawn_timer:
 		_spawn_timer.stop()
 
+func delay_first_spawn(delay: float) -> void:
+	if _spawn_timer == null or _closing:
+		return
+	# https://docs.godotengine.org/en/stable/classes/class_timer.html#class-timer-method-start
+	_spawn_timer.start(maxf(delay, 0.4))
+
 func force_cleanup() -> void:
 	stop_spawning()
 	for phantom in _live_phantoms.values():

@@ -67,7 +67,7 @@ func show_main_menu(deploy_detail: String = "Seal the next live rift before the 
 	))
 	_content.add_child(_make_action_button(
 		&"operations",
-		"◉  OPERATIONS\nCHOOSE A CONTRACT\nThree live operations from Dr. Chen",
+		"◉  OPERATIONS\nCHOOSE A CONTRACT\nFour live operations from Dr. Chen",
 		COLOR_AMBER,
 		Vector2(0, 96)
 	))
@@ -99,14 +99,14 @@ func show_operations(entries: Array[Dictionary]) -> void:
 		var state := "SEALED" if cleared else "OPEN" if unlocked else "LOCKED"
 		var button := _make_action_button(
 			StringName("mission_%s" % entry.get("id", "")),
-			"%s  %s\n%s\n%s" % [entry.get("codename", ""), entry.get("title", ""), state, detail],
+			"%s  %s  •  %s\n%s" % [entry.get("codename", ""), entry.get("title", ""), state, detail],
 			accent,
-			Vector2(0, 108),
+			Vector2(0, 72),
 			unlocked and not cleared
 		)
 		button.disabled = not unlocked
 		_content.add_child(button)
-	_content.add_child(_make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 68)))
+	_content.add_child(_make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 64)))
 	_set_footer("LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
 
 func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
@@ -211,7 +211,7 @@ func activate_at_viewport_point(point: Vector2) -> bool:
 func _closest_button(node: Node, point: Vector2, best: Array) -> void:
 	if node is Button:
 		var button := node as Button
-		var rect := button.get_global_rect().grow(42.0)
+		var rect := button.get_global_rect().grow(64.0)
 		if button.visible and not button.disabled and rect.has_point(point):
 			var distance := rect.get_center().distance_to(point)
 			if distance < float(best[1]):
@@ -240,16 +240,18 @@ func show_results(outcome: StringName, score: int, debrief: String = "", next_ti
 	if debrief != "":
 		var debrief_label := _label(debrief, 18, COLOR_TEXT)
 		debrief_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		# https://docs.godotengine.org/en/stable/classes/class_label.html#class-label-property-max-lines-visible
+		debrief_label.max_lines_visible = 2
+		debrief_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		_content.add_child(debrief_label)
+	if next_title != "":
+		_content.add_child(_make_action_button(&"next_mission", "NEXT OPERATION\n%s" % next_title, COLOR_GREEN, Vector2(0, 78), true))
+	_content.add_child(_make_action_button(&"retry", "RETRY MISSION", COLOR_CYAN, Vector2(0, 78), next_title == ""))
+	_content.add_child(_make_action_button(&"results_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 78)))
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	spacer.custom_minimum_size.y = 8
 	_content.add_child(spacer)
-	if next_title != "":
-		_content.add_child(_make_action_button(&"next_mission", "NEXT OPERATION\n%s" % next_title, COLOR_GREEN, Vector2(0, 64), true))
-	_content.add_child(_make_action_button(&"retry", "RETRY MISSION", COLOR_CYAN, Vector2(0, 58), next_title == ""))
-	_content.add_child(_make_action_button(&"results_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 58)))
 	_set_footer("POINT + TRIGGER TO SELECT YOUR NEXT OPERATION")
 
 func _build_shell() -> void:

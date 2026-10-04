@@ -19,6 +19,24 @@ func _ready() -> void:
 	if material:
 		material = material.duplicate() as StandardMaterial3D
 		sweet_spot_visual.material_override = material
+	place_sweet_spot()
+
+func place_sweet_spot(face: int = -1) -> void:
+	# Local +Z is the face traveling toward the player. +X is the phantom's right.
+	var side := signf(sweet_spot_visual.position.x)
+	if absf(side) < 0.01:
+		side = -1.0 if required_hand == &"left" else 1.0
+	var chosen := face if face >= 0 else randi() % 3
+	match chosen:
+		0:
+			# Hook. Stay on the hand that owns this color.
+			sweet_spot_visual.position = Vector3(side * 0.36, 0.02, 0.0)
+		1:
+			# Uppercut.
+			sweet_spot_visual.position = Vector3(0.0, -0.34, 0.08)
+		_:
+			# Jab.
+			sweet_spot_visual.position = Vector3(0.0, 0.04, 0.36)
 
 func _evaluate_strike(strike: Dictionary) -> Dictionary:
 	var hand_id: StringName = strike.get("hand_id", &"")

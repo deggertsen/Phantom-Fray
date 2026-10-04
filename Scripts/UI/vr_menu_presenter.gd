@@ -76,6 +76,37 @@ func activate_at_viewport_point(point: Vector2) -> bool:
 		return false
 	return _menu.activate_at_viewport_point(point)
 
+func activate_from_aim(origin: Vector3, direction: Vector3) -> bool:
+	var point: Variant = _viewport_point_from_aim(origin, direction)
+	if point == null:
+		return false
+	return activate_at_viewport_point(point)
+
+func _viewport_point_from_aim(origin: Vector3, direction: Vector3) -> Variant:
+	if _screen == null:
+		return null
+	var screen := _screen.get_node_or_null("Screen") as Node3D
+	if screen == null or direction.length_squared() < 0.0001:
+		return null
+	var normal := screen.global_transform.basis.z
+	var denom := direction.normalized().dot(normal)
+	if absf(denom) < 0.0001:
+		return null
+	var travel := direction.normalized()
+	var distance := (screen.global_position - origin).dot(normal) / denom
+	if distance < 0.05 or distance > 12.0:
+		return null
+	var hit := origin + travel * distance
+	var local: Vector3 = screen.global_transform.affine_inverse() * hit
+	var size := _screen.screen_size
+	if absf(local.x) > size.x * 0.55 or absf(local.y) > size.y * 0.55:
+		return null
+	var vp := _screen.viewport_size
+	return Vector2(
+		(local.x / size.x + 0.5) * vp.x,
+		(0.5 - local.y / size.y) * vp.y
+	)
+
 func hide_menu() -> void:
 	_is_visible = false
 	visible = false
@@ -107,6 +138,21 @@ func _show() -> void:
 	# A throttled viewport drops the frames where a trigger click has to land.
 	_screen.update_mode = XRToolsViewport2DIn3D.UpdateMode.UPDATE_ALWAYS
 	recenter()
+	# Victory opens this panel from the rift-close physics callback. A collision
+	# shape changed in that callback does not come back until the idle frame.
+	# https://docs.godotengine.org/en/stable/classes/class_collisionshape3d.html#class-collisionshape3d-property-disabled
+	_arm_screen_collision.call_deferred()
+
+func ensure_screen_collision() -> void:
+	_arm_screen_collision()
+
+func _arm_screen_collision() -> void:
+	if not _is_visible or _screen == null:
+		return
+	_screen.enabled = true
+	var shape := _screen.get_node_or_null("StaticBody3D/CollisionShape3D") as CollisionShape3D
+	if shape:
+		shape.set_deferred("disabled", false)
 
 func _build_holographic_frame() -> void:
 	var cyan := _holo_material(Color("35e7ff"), 1.35)

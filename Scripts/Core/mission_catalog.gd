@@ -12,7 +12,7 @@ static func scene_path(variant_id: String) -> String:
 	return String(SCENE_BY_ID.get(variant_id, ""))
 
 static func all_missions() -> Array[Dictionary]:
-	return [_first_light(), _widen_the_ring(), _chens_gambit()]
+	return [_first_light(), _widen_the_ring(), _chens_gambit(), _double_breach()]
 
 static func get_mission(mission_id: String) -> Dictionary:
 	for mission in all_missions():
@@ -157,6 +157,31 @@ static func _chens_gambit() -> Dictionary:
 			_wave(100, 3.2, 3, 1.05, 0.95, ["yellow", "blue", "green", "pink"]),
 			_wave(120, 2.6, 4, 1.16, 0.8, ["green", "pink", "blue", "yellow", "pink"]),
 			_wave(140, 2.2, 4, 1.28, 0.7, ["yellow", "blue", "green", "pink"]),
+		],
+	}
+
+static func _double_breach() -> Dictionary:
+	return {
+		"id": "double_breach",
+		"codename": "OP-04",
+		"title": "DOUBLE BREACH",
+		"summary": "Two rifts open in the same view. Their scouts arrive out of step.",
+		"objective": "SEAL THE PAIRED RIFTS",
+		"duration": 260.0,
+		"max_concurrent": 2,
+		"cluster_rifts": true,
+		"start_line": "CHEN: TWO DOORS. SAME VIEW. THEY WILL NOT SYNC.",
+		"pressure_labels": ["PAIR LIVE", "SECOND PAIR", "BOTH ANGRY", "LAST DOOR"],
+		"open_barks": ["", "THE OTHER ONE IS ALREADY OPEN.", "NEW PAIR. KEEP THEM IN FRONT.", "ONE LEFT. FINISH IT."],
+		"seal_lines": ["ONE DOWN. ITS PARTNER IS STILL FEEDING.", "PAIR SEALED. THE NEXT TWO ARE OPENING.", "ALMOST. DON'T BLINK THE LAST ONE."],
+		"victory_line": "Chen: You sealed them as a pair. The Overseer will not make the next one this polite.",
+		"defeat_line": "Chen: The pair drank you. Take the left door before their scouts overlap.",
+		"timeout_line": "Chen: The window died with both doors still open.",
+		"rifts": [
+			_wave(120, 3.1, 2, 1.12, 0.88, ["yellow", "blue", "green", "pink"]),
+			_wave(120, 3.6, 2, 1.12, 0.88, ["blue", "green", "pink", "yellow"]),
+			_wave(140, 2.6, 2, 1.24, 0.74, ["green", "pink", "yellow", "blue"]),
+			_wave(140, 3.0, 2, 1.24, 0.74, ["pink", "yellow", "green", "blue"]),
 		],
 	}
 

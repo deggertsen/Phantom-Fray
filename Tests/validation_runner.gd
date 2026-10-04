@@ -13,7 +13,7 @@ func _run_validation() -> void:
 	await _validate_variant_rules()
 	_validate_life_force()
 	await _validate_attack_window()
-	_validate_mission_catalog()
+	await _validate_mission_catalog()
 	await _validate_menu_surface()
 	await _validate_results_menu()
 	await _validate_pink_dodge()
@@ -87,6 +87,39 @@ func _validate_variant_rules() -> void:
 	var correct: Dictionary = yellow._evaluate_strike({"hand_id": &"left", "position": yellow.get_node("SweetSpotVisual").global_position})
 	if not correct.get("valid", false) or not correct.get("sweet_spot", false):
 		failures.append("Yellow sweet spot rejects left-hand strike")
+	var faces: Dictionary = {}
+	for face in 3:
+		yellow.place_sweet_spot(face)
+		var spot: Vector3 = yellow.get_node("SweetSpotVisual").position
+		if face == 0 and spot.x > -0.2:
+			failures.append("Yellow hook spot left the punching side")
+		elif face == 1 and spot.y > -0.2:
+			failures.append("Yellow uppercut spot is not on the underside")
+		elif face == 2 and spot.z < 0.2:
+			failures.append("Yellow jab spot is not on the front")
+		var sweet: Dictionary = yellow._evaluate_strike({"hand_id": &"left", "position": yellow.get_node("SweetSpotVisual").global_position})
+		if not sweet.get("sweet_spot", false):
+			failures.append("Moved sweet spot rejected the strike")
+		faces[face] = true
+	for _roll in 24:
+		yellow.place_sweet_spot()
+		var rolled: Vector3 = yellow.get_node("SweetSpotVisual").position
+		if rolled.y < -0.2:
+			faces["belly"] = true
+		elif rolled.z > 0.2:
+			faces["front"] = true
+		elif absf(rolled.x) > 0.2:
+			faces["side"] = true
+	if not faces.has("belly") or not faces.has("front") or not faces.has("side"):
+		failures.append("Yellow sweet spot did not vary between hook, uppercut, and jab")
+	var blue_scene := load("res://Scenes/Phantoms/blue_phantom.tscn") as PackedScene
+	var blue := blue_scene.instantiate()
+	root.add_child(blue)
+	await process_frame
+	blue.place_sweet_spot(0)
+	if blue.get_node("SweetSpotVisual").position.x < 0.2:
+		failures.append("Blue hook spot left the punching side")
+	blue.queue_free()
 	yellow.queue_free()
 	await process_frame
 
@@ -134,6 +167,14 @@ func _validate_menu_surface() -> void:
 		failures.append("Tutorial continue action is missing")
 	menu.queue_free()
 	await process_frame
+
+func _buttons_under(node: Node) -> Array[Button]:
+	var found: Array[Button] = []
+	if node is Button:
+		found.append(node as Button)
+	for child in node.get_children():
+		found.append_array(_buttons_under(child))
+	return found
 
 func _find_button(node: Node, text_fragment: String) -> Button:
 	if node is Button and text_fragment in node.text:
@@ -309,6 +350,8 @@ func _validate_results_menu() -> void:
 		var rect := button.get_global_rect()
 		if rect.size.y < 20.0 or not panel_rect.encloses(rect):
 			failures.append("Results button %s sits outside the panel %s" % [label, rect])
+		elif rect.position.y + rect.size.y > 680.0:
+			failures.append("Results button %s is pinned to the bottom edge %s" % [label, rect])
 	var retry := _find_button(presenter, "RETRY MISSION")
 	var body := presenter.get_node_or_null("MenuScreen/StaticBody3D")
 	if retry == null or body == null or not body.has_method("global_to_viewport"):
@@ -333,6 +376,33 @@ func _validate_results_menu() -> void:
 		)
 		if not presenter.activate_at_viewport_point(mapped) or not activated[0]:
 			failures.append("Pointing at retry did not activate it")
+		activated[0] = false
+		var aim_origin: Vector3 = world_point + shape.global_transform.basis.z * 1.2
+		var aim_direction: Vector3 = world_point - aim_origin
+		if not presenter.activate_from_aim(aim_origin, aim_direction) or not activated[0]:
+			failures.append("Aiming at retry did not activate it")
+		var screen_shape := body.get_node_or_null("CollisionShape3D") as CollisionShape3D
+		if screen_shape == null:
+			failures.append("Results screen has no collision shape")
+		else:
+			screen_shape.disabled = true
+			presenter.ensure_screen_collision()
+			await process_frame
+			if screen_shape.disabled:
+				failures.append("Results screen collider stayed disabled")
+	presenter.show_operations(MissionCatalog.operation_entries(null))
+	for _frame in 4:
+		await process_frame
+	var operation_buttons := 0
+	var operation_panel := Rect2(Vector2.ZERO, Vector2(1280, 780))
+	var stack := presenter.get_node("MenuScreen/Viewport").get_child(0)
+	for button in _buttons_under(stack):
+		operation_buttons += 1
+		var op_rect := button.get_global_rect()
+		if op_rect.size.y < 20.0 or not operation_panel.encloses(op_rect):
+			failures.append("Operations button sits outside the panel %s" % op_rect)
+	if operation_buttons < 5:
+		failures.append("Operations list is missing a contract or the back button")
 	presenter.queue_free()
 	player.queue_free()
 	await process_frame
@@ -390,8 +460,8 @@ func _validate_possession(yellow_scene: PackedScene) -> void:
 	await process_frame
 
 func _validate_mission_catalog() -> void:
-	if MissionCatalog.all_missions().size() != 3:
-		failures.append("Mission catalog does not contain three operations")
+	if MissionCatalog.all_missions().size() != 4:
+		failures.append("Mission catalog does not contain four operations")
 	var none := PackedStringArray()
 	if not MissionCatalog.is_unlocked_with_clears("first_light", none):
 		failures.append("First Light should be available immediately")
@@ -402,9 +472,66 @@ func _validate_mission_catalog() -> void:
 		failures.append("Widen the Ring stayed locked after First Light")
 	if MissionCatalog.is_unlocked_with_clears("chens_gambit", cleared):
 		failures.append("Chen's Gambit unlocked before the civic ring")
+	var through_ring := PackedStringArray(["first_light", "widen_the_ring"])
+	if MissionCatalog.is_unlocked_with_clears("double_breach", through_ring):
+		failures.append("Double Breach unlocked before Chen's Gambit")
+	var through_gambit := PackedStringArray(["first_light", "widen_the_ring", "chens_gambit"])
+	if not MissionCatalog.is_unlocked_with_clears("double_breach", through_gambit):
+		failures.append("Double Breach stayed locked after Chen's Gambit")
+	var paired := MissionCatalog.get_mission("double_breach")
+	if int(paired.get("max_concurrent", 1)) != 2 or not bool(paired.get("cluster_rifts", false)):
+		failures.append("Double Breach does not open a paired rift")
+	var paired_waves: Array = paired.get("rifts", [])
+	if paired_waves.size() != 4:
+		failures.append("Double Breach is missing its four rifts")
+	elif absf(float(paired_waves[0].get("interval", 0.0)) - float(paired_waves[1].get("interval", 0.0))) < 0.3:
+		failures.append("Paired rifts spawn on the same clock")
+	var first := MissionCatalog.get_mission("first_light")
+	if int(first.get("max_concurrent", 1)) != 1 or bool(first.get("cluster_rifts", false)):
+		failures.append("First Light opened more than one rift")
+	await _validate_paired_rift_placement()
 	for variant_id in ["yellow", "blue", "green", "pink"]:
 		if load(MissionCatalog.scene_path(variant_id)) == null:
 			failures.append("Mission pool failed to load %s" % variant_id)
+
+func _validate_paired_rift_placement() -> void:
+	var director := RiftDirector.new()
+	root.add_child(director)
+	await process_frame
+	var player := Node3D.new()
+	root.add_child(player)
+	var camera := Node3D.new()
+	camera.name = "XRCamera3D"
+	player.add_child(camera)
+	camera.global_position = Vector3(0.0, 1.6, 0.0)
+	camera.look_at(Vector3(0.0, 1.6, -5.0), Vector3.UP)
+	director._player = player
+	director._cluster_rifts = true
+	var forward := Vector3(0.0, 0.0, -1.0)
+	for _i in 6:
+		director.rift_instances.clear()
+		var first: Vector3 = director._find_valid_position()
+		var to_first := first - player.global_position
+		to_first.y = 0.0
+		if to_first.length() < 9.0 or to_first.length() > 13.2 or to_first.normalized().dot(forward) < 0.7:
+			failures.append("Paired rift did not open in front of the player")
+			break
+		var anchor := Node3D.new()
+		root.add_child(anchor)
+		anchor.global_position = first
+		director.rift_instances.append(anchor)
+		var second: Vector3 = director._find_valid_position()
+		var gap := Vector2(second.x - first.x, second.z - first.z).length()
+		var to_second := second - player.global_position
+		to_second.y = 0.0
+		if gap < 3.2 or gap > 5.0 or to_second.length_squared() < 0.001 or to_second.normalized().dot(forward) < 0.45:
+			failures.append("Paired rift is not beside its partner")
+		anchor.queue_free()
+		if not failures.is_empty() and failures[failures.size() - 1] == "Paired rift is not beside its partner":
+			break
+	director.queue_free()
+	player.queue_free()
+	await process_frame
 
 func _validate_life_force() -> void:
 	var life := LifeForceManager.new()
