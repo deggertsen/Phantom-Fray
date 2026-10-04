@@ -78,6 +78,7 @@ var _coast_time: float = 0.0
 var _stall_time: float = 0.0
 var _stalls: int = 0
 var _alive_time: float = 0.0
+var _impact_drop: float = 0.22
 
 func _ready() -> void:
 	# The body is punchable but does not physically block on the player's hurtbox.
@@ -275,11 +276,16 @@ func _tick_arc(delta: float) -> void:
 		if through.length_squared() < 0.0001:
 			through = velocity if velocity.length_squared() > 0.01 else Vector3.FORWARD
 		desired = through.normalized() * speed
+	var to_player := _locked_target - global_position
+	var camera_distance := global_position.distance_to(_player_camera.global_position)
+	if camera_distance < 3.2 and camera_distance > 0.02:
+		var homing := smoothstep(3.2, 0.55, camera_distance)
+		desired = desired.lerp(to_player.normalized() * speed, homing)
 	# https://docs.godotengine.org/en/stable/classes/class_characterbody3d.html#class-characterbody3d-method-move-and-slide
 	velocity = velocity.lerp(desired, clampf(acceleration * delta, 0.0, 1.0))
 	_face_direction(desired)
 	move_and_slide()
-	var camera_distance := global_position.distance_to(_player_camera.global_position)
+	camera_distance = global_position.distance_to(_player_camera.global_position)
 	var closing_in := camera_distance < strike_reach * 1.4
 	if velocity.length() < 0.2 and _curve_progress > 0.08 and not closing_in:
 		_stall_time += delta
@@ -296,12 +302,12 @@ func _tick_arc(delta: float) -> void:
 	var in_reach := camera_distance <= strike_reach
 	_phase = Phase.COMMIT if in_reach else Phase.APPROACH
 	_set_alert(lerpf(0.2, 1.0, maxf(ramp, 1.0 if in_reach else 0.0)))
-	# Turn around only after the body has passed the player, not when the carrot finishes early.
-	var passed_player := _camera_closest <= strike_reach and camera_distance > _camera_closest + 0.22
+	# Leave only after the body has passed through the player. A wide arc must not count as a miss.
+	var passed_through := _camera_closest <= possession_radius and camera_distance > _camera_closest + 0.16
 	_camera_closest = minf(_camera_closest, camera_distance)
-	var arrived := _curve_progress > 0.85 and global_position.distance_to(_curve_end) < 0.4
+	var arrived := _curve_progress > 0.92 and global_position.distance_to(_curve_end) < 0.35 and _camera_closest <= possession_radius
 	_coast_time = _coast_time + delta if arrived else 0.0
-	if passed_player or _coast_time > 0.2:
+	if passed_through or _coast_time > 0.12:
 		_begin_recover()
 
 func _steer_point() -> Vector3:
@@ -316,13 +322,8 @@ func _steer_point() -> Vector3:
 func _build_curve() -> void:
 	_lock_target()
 	_curve_start = global_position
-	var travel := _locked_target - _curve_start
-	if travel.length_squared() < 0.04:
-		travel = -_player_camera.global_transform.basis.z
-	if travel.length_squared() < 0.0001:
-		travel = Vector3.FORWARD
-	# Finish past the strike so they are still moving when they reach you.
-	_curve_end = _locked_target + travel.normalized() * randf_range(1.25, 1.9)
+	# The approach ends on the player. The bow is only the middle of the path.
+	_curve_end = _locked_target
 	var side := lateral_bias
 	if absf(side) < 0.01:
 		side = -1.0 if randf() < 0.5 else 1.0
@@ -333,10 +334,8 @@ func _build_curve() -> void:
 	var bow := randf_range(arc_scale * 0.35, arc_scale * 1.2)
 	var early := _curve_start.lerp(_curve_end, along)
 	_curve_control = early + right * side * bow + Vector3.UP * randf_range(-0.45, 0.7)
-	var late_along := clampf(along + randf_range(0.12, 0.28), 0.4, 0.84)
-	var late := _curve_start.lerp(_curve_end, late_along)
-	var counter := -0.4 if randf() < 0.45 else randf_range(0.2, 0.7)
-	_curve_control_b = late + right * side * bow * counter + Vector3.UP * randf_range(-0.3, 0.45)
+	var late := _curve_start.lerp(_locked_target, randf_range(0.74, 0.88))
+	_curve_control_b = late + right * side * bow * randf_range(0.04, 0.18)
 	_curve_length = maxf(
 		_curve_start.distance_to(_curve_control)
 		+ _curve_control.distance_to(_curve_control_b)
@@ -377,23 +376,9 @@ func _tick_recover(delta: float) -> void:
 		_set_alert(0.0)
 
 func _lock_target() -> void:
-	var right := _flat_right()
-	var forward := -_player_camera.global_transform.basis.z
-	forward.y = 0.0
-	if forward.length_squared() < 0.001:
-		forward = Vector3.FORWARD
-	else:
-		forward = forward.normalized()
-	var side := lateral_bias
-	if absf(side) < 0.01:
-		side = -1.0 if randf() < 0.5 else 1.0
-	else:
-		side = signf(side)
-	var reach := randf_range(lateral_reach_min, maxf(lateral_reach_min, lateral_reach_max))
-	var height := height_bias + randf_range(-height_jitter, height_jitter)
-	var depth := randf_range(-0.04, 0.14)
-	_locked_target = _player_camera.global_position + right * side * reach + forward * depth + Vector3.UP * height
-	_locked_target.y = clampf(_locked_target.y, 0.85, 1.85)
+	# Just under the eyes. High enough to punch, low enough to not be a bird.
+	_impact_drop = randf_range(0.18, 0.30)
+	_locked_target = _player_camera.global_position + Vector3.DOWN * _impact_drop
 
 func _flat_right() -> Vector3:
 	var right := _player_camera.global_transform.basis.x
@@ -456,6 +441,10 @@ func _core_reaches_player(from_position: Vector3, to_position: Vector3) -> bool:
 	var points: Array[Vector3] = []
 	if _player_camera:
 		points.append(_player_camera.global_position)
+		# Punchable phantoms finish under the eyes. Pink's lane is not a body part:
+		# leaving that line is the dodge.
+		if uses_attack_pattern:
+			points.append(_player_camera.global_position + Vector3.DOWN * _impact_drop)
 	var body := get_tree().get_first_node_in_group("PlayerBody") as Node3D
 	if body:
 		points.append(body.global_position)

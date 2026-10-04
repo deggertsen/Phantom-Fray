@@ -12,14 +12,8 @@ var _player: Node3D
 var _screen: XRToolsViewport2DIn3D
 var _menu: VRMenuPanel
 var _is_visible: bool = false
-const HitPad := preload("res://Scripts/UI/menu_hit_pad.gd")
-## XR Tools function pointers collide with physics layer 23, not project layer 5.
-const POINTER_LAYER := 1 << 22
-
 var _holo_nodes: Array[MeshInstance3D] = []
 var _holo_time: float = 0.0
-var _hit_pads: Array[StaticBody3D] = []
-var _pad_attempts: int = 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -48,42 +42,34 @@ func show_main_menu(deploy_detail: String = "") -> void:
 		_menu.show_main_menu()
 	else:
 		_menu.show_main_menu(deploy_detail)
-	_queue_hit_pads()
 
 func show_operations(entries: Array[Dictionary]) -> void:
 	_show()
 	_menu.show_operations(entries)
-	_queue_hit_pads()
 
 func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
 	_show()
 	_menu.show_tutorial(page_index, pages)
-	_queue_hit_pads()
 
 func show_settings(music: String, haptics: String, reduced_flashes: bool, from_pause: bool) -> void:
 	_show()
 	_menu.show_settings(music, haptics, reduced_flashes, from_pause)
-	_queue_hit_pads()
 
 func show_pause() -> void:
 	_show()
 	_menu.show_pause()
-	_queue_hit_pads()
 
 func show_abort_confirmation() -> void:
 	_show()
 	_menu.show_abort_confirmation()
-	_queue_hit_pads()
 
 func show_suspended() -> void:
 	_show()
 	_menu.show_suspended()
-	_queue_hit_pads()
 
 func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "") -> void:
 	_show()
 	_menu.show_results(outcome, score, debrief, next_title)
-	_queue_hit_pads()
 
 func activate_at_viewport_point(point: Vector2) -> bool:
 	if _menu == null or not _is_visible:
@@ -92,7 +78,6 @@ func activate_at_viewport_point(point: Vector2) -> bool:
 
 func hide_menu() -> void:
 	_is_visible = false
-	_clear_hit_pads()
 	visible = false
 	if _screen:
 		_screen.enabled = false
@@ -182,69 +167,3 @@ func _build_screen() -> void:
 
 func _on_menu_action(action: StringName) -> void:
 	action_requested.emit(action)
-
-func _queue_hit_pads() -> void:
-	_clear_hit_pads()
-	_pad_attempts = 0
-	_place_hit_pads.call_deferred()
-
-func _place_hit_pads() -> void:
-	if not _is_visible or _screen == null or _menu == null:
-		return
-	_clear_hit_pads()
-	var placed := 0
-	var body := _screen.get_node_or_null("StaticBody3D")
-	if body == null:
-		return
-	var screen_size: Vector2 = body.get("screen_size")
-	var viewport_size: Vector2 = body.get("viewport_size")
-	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
-		return
-	for button in _buttons_in(_menu):
-		if not button.has_meta(&"menu_action") or button.disabled:
-			continue
-		var rect := button.get_global_rect()
-		if rect.size.x < 8.0 or rect.size.y < 8.0:
-			continue
-		var center := rect.get_center()
-		var pad := HitPad.new() as StaticBody3D
-		pad.set(&"action", button.get_meta(&"menu_action"))
-		pad.collision_layer = POINTER_LAYER
-		pad.collision_mask = 0
-		# +Z faces the player. Basis.looking_at points the panel's -Z along their gaze.
-		# https://docs.godotengine.org/en/stable/classes/class_basis.html#class-basis-method-looking-at
-		pad.position = Vector3(
-			(center.x / viewport_size.x - 0.5) * screen_size.x,
-			(0.5 - center.y / viewport_size.y) * screen_size.y,
-			0.06
-		)
-		var shape := CollisionShape3D.new()
-		var box := BoxShape3D.new()
-		box.size = Vector3(
-			maxf(rect.size.x / viewport_size.x * screen_size.x, 0.18),
-			maxf(rect.size.y / viewport_size.y * screen_size.y, 0.1),
-			0.05
-		)
-		shape.shape = box
-		pad.add_child(shape)
-		pad.connect(&"selected", _on_menu_action)
-		_screen.add_child(pad)
-		_hit_pads.append(pad)
-		placed += 1
-	if placed == 0 and _pad_attempts < 6:
-		_pad_attempts += 1
-		_place_hit_pads.call_deferred()
-
-func _buttons_in(node: Node) -> Array[Button]:
-	var found: Array[Button] = []
-	if node is Button:
-		found.append(node)
-	for child in node.get_children():
-		found.append_array(_buttons_in(child))
-	return found
-
-func _clear_hit_pads() -> void:
-	for pad in _hit_pads:
-		if is_instance_valid(pad):
-			pad.queue_free()
-	_hit_pads.clear()

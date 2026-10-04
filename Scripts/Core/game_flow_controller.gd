@@ -24,6 +24,8 @@ var _menu_input_armed: bool = false
 var _results_pointer_warmup: float = 0.0
 var _results_action_locked: bool = false
 var _menu_trigger_down: bool = false
+var _trigger_controller: XRController3D
+var _menu_action_cooldown: float = 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -48,6 +50,8 @@ func _ready() -> void:
 		_arm_menu_input_after_release()
 
 func _process(delta: float) -> void:
+	if _menu_action_cooldown > 0.0:
+		_menu_action_cooldown = maxf(_menu_action_cooldown - delta, 0.0)
 	if _state == STATE_RESULTS and _results_pointer_warmup > 0.0:
 		_results_pointer_warmup -= delta
 		_set_menu_pointers_enabled(true)
@@ -65,15 +69,18 @@ func _connect_controller_buttons() -> void:
 			controller.button_pressed.connect(_on_controller_button_pressed.bind(controller))
 
 func _on_controller_button_pressed(button: String, controller: XRController3D = null) -> void:
-	if button == "trigger_click" and _menu_input_armed and controller and _presenter and _presenter.is_menu_visible():
+	if button == "trigger_click" and controller and _presenter and _presenter.is_menu_visible():
 		_menu_trigger_down = true
-		_activate_menu_from_controller(controller)
+		_trigger_controller = controller
 		return
 	# The Meta system button owns recentering. We only consume the app-menu action for pause.
 	if button == "menu_button" and _state == STATE_PLAYING and _round and _round.is_round_in_progress():
 		_pause_game()
 
 func _on_menu_action(action: StringName) -> void:
+	if _menu_action_cooldown > 0.0 or not _action_belongs_to_state(action):
+		return
+	_menu_action_cooldown = 0.45
 	if _state != STATE_RESULTS:
 		if not _menu_input_armed:
 			return
@@ -379,21 +386,40 @@ func _show_results() -> void:
 	call_deferred("_reset_results_pointers_after_render")
 
 func _poll_menu_trigger() -> void:
-	if not _menu_input_armed or _player == null or _presenter == null or not _presenter.is_menu_visible():
-		return
-	if _state == STATE_PLAYING:
+	if _player == null or _presenter == null or not _presenter.is_menu_visible() or _state == STATE_PLAYING:
+		_menu_trigger_down = false
 		return
 	var down := false
-	var pressed_controller: XRController3D = null
+	var held: XRController3D = null
 	for path in [NodePath("LeftHandController"), NodePath("RightHandController")]:
 		var controller := _player.get_node_or_null(path) as XRController3D
 		if controller and controller.is_button_pressed("trigger_click"):
 			down = true
-			pressed_controller = controller
-	var rising := down and not _menu_trigger_down
+			held = controller
+	var released := _menu_trigger_down and not down
+	var who := _trigger_controller
 	_menu_trigger_down = down
-	if rising and pressed_controller:
-		_activate_menu_from_controller(pressed_controller)
+	if down:
+		_trigger_controller = held
+	if released and _menu_input_armed and who != null:
+		_activate_menu_from_controller(who)
+
+func _action_belongs_to_state(action: StringName) -> bool:
+	match _state:
+		STATE_RESULTS:
+			return action in [&"retry", &"next_mission", &"results_menu"]
+		STATE_SETTINGS:
+			return action in [&"music_down", &"music_up", &"effects_down", &"effects_up", &"haptics_down", &"haptics_up", &"settings_flashes", &"settings_back"]
+		STATE_MENU:
+			return String(action).begins_with("mission_") or action in [&"deploy", &"operations", &"operations_back", &"training", &"settings"]
+		STATE_TUTORIAL:
+			return action in [&"tutorial_continue", &"tutorial_back", &"tutorial_exit", &"results_training"]
+		STATE_PAUSED:
+			return action in [&"resume", &"pause_settings", &"abort"]
+		STATE_ABORT_CONFIRM:
+			return action in [&"abort_cancel", &"abort_confirm"]
+		_:
+			return false
 
 func _sync_menu_trigger_baseline() -> void:
 	_menu_trigger_down = false
@@ -419,9 +445,6 @@ func _activate_menu_from_controller(controller: XRController3D) -> void:
 	if ray.is_colliding():
 		body = ray.get_collider()
 		hit = ray.get_collision_point()
-	if body != null and body.has_method("activate"):
-		body.activate()
-		return
 	if body == null or not body.has_method("global_to_viewport"):
 		return
 	var point: Vector2 = body.global_to_viewport(hit)

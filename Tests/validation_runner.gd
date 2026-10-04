@@ -157,6 +157,52 @@ func _validate_pink_dodge() -> void:
 	if not pink._terminal:
 		failures.append("Pink dodge pass detection failed")
 	pink.queue_free()
+	var missed := pink_scene.instantiate()
+	root.add_child(missed)
+	await process_frame
+	var aside := Node3D.new()
+	root.add_child(aside)
+	aside.global_position = Vector3(1.1, 1.6, 0.0)
+	missed._player_camera = aside
+	missed._locked_target = Vector3(0.0, 1.6, 0.0)
+	missed.global_position = Vector3(0.0, 1.6, 1.2)
+	missed._telegraph_remaining = 0.0
+	missed._previous_target_distance = 1.2
+	var dodged_hurt := [false]
+	missed.player_contact.connect(func(_amount: float) -> void:
+		dodged_hurt[0] = true
+	)
+	for _step in 40:
+		if missed._terminal:
+			break
+		missed._physics_process(0.05)
+	if dodged_hurt[0] or not missed._terminal:
+		failures.append("Pink dodge still damaged the player")
+	missed.queue_free()
+	aside.queue_free()
+	var caught := pink_scene.instantiate()
+	root.add_child(caught)
+	await process_frame
+	var inline := Node3D.new()
+	root.add_child(inline)
+	inline.global_position = Vector3(0.0, 1.6, 0.0)
+	caught._player_camera = inline
+	caught._locked_target = inline.global_position
+	caught.global_position = Vector3(0.0, 1.6, 1.2)
+	caught._telegraph_remaining = 0.0
+	caught._previous_target_distance = 1.2
+	var lane_hurt := [false]
+	caught.player_contact.connect(func(_amount: float) -> void:
+		lane_hurt[0] = true
+	)
+	for _step in 40:
+		if caught._terminal:
+			break
+		caught._physics_process(0.05)
+	if not lane_hurt[0]:
+		failures.append("Pink lane hit did not damage the player")
+	caught.queue_free()
+	inline.queue_free()
 	await process_frame
 
 func _validate_attack_window() -> void:
@@ -210,12 +256,14 @@ func _validate_green_arrival() -> void:
 	green._player_camera = head
 	var stalled := false
 	var slow_frames := 0
-	for _step in 320:
+	var closest := INF
+	for _step in 420:
 		if green._terminal:
 			break
 		var before: float = green_body.global_position.distance_to(head.global_position)
 		green._physics_process(0.016)
 		var after: float = green_body.global_position.distance_to(head.global_position)
+		closest = minf(closest, after)
 		var still_closing := after < before - 0.001 and before < 2.0
 		if still_closing and green.velocity.length() < 0.35:
 			slow_frames += 1
@@ -226,6 +274,8 @@ func _validate_green_arrival() -> void:
 			slow_frames = 0
 	if stalled:
 		failures.append("Green phantom stopped while closing")
+	if not green._terminal and closest > 0.34:
+		failures.append("Green phantom flew past the player")
 	green.queue_free()
 	head.queue_free()
 	await process_frame
@@ -283,13 +333,6 @@ func _validate_results_menu() -> void:
 		)
 		if not presenter.activate_at_viewport_point(mapped) or not activated[0]:
 			failures.append("Pointing at retry did not activate it")
-	var pads := presenter.get_node("MenuScreen").get_children()
-	var pad_actions: Array[String] = []
-	for child in pads:
-		if child.has_method("activate"):
-			pad_actions.append(String(child.get("action")))
-	if pad_actions.size() < 3 or not pad_actions.has("retry"):
-		failures.append("Results buttons have no laser hit pads: %s" % str(pad_actions))
 	presenter.queue_free()
 	player.queue_free()
 	await process_frame
@@ -318,12 +361,28 @@ func _validate_possession(yellow_scene: PackedScene) -> void:
 	graze._player_camera = far_head
 	if graze._try_possess_between(graze.global_position, graze.global_position) or graze._terminal:
 		failures.append("Phantom edge graze possessed the player")
-	var offsets: Dictionary = {}
+	graze.global_position = far_head.global_position + Vector3(0.0, -0.2, 6.0)
+	var bows: Dictionary = {}
 	for _i in 8:
-		graze._lock_target()
-		offsets[snappedf(graze._locked_target.x, 0.02)] = true
-	if offsets.size() < 2:
-		failures.append("Yellow commit target did not vary")
+		graze._build_curve()
+		var drop: float = far_head.global_position.y - graze._locked_target.y
+		var flat := Vector2(
+			graze._locked_target.x - far_head.global_position.x,
+			graze._locked_target.z - far_head.global_position.z
+		)
+		if drop < 0.14 or drop > 0.34 or flat.length() > 0.05:
+			failures.append("Punchable phantom is not aimed below the head")
+			break
+		bows[snappedf(graze._curve_control.x, 0.15)] = true
+		var nearest := INF
+		for step in 48:
+			var point: Vector3 = graze._bezier(float(step) / 47.0)
+			nearest = minf(nearest, point.distance_to(graze._locked_target))
+		if nearest > 0.2:
+			failures.append("Approach arc misses the player")
+			break
+	if bows.size() < 2:
+		failures.append("Approach arc did not vary")
 	graze.queue_free()
 	far_head.queue_free()
 	yellow.queue_free()
