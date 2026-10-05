@@ -67,7 +67,7 @@ func show_main_menu(deploy_detail: String = "Seal the next live rift before the 
 	))
 	_content.add_child(_make_action_button(
 		&"operations",
-		"◉  OPERATIONS\nCHOOSE A CONTRACT\nFour live operations from Dr. Chen",
+		"◉  OPERATIONS\nCHOOSE A CONTRACT\nSix live operations from Dr. Chen",
 		COLOR_AMBER,
 		Vector2(0, 96)
 	))
@@ -90,7 +90,7 @@ func show_main_menu(deploy_detail: String = "Seal the next live rift before the 
 	_set_footer("POINT AT A BUTTON  •  PULL TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
 
 func show_operations(entries: Array[Dictionary]) -> void:
-	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "EACH SEAL TEACHES THE NEXT", COLOR_AMBER)
+	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "EACH SEAL TEACHES THE NEXT", COLOR_AMBER, 40)
 	for entry in entries:
 		var unlocked: bool = entry.get("unlocked", false)
 		var cleared: bool = entry.get("cleared", false)
@@ -101,12 +101,15 @@ func show_operations(entries: Array[Dictionary]) -> void:
 			StringName("mission_%s" % entry.get("id", "")),
 			"%s  %s  •  %s\n%s" % [entry.get("codename", ""), entry.get("title", ""), state, detail],
 			accent,
-			Vector2(0, 72),
+			Vector2(0, 56),
 			unlocked and not cleared
 		)
 		button.disabled = not unlocked
+		_compact_menu_button(button, 56.0)
 		_content.add_child(button)
-	_content.add_child(_make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 64)))
+	var back := _make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 52))
+	_compact_menu_button(back, 52.0)
+	_content.add_child(back)
 	_set_footer("LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
 
 func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
@@ -146,7 +149,7 @@ func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
 	actions.add_child(_make_action_button(&"tutorial_continue", continue_text, COLOR_VIOLET, Vector2(270, 72), true))
 	_set_footer("THIS LESSON WILL WAIT  •  SELECT CONTINUE WHEN YOU ARE READY  •  HOLD META TO RECENTER")
 
-func show_settings(music_text: String, haptics_text: String, reduced_flashes: bool, from_pause: bool) -> void:
+func show_settings(music_text: String, effects_text: String, haptics_text: String, reduced_flashes: bool, from_pause: bool) -> void:
 	_begin_view(&"SETTINGS", "RSF // OPERATOR PROFILE", "SETTINGS", "", COLOR_BLUE)
 	var scroll_hint := _label("AIM AT PANEL • USE EITHER THUMBSTICK TO SCROLL", 16, COLOR_MUTED, true)
 	scroll_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -161,14 +164,20 @@ func show_settings(music_text: String, haptics_text: String, reduced_flashes: bo
 	settings_stack.add_theme_constant_override("separation", 14)
 	_settings_scroll.add_child(settings_stack)
 	settings_stack.add_child(_make_stepper("MUSIC VOLUME", music_text, "Soundtrack and mission music", &"music_down", &"music_up", COLOR_CYAN))
-	settings_stack.add_child(_make_stepper("EFFECTS VOLUME", _effects_volume_text(), "Impacts, UI, heartbeat, and warnings", &"effects_down", &"effects_up", COLOR_MAGENTA))
+	settings_stack.add_child(_make_stepper("EFFECTS VOLUME", effects_text, "Impacts, UI, heartbeat, and warnings", &"effects_down", &"effects_up", COLOR_MAGENTA))
 	settings_stack.add_child(_make_stepper("HAPTIC STRENGTH", haptics_text, "Controller impact feedback", &"haptics_down", &"haptics_up", COLOR_VIOLET))
-	settings_stack.add_child(_make_toggle(
+	settings_stack.add_child(_make_switch(
 		"REDUCED FLASHES",
-		"ON" if reduced_flashes else "OFF",
-		"Lower damage flashes, blur, and danger tint",
-		&"settings_flashes",
-		COLOR_GREEN if reduced_flashes else COLOR_AMBER
+		"Damage flashes, blur, and danger tint",
+		reduced_flashes,
+		&"settings_flashes_off",
+		&"settings_flashes_on"
+	))
+	settings_stack.add_child(_make_action_button(
+		&"reset_progress",
+		"RESET MISSION PROGRESS\nCLEARED CONTRACTS RETURN TO LOCKED",
+		COLOR_RED,
+		Vector2(0, 72)
 	))
 	var back_text := "BACK TO PAUSE" if from_pause else "BACK TO MAIN MENU"
 	_content.add_child(_make_action_button(&"settings_back", back_text, COLOR_BLUE, Vector2(0, 72), true))
@@ -185,6 +194,13 @@ func show_pause() -> void:
 	_content.add_child(_make_action_button(&"pause_settings", "SETTINGS", COLOR_BLUE, Vector2(0, 82)))
 	_content.add_child(_make_action_button(&"abort", "END MISSION", COLOR_RED, Vector2(0, 82)))
 	_set_footer("POINT + TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
+
+func show_reset_confirmation() -> void:
+	_begin_view(&"CONFIRM", "RSF // OPERATOR PROFILE", "RESET MISSION PROGRESS?", "CLEARED CONTRACTS RETURN TO LOCKED", COLOR_RED)
+	_add_copy("AUDIO AND TRAINING STAY", "Music, effects, haptics, and the training record are left alone.", COLOR_MUTED)
+	_content.add_child(_make_action_button(&"reset_cancel", "KEEP PROGRESS", COLOR_GREEN, Vector2(0, 92), true))
+	_content.add_child(_make_action_button(&"reset_confirm", "RESET PROGRESS", COLOR_RED, Vector2(0, 92)))
+	_set_footer("SELECT KEEP PROGRESS TO LEAVE YOUR CONTRACTS SEALED")
 
 func show_abort_confirmation() -> void:
 	_begin_view(&"CONFIRM", "RSF // MISSION CONTROL", "END CURRENT MISSION?", "UNSAVED MISSION PROGRESS WILL BE LOST", COLOR_RED)
@@ -402,11 +418,18 @@ func _make_action_button(action: StringName, text: String, accent: Color, minimu
 	button.mouse_entered.connect(_on_button_hovered.bind(button))
 	return button
 
-func _effects_volume_text() -> String:
-	var settings := get_node_or_null("/root/GameSettings")
-	if settings == null:
-		return "--"
-	return "MUTED" if settings.sfx_db <= -79.0 else "%d dB" % int(settings.sfx_db)
+func _compact_menu_button(button: Button, height: float) -> void:
+	button.custom_minimum_size.y = height
+	button.add_theme_font_size_override("font_size", 18)
+	# https://docs.godotengine.org/en/stable/classes/class_styleboxflat.html#class-styleboxflat-property-content-margin-top
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var style := button.get_theme_stylebox(state) as StyleBoxFlat
+		if style == null:
+			continue
+		var tight := style.duplicate() as StyleBoxFlat
+		tight.content_margin_top = 4
+		tight.content_margin_bottom = 4
+		button.add_theme_stylebox_override(state, tight)
 
 func _make_stepper(label_text: String, value_text: String, description: String, down_action: StringName, up_action: StringName, accent: Color) -> Control:
 	var panel := PanelContainer.new()
@@ -428,18 +451,19 @@ func _make_stepper(label_text: String, value_text: String, description: String, 
 	row.add_child(_make_action_button(up_action, "+", accent, Vector2(74, 68)))
 	return panel
 
-func _make_toggle(label_text: String, value_text: String, description: String, action: StringName, accent: Color) -> Control:
+func _make_switch(label_text: String, description: String, is_on: bool, off_action: StringName, on_action: StringName) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style_box(COLOR_PANEL_SOFT, Color(accent, 0.55), 2, 16))
+	panel.add_theme_stylebox_override("panel", _style_box(COLOR_PANEL_SOFT, Color(COLOR_AMBER if not is_on else COLOR_GREEN, 0.55), 2, 16))
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
+	row.add_theme_constant_override("separation", 12)
 	panel.add_child(row)
 	var copy := VBoxContainer.new()
 	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	copy.add_child(_label(label_text, 22, COLOR_TEXT, true))
 	copy.add_child(_label(description, 17, COLOR_MUTED))
 	row.add_child(copy)
-	row.add_child(_make_action_button(action, value_text, accent, Vector2(210, 68), true))
+	row.add_child(_make_action_button(off_action, "● OFF" if not is_on else "OFF", COLOR_AMBER, Vector2(128, 68), not is_on))
+	row.add_child(_make_action_button(on_action, "● ON" if is_on else "ON", COLOR_GREEN, Vector2(128, 68), is_on))
 	return panel
 
 func _label(text: String, size: int, color: Color, bold: bool = false) -> Label:

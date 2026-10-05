@@ -7,6 +7,7 @@ const STATE_PAUSED := &"paused"
 const STATE_SETTINGS := &"settings"
 const STATE_RESULTS := &"results"
 const STATE_ABORT_CONFIRM := &"abort_confirm"
+const STATE_RESET_CONFIRM := &"reset_confirm"
 
 var _state: StringName = STATE_MENU
 var _previous_state: StringName = STATE_MENU
@@ -125,10 +126,28 @@ func _on_menu_action(action: StringName) -> void:
 			if _settings:
 				_settings.adjust_haptics(1)
 			_render_settings()
-		&"settings_flashes":
+		&"settings_flashes_off":
 			if _settings:
-				_settings.reduced_flashes = not _settings.reduced_flashes
+				_settings.reduced_flashes = false
 				_settings.save_settings()
+			_render_settings()
+		&"settings_flashes_on":
+			if _settings:
+				_settings.reduced_flashes = true
+				_settings.save_settings()
+			_render_settings()
+		&"reset_progress":
+			_state = STATE_RESET_CONFIRM
+			_set_menu_visible(true)
+			if _presenter:
+				_presenter.show_reset_confirmation()
+		&"reset_cancel":
+			_state = STATE_SETTINGS
+			_render_settings()
+		&"reset_confirm":
+			if _settings:
+				_settings.reset_mission_progress()
+			_state = STATE_SETTINGS
 			_render_settings()
 		&"settings_back":
 			if _previous_state == STATE_PAUSED:
@@ -328,14 +347,16 @@ func _show_settings(return_state: StringName) -> void:
 
 func _render_settings() -> void:
 	var music := "--"
+	var effects := "--"
 	var haptics := "--"
 	var reduced_flashes := false
 	if _settings:
-		music = "MUTED" if _settings.music_db <= -79.0 else "%d dB" % int(_settings.music_db)
+		music = _settings.volume_label(_settings.music_db)
+		effects = _settings.volume_label(_settings.sfx_db)
 		haptics = "%d%%" % int(_settings.haptic_scale * 100.0)
 		reduced_flashes = _settings.reduced_flashes
 	if _presenter:
-		_presenter.show_settings(music, haptics, reduced_flashes, _previous_state == STATE_PAUSED)
+		_presenter.show_settings(music, effects, haptics, reduced_flashes, _previous_state == STATE_PAUSED)
 
 func restore_current_menu() -> void:
 	match _state:
@@ -353,6 +374,10 @@ func restore_current_menu() -> void:
 			_set_menu_visible(true)
 			if _presenter:
 				_presenter.show_abort_confirmation()
+		STATE_RESET_CONFIRM:
+			_set_menu_visible(true)
+			if _presenter:
+				_presenter.show_reset_confirmation()
 		_:
 			pass
 
@@ -410,7 +435,9 @@ func _action_belongs_to_state(action: StringName) -> bool:
 		STATE_RESULTS:
 			return action in [&"retry", &"next_mission", &"results_menu"]
 		STATE_SETTINGS:
-			return action in [&"music_down", &"music_up", &"effects_down", &"effects_up", &"haptics_down", &"haptics_up", &"settings_flashes", &"settings_back"]
+			return action in [&"music_down", &"music_up", &"effects_down", &"effects_up", &"haptics_down", &"haptics_up", &"settings_flashes_off", &"settings_flashes_on", &"reset_progress", &"settings_back"]
+		STATE_RESET_CONFIRM:
+			return action in [&"reset_cancel", &"reset_confirm"]
 		STATE_MENU:
 			return String(action).begins_with("mission_") or action in [&"deploy", &"operations", &"operations_back", &"training", &"settings"]
 		STATE_TUTORIAL:

@@ -17,7 +17,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_2:
 				_menu.show_tutorial(_page, _pages())
 			KEY_3:
-				_menu.show_settings("-8 dB", "100%", false, false)
+				_menu.show_settings("75%", "50%", "100%", false, false)
 			KEY_4:
 				_menu.show_pause()
 			KEY_5:
@@ -37,7 +37,15 @@ func _on_action(action: StringName) -> void:
 		&"tutorial_exit", &"settings_back", &"results_menu":
 			_menu.show_main_menu()
 		&"settings":
-			_menu.show_settings("-8 dB", "100%", false, false)
+			_menu.show_settings("75%", "50%", "100%", false, false)
+		&"settings_flashes_off":
+			_menu.show_settings("75%", "50%", "100%", false, false)
+		&"settings_flashes_on":
+			_menu.show_settings("75%", "50%", "100%", true, false)
+		&"reset_progress":
+			_menu.show_reset_confirmation()
+		&"reset_cancel", &"reset_confirm":
+			_menu.show_settings("75%", "50%", "100%", false, false)
 
 func _pages() -> Array[Dictionary]:
 	return [

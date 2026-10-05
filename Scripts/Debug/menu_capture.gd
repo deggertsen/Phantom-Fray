@@ -29,7 +29,7 @@ func _capture_tutorial() -> void:
 	await _capture("tutorial.png")
 
 func _capture_settings() -> void:
-	_menu.show_settings("-8 dB", "100%", false, false)
+	_menu.show_settings("75%", "50%", "100%", false, false)
 	await _capture("settings.png")
 
 func _capture_pause() -> void:

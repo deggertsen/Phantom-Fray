@@ -165,6 +165,46 @@ func _validate_menu_surface() -> void:
 	menu.show_tutorial(0, tutorial_pages)
 	if _find_button(menu, "COMPLETE TRAINING") == null:
 		failures.append("Tutorial continue action is missing")
+	menu.show_settings("75%", "50%", "100%", false, false)
+	await process_frame
+	var flashes_off := false
+	var flashes_on := false
+	var saw_reset := false
+	for button in _buttons_under(menu):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action == "settings_flashes_off":
+			flashes_off = button.text.begins_with("●")
+		elif action == "settings_flashes_on":
+			flashes_on = not button.text.begins_with("●")
+		elif action == "reset_progress":
+			saw_reset = true
+	if not flashes_off or not flashes_on or not saw_reset:
+		failures.append("Reduced flashes is not an off/on switch")
+	menu.show_settings("OFF", "100%", "0%", true, false)
+	await process_frame
+	for button in _buttons_under(menu):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action == "settings_flashes_on" and not button.text.begins_with("●"):
+			failures.append("Reduced flashes on-state is unmarked")
+		if action == "settings_flashes_off" and button.text.begins_with("●"):
+			failures.append("Reduced flashes off-state stayed marked")
+	menu.show_reset_confirmation()
+	await process_frame
+	var keep := _find_button(menu, "KEEP PROGRESS")
+	var wipe := _find_button(menu, "RESET PROGRESS")
+	if keep == null or wipe == null:
+		failures.append("Progress reset does not ask for confirmation")
+	elif String(keep.get_meta(&"menu_action")) != "reset_cancel" or String(wipe.get_meta(&"menu_action")) != "reset_confirm":
+		failures.append("Progress reset confirmation actions are wired wrong")
+	var levels = load("res://Scripts/Core/game_settings.gd").new()
+	if levels.volume_label(-80.0) != "OFF" or levels.volume_label(-20.0) != "25%" or levels.volume_label(-14.0) != "50%" or levels.volume_label(-8.0) != "75%" or levels.volume_label(-2.0) != "100%":
+		failures.append("Volume steps are not shown as off through 100 percent")
+	levels.cleared_missions = PackedStringArray(["first_light", "open_arc"])
+	levels.pending_mission_id = "the_maw"
+	levels.clear_mission_progress()
+	if not levels.cleared_missions.is_empty() or levels.pending_mission_id != "":
+		failures.append("Mission progress did not clear")
+	levels.free()
 	menu.queue_free()
 	await process_frame
 
@@ -401,7 +441,7 @@ func _validate_results_menu() -> void:
 		var op_rect := button.get_global_rect()
 		if op_rect.size.y < 20.0 or not operation_panel.encloses(op_rect):
 			failures.append("Operations button sits outside the panel %s" % op_rect)
-	if operation_buttons < 5:
+	if operation_buttons < 7:
 		failures.append("Operations list is missing a contract or the back button")
 	presenter.queue_free()
 	player.queue_free()
@@ -460,8 +500,8 @@ func _validate_possession(yellow_scene: PackedScene) -> void:
 	await process_frame
 
 func _validate_mission_catalog() -> void:
-	if MissionCatalog.all_missions().size() != 4:
-		failures.append("Mission catalog does not contain four operations")
+	if MissionCatalog.all_missions().size() != 6:
+		failures.append("Mission catalog does not contain six operations")
 	var none := PackedStringArray()
 	if not MissionCatalog.is_unlocked_with_clears("first_light", none):
 		failures.append("First Light should be available immediately")
@@ -482,14 +522,47 @@ func _validate_mission_catalog() -> void:
 	if int(paired.get("max_concurrent", 1)) != 2 or not bool(paired.get("cluster_rifts", false)):
 		failures.append("Double Breach does not open a paired rift")
 	var paired_waves: Array = paired.get("rifts", [])
-	if paired_waves.size() != 4:
-		failures.append("Double Breach is missing its four rifts")
-	elif absf(float(paired_waves[0].get("interval", 0.0)) - float(paired_waves[1].get("interval", 0.0))) < 0.3:
-		failures.append("Paired rifts spawn on the same clock")
+	if paired_waves.size() != 8:
+		failures.append("Double Breach is missing its eight rifts")
+	else:
+		_expect_staggered_pairs(paired_waves, "Double Breach")
+	if not is_equal_approx(float(paired.get("duration", 0.0)), 520.0):
+		failures.append("Double Breach did not double its window")
+	var ring := MissionCatalog.get_mission("widen_the_ring")
+	if ring.get("rifts", []).size() != 6 or not is_equal_approx(float(ring.get("duration", 0.0)), 420.0):
+		failures.append("Widen the Ring did not double its length")
+	var gambit := MissionCatalog.get_mission("chens_gambit")
+	if gambit.get("rifts", []).size() != 6 or not is_equal_approx(float(gambit.get("duration", 0.0)), 480.0):
+		failures.append("Chen's Gambit did not double its length")
+	if MissionCatalog.is_unlocked_with_clears("open_arc", through_gambit):
+		failures.append("Open Arc unlocked before Double Breach")
+	var through_breach := PackedStringArray(["first_light", "widen_the_ring", "chens_gambit", "double_breach"])
+	if not MissionCatalog.is_unlocked_with_clears("open_arc", through_breach):
+		failures.append("Open Arc stayed locked after Double Breach")
+	var fan := MissionCatalog.get_mission("open_arc")
+	if int(fan.get("max_concurrent", 1)) != 2 or bool(fan.get("cluster_rifts", false)) or not bool(fan.get("arc_rifts", false)):
+		failures.append("Open Arc is not a wide paired rift")
+	if fan.get("rifts", []) != paired.get("rifts", []):
+		failures.append("Open Arc does not use Double Breach's rift waves")
+	if MissionCatalog.is_unlocked_with_clears("the_maw", through_breach):
+		failures.append("The Maw unlocked before Open Arc")
+	var through_arc := PackedStringArray(["first_light", "widen_the_ring", "chens_gambit", "double_breach", "open_arc"])
+	if not MissionCatalog.is_unlocked_with_clears("the_maw", through_arc):
+		failures.append("The Maw stayed locked after Open Arc")
+	var maw := MissionCatalog.get_mission("the_maw")
+	var maw_waves: Array = maw.get("rifts", [])
+	if maw_waves.size() != 1 or int(maw.get("max_concurrent", 1)) != 1:
+		failures.append("The Maw is not a single rift")
+	elif int(maw_waves[0].get("health", 0)) != 200 or not is_equal_approx(float(maw_waves[0].get("interval", 0.0)), 1.75) or not is_equal_approx(float(maw_waves[0].get("scale", 1.0)), 2.0):
+		failures.append("The Maw is not twice the mouth, the feed, and the damage")
+	await _validate_maw_rift()
 	var first := MissionCatalog.get_mission("first_light")
-	if int(first.get("max_concurrent", 1)) != 1 or bool(first.get("cluster_rifts", false)):
+	if int(first.get("max_concurrent", 1)) != 1 or bool(first.get("cluster_rifts", false)) or first.get("rifts", []).size() != 2:
 		failures.append("First Light opened more than one rift")
+	if not is_equal_approx(float(first.get("duration", 0.0)), 180.0):
+		failures.append("First Light changed length")
 	await _validate_paired_rift_placement()
+	await _validate_arc_rift_placement()
 	for variant_id in ["yellow", "blue", "green", "pink"]:
 		if load(MissionCatalog.scene_path(variant_id)) == null:
 			failures.append("Mission pool failed to load %s" % variant_id)
@@ -531,6 +604,74 @@ func _validate_paired_rift_placement() -> void:
 			break
 	director.queue_free()
 	player.queue_free()
+	await process_frame
+
+func _expect_staggered_pairs(waves: Array, label: String) -> void:
+	for pair in range(0, waves.size(), 2):
+		if pair + 1 >= waves.size():
+			failures.append("%s has an unpaired rift" % label)
+			return
+		var gap := absf(float(waves[pair].get("interval", 0.0)) - float(waves[pair + 1].get("interval", 0.0)))
+		if gap < 0.3:
+			failures.append("%s spawns a pair on the same clock" % label)
+			return
+
+func _validate_arc_rift_placement() -> void:
+	var director := RiftDirector.new()
+	root.add_child(director)
+	await process_frame
+	var player := Node3D.new()
+	root.add_child(player)
+	var camera := Node3D.new()
+	camera.name = "XRCamera3D"
+	player.add_child(camera)
+	camera.global_position = Vector3(0.0, 1.6, 0.0)
+	camera.look_at(Vector3(0.0, 1.6, -5.0), Vector3.UP)
+	director._player = player
+	director._arc_rifts = true
+	var forward := Vector3(0.0, 0.0, -1.0)
+	for _i in 8:
+		director.rift_instances.clear()
+		var first: Vector3 = director._find_valid_position()
+		var to_first := first - player.global_position
+		to_first.y = 0.0
+		if to_first.length() < 10.5 or to_first.length() > 14.5 or absf(forward.signed_angle_to(to_first.normalized(), Vector3.UP)) > deg_to_rad(50.0):
+			failures.append("Open Arc rift did not open in front of the player")
+			break
+		var anchor := Node3D.new()
+		root.add_child(anchor)
+		anchor.global_position = first
+		director.rift_instances.append(anchor)
+		var second: Vector3 = director._find_valid_position()
+		var to_second := second - player.global_position
+		to_second.y = 0.0
+		var between := to_first.normalized().angle_to(to_second.normalized())
+		var second_turn := absf(forward.signed_angle_to(to_second.normalized(), Vector3.UP))
+		var gap := Vector2(second.x - first.x, second.z - first.z).length()
+		if to_second.length() < 10.5 or to_second.length() > 14.5 or second_turn > PI * 0.5 + 0.02:
+			failures.append("Open Arc partner requires more than a 90 degree turn")
+		elif between < deg_to_rad(38.0) or between > PI * 0.5 + 0.02 or gap < 6.0:
+			failures.append("Open Arc pair is opposite or still clustered")
+		anchor.queue_free()
+		if not failures.is_empty() and (failures[failures.size() - 1] == "Open Arc partner requires more than a 90 degree turn" or failures[failures.size() - 1] == "Open Arc pair is opposite or still clustered"):
+			break
+	director.queue_free()
+	player.queue_free()
+	await process_frame
+
+func _validate_maw_rift() -> void:
+	var rift := RiftManager.new()
+	root.add_child(rift)
+	await process_frame
+	var wave: Dictionary = MissionCatalog.get_mission("the_maw").get("rifts", [])[0]
+	rift.configure_wave(wave)
+	var portal := rift.get_node_or_null("Portal") as MeshInstance3D
+	var quad := portal.mesh as QuadMesh if portal else null
+	if rift.maximum_health != 200 or not is_equal_approx(rift.spawn_interval, 1.75):
+		failures.append("The Maw rift did not take the doubled feed")
+	elif quad == null or not quad.size.is_equal_approx(Vector2(8.0, 8.0)) or rift.spawn_radius < 4.9:
+		failures.append("The Maw rift did not grow")
+	rift.queue_free()
 	await process_frame
 
 func _validate_life_force() -> void:

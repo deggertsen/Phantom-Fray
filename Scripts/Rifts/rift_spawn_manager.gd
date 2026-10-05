@@ -27,6 +27,7 @@ var _player: Node3D
 var _mission: Dictionary = {}
 var _wave_cursor: int = 0
 var _cluster_rifts: bool = false
+var _arc_rifts: bool = false
 
 func _ready() -> void:
 	add_to_group("RiftSpawnManager")
@@ -45,6 +46,7 @@ func start_round(mission: Dictionary = {}) -> void:
 		total_rifts = waves.size()
 	max_concurrent_rifts = maxi(int(mission.get("max_concurrent", 1)), 1)
 	_cluster_rifts = bool(mission.get("cluster_rifts", false))
+	_arc_rifts = bool(mission.get("arc_rifts", false))
 	_wave_cursor = spawned_rifts
 	spawning_enabled = true
 	_fill_rift_slots()
@@ -97,7 +99,7 @@ func _spawn_new_rift() -> void:
 	rift.player_damaged.connect(_on_player_damaged)
 	if rift.has_signal("strike_rejected"):
 		rift.strike_rejected.connect(_on_strike_rejected)
-	var stagger := _cluster_rifts and not rift_instances.is_empty()
+	var stagger := max_concurrent_rifts > 1 and not rift_instances.is_empty()
 	rift_instances.append(rift)
 	spawned_rifts += 1
 	_play_open_sound(rift.global_position)
@@ -129,6 +131,8 @@ func _on_strike_rejected(reason: StringName) -> void:
 func _find_valid_position() -> Vector3:
 	var player_position := _player.global_position if _player else Vector3.ZERO
 	var forward := _player_forward()
+	if _arc_rifts:
+		return _position_on_arc(player_position, forward)
 	if _cluster_rifts and not rift_instances.is_empty():
 		return _position_beside(rift_instances[rift_instances.size() - 1], player_position, forward)
 	if _cluster_rifts:
@@ -162,6 +166,47 @@ func _player_forward() -> Vector3:
 	if forward.length_squared() < 0.001:
 		return Vector3.FORWARD
 	return forward.normalized()
+
+func _position_on_arc(player_position: Vector3, forward: Vector3) -> Vector3:
+	# Every live rift stays inside a 90-degree turn of the player's facing, and a
+	# pair stays inside a right angle of each other so the doors are never opposite.
+	# https://docs.godotengine.org/en/stable/classes/class_vector3.html#class-vector3-method-rotated
+	var angle := _arc_angle(_bearing_of_last_rift(player_position, forward))
+	var distance := randf_range(11.0, 14.0)
+	var facing := forward.rotated(Vector3.UP, angle)
+	return player_position + Vector3(facing.x * distance, rift_height, facing.z * distance)
+
+func _bearing_of_last_rift(player_position: Vector3, forward: Vector3) -> float:
+	for index in range(rift_instances.size() - 1, -1, -1):
+		var existing := rift_instances[index]
+		if not is_instance_valid(existing):
+			continue
+		var offset := existing.global_position - player_position
+		offset.y = 0.0
+		if offset.length_squared() < 0.001:
+			continue
+		return forward.signed_angle_to(offset.normalized(), Vector3.UP)
+	return NAN
+
+func _arc_angle(anchor: float) -> float:
+	var limit := PI * 0.5
+	var min_gap := deg_to_rad(40.0)
+	var max_gap := deg_to_rad(88.0)
+	if is_nan(anchor):
+		return randf_range(deg_to_rad(-48.0), deg_to_rad(48.0))
+	var pockets: Array[Vector2] = []
+	_collect_arc_pocket(pockets, anchor - max_gap, anchor - min_gap, limit)
+	_collect_arc_pocket(pockets, anchor + min_gap, anchor + max_gap, limit)
+	if pockets.is_empty():
+		return clampf(anchor, -limit, limit)
+	var pocket: Vector2 = pockets[randi() % pockets.size()]
+	return randf_range(pocket.x, pocket.y)
+
+func _collect_arc_pocket(pockets: Array[Vector2], start: float, end: float, limit: float) -> void:
+	var lo := maxf(start, -limit)
+	var hi := minf(end, limit)
+	if hi - lo >= 0.04:
+		pockets.append(Vector2(lo, hi))
 
 func _position_beside(anchor: Node3D, player_position: Vector3, forward: Vector3) -> Vector3:
 	var right := forward.cross(Vector3.UP)

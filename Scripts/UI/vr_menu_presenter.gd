@@ -51,9 +51,13 @@ func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
 	_show()
 	_menu.show_tutorial(page_index, pages)
 
-func show_settings(music: String, haptics: String, reduced_flashes: bool, from_pause: bool) -> void:
+func show_settings(music: String, effects: String, haptics: String, reduced_flashes: bool, from_pause: bool) -> void:
 	_show()
-	_menu.show_settings(music, haptics, reduced_flashes, from_pause)
+	_menu.show_settings(music, effects, haptics, reduced_flashes, from_pause)
+
+func show_reset_confirmation() -> void:
+	_show()
+	_menu.show_reset_confirmation()
 
 func show_pause() -> void:
 	_show()

@@ -28,6 +28,7 @@ var _portal_material: ShaderMaterial
 var _wave_scenes: Array[PackedScene] = []
 var _speed_scale: float = 1.0
 var _telegraph_scale: float = 1.0
+var _rift_scale: float = 1.0
 var _beacon: Node3D
 var _beacon_time: float = 0.0
 
@@ -53,6 +54,7 @@ func configure_wave(wave: Dictionary) -> void:
 	max_live_phantoms = int(wave.get("max_live", max_live_phantoms))
 	_speed_scale = float(wave.get("speed_scale", 1.0))
 	_telegraph_scale = float(wave.get("telegraph_scale", 1.0))
+	_apply_rift_scale(float(wave.get("scale", 1.0)))
 	var pool: Array = wave.get("pool", [])
 	if not pool.is_empty():
 		_wave_scenes.clear()
@@ -124,7 +126,7 @@ func _spawn_phantom() -> void:
 	if phantom == null:
 		return
 	var angle := randf_range(-0.65, 0.65)
-	var offset := Vector3(sin(angle), randf_range(-0.35, 0.35), cos(angle)) * randf_range(0.8, spawn_radius)
+	var offset := Vector3(sin(angle), randf_range(-0.35, 0.35), cos(angle)) * randf_range(0.8 * _rift_scale, spawn_radius)
 	phantom.position = _phantom_container.to_local(global_position + offset)
 	_phantom_container.add_child(phantom)
 	if phantom.has_method("apply_pressure"):
@@ -266,6 +268,21 @@ func _pulse_beacon(delta: float) -> void:
 		var material := mesh.material_override as StandardMaterial3D
 		if material:
 			material.emission_energy_multiplier = lerpf(1.2, 3.4, pulse)
+
+func _apply_rift_scale(rift_scale: float) -> void:
+	_rift_scale = maxf(rift_scale, 0.25)
+	spawn_radius = 2.5 * _rift_scale
+	var portal := get_node_or_null("Portal") as MeshInstance3D
+	if portal and portal.mesh is QuadMesh:
+		# https://docs.godotengine.org/en/stable/classes/class_quadmesh.html#class-quadmesh-property-size
+		var quad := portal.mesh as QuadMesh
+		quad.size = Vector2(4.0, 4.0) * _rift_scale
+		portal.position.y = 2.0 * (_rift_scale - 1.0)
+	var ring := _beacon.get_node_or_null("FloorRing") as MeshInstance3D if _beacon else null
+	if ring and ring.mesh is TorusMesh:
+		var torus := ring.mesh as TorusMesh
+		torus.inner_radius = 0.85 * _rift_scale
+		torus.outer_radius = 1.05 * _rift_scale
 
 func _update_health_shader() -> void:
 	if _portal_material == null:
