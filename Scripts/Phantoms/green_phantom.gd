@@ -27,7 +27,7 @@ func _ready() -> void:
 
 ## The Carapace: one crystal claw per hand says "block with both".
 func _creature_mesh() -> Mesh:
-	return CreatureMesh.carapace()
+	return CreatureMesh.carapace(_form)
 
 func _tune_creature_material(material: ShaderMaterial) -> void:
 	material.set_shader_parameter("snap", 1.0)

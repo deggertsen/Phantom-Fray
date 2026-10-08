@@ -57,6 +57,7 @@ func _ready() -> void:
 	await _wrist(rift)
 	await _hits()
 	await _low_life()
+	await _lineups()
 	print("ART CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
 
@@ -68,8 +69,38 @@ func _quiet_main() -> void:
 			if node is Node3D:
 				(node as Node3D).visible = false
 
-func _spawn(id: String, at: Vector3) -> void:
+## Every body form of each species side by side, turned three-quarters to show silhouettes.
+func _lineups() -> void:
+	for id in _phantoms:
+		if is_instance_valid(_phantoms[id]):
+			(_phantoms[id] as Node3D).queue_free()
+	_phantoms.clear()
+	_camera.make_current()
+	# Clear the low-life overlay and the in-combat bearing markers out of the way.
+	_main.get_node("Player/LifeForceManager").reset()
+	var markers := _main.get_node_or_null("RiftSpawnManager/PhantomBearings") as Node3D
+	if markers:
+		markers.process_mode = Node.PROCESS_MODE_DISABLED
+		markers.visible = false
+	await get_tree().create_timer(1.0).timeout
+	for id in ["yellow", "green", "pink"]:
+		var row: Array[Node3D] = []
+		for form in CreatureMesh.FORMS:
+			_spawn("%s-%d" % [id, form], Vector3(-1.5 + form * 1.5, 1.45, -2.2), id, form)
+			var phantom := _phantoms["%s-%d" % [id, form]] as Node3D
+			phantom.rotate_y(1.1 if id == "pink" else 0.6)
+			row.append(phantom)
+		var eye := Vector3(0.0, 1.65, -0.5) if id == "pink" else Vector3(0.0, 1.75, 0.4)
+		await _shot("forms-%s" % id, eye, Vector3(0.0, 1.4, -2.2))
+		for phantom in row:
+			phantom.queue_free()
+		_phantoms.clear()
+
+func _spawn(key: String, at: Vector3, id: String = "", form: int = 0) -> void:
+	if id == "":
+		id = key
 	var phantom := (load(PHANTOMS[id]) as PackedScene).instantiate() as Node3D
+	phantom.set("creature_form", form)
 	_main.get_node("PhantomContainer").add_child(phantom)
 	phantom.global_position = at
 	# Hold still and face the player so the stills are repeatable.
@@ -80,7 +111,7 @@ func _spawn(id: String, at: Vector3) -> void:
 		phantom.place_sweet_spot(0)
 	if phantom.has_method("_update_lane"):
 		phantom._update_lane(1.0)
-	_phantoms[id] = phantom
+	_phantoms[key] = phantom
 
 ## The wrist display mid-mission: standby first, then fed a mission's worth of signals.
 func _wrist(rift: Node3D) -> void:
