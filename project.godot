@@ -20,6 +20,10 @@ run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[audio]
+
+buses/default_bus_layout="uid://3r8hh5r32n8g"
+
 [autoload]
 
 XRToolsUserSettings="*uid://bqgb8i74tm0t"
