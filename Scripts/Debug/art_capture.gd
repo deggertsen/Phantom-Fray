@@ -54,6 +54,7 @@ func _ready() -> void:
 		var front := phantom.global_position + phantom.global_transform.basis.z * 2.1 + Vector3(0.7, 0.35, 0.0)
 		await _shot("phantom-%s" % id, front, phantom.global_position)
 	await _shot("gauntlets", Vector3(0.0, 1.62, 0.12), Vector3(0.0, 1.2, -0.6))
+	await _wrist(rift)
 	await _hits()
 	await _low_life()
 	print("ART CAPTURE COMPLETE: %s" % _out_dir)
@@ -80,6 +81,31 @@ func _spawn(id: String, at: Vector3) -> void:
 	if phantom.has_method("_update_lane"):
 		phantom._update_lane(1.0)
 	_phantoms[id] = phantom
+
+## The wrist display mid-mission: standby first, then fed a mission's worth of signals.
+func _wrist(rift: Node3D) -> void:
+	var hud := _main.get_node_or_null("Player/LeftHandController/RoundHUD") as Node3D
+	if hud == null:
+		return
+	var panel := hud.global_position
+	var facing := hud.global_transform.basis.z
+	await _shot("wrist-standby", panel + facing * 0.22, panel)
+	var round := _main.get_node("RoundController")
+	var director := get_tree().get_first_node_in_group("RiftSpawnManager")
+	round.score_changed.emit(0, 0, &"reset")
+	round.rift_progress_changed.emit(0, 3)
+	director.rift_spawned.emit(101, null)
+	director.rift_closed.emit(101, 1, 3)
+	round.rift_progress_changed.emit(1, 3)
+	director.rift_spawned.emit(102, rift)
+	rift.health_changed.emit(45, 100)
+	round.mission_status_changed.emit("OP-03  2/3  •  CHEN'S GAMBIT")
+	round.time_changed.emit(142.0)
+	round.combo_changed.emit(4, 2.5)
+	round.score_changed.emit(12840, 220, &"sweet_spot")
+	await _settle(6)
+	await _shot("wrist", panel + facing * 0.22, panel)
+	await _shot("wrist-in-view", Vector3(0.0, 1.62, 0.12), Vector3(0.0, 1.2, -0.6))
 
 ## The moment of impact: a sweet-spot hit on yellow, a plain hit burning through blue,
 ## and a half-block spark on green.
