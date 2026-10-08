@@ -55,6 +55,7 @@ func _ready() -> void:
 		await _shot("phantom-%s" % id, front, phantom.global_position)
 	await _shot("gauntlets", Vector3(0.0, 1.62, 0.12), Vector3(0.0, 1.2, -0.6))
 	await _hits()
+	await _low_life()
 	print("ART CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
 
@@ -101,6 +102,21 @@ func _hits() -> void:
 	RenderingServer.force_draw()
 	await get_tree().process_frame
 	get_viewport().get_texture().get_image().save_png("%s/hits.png" % _out_dir)
+
+## Critical life force, seen through the player's own camera (the overlay rides on it).
+func _low_life() -> void:
+	var life := _main.get_node_or_null("Player/LifeForceManager")
+	var eyes := _main.get_node_or_null("Player/XRCamera3D") as Camera3D
+	if life == null or eyes == null:
+		return
+	eyes.position = Vector3(0.0, 1.6, 0.0)
+	eyes.look_at(Vector3(0.0, 1.4, -6.0), Vector3.UP)
+	eyes.make_current()
+	life.apply_damage(82.0)
+	await get_tree().create_timer(1.5).timeout
+	RenderingServer.force_draw()
+	await get_tree().process_frame
+	get_viewport().get_texture().get_image().save_png("%s/low-life.png" % _out_dir)
 
 func _place_hands() -> void:
 	var player := _main.get_node("Player") as Node3D
