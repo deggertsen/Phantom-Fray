@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://cwb5yux81m237" path="res://Scripts/Debug/performance_monitor.gd" id="12_perf"]
 [ext_resource type="Script" uid="uid://xi4845eyogjx" path="res://Scripts/UI/vr_menu_presenter.gd" id="13_menu_presenter"]
 [ext_resource type="Material" path="res://Resources/Materials/breach_sky.tres" id="14_breach_sky"]
+[ext_resource type="Script" path="res://Scripts/Audio/chen_comms.gd" id="15_chen_comms"]
 
 [sub_resource type="Sky" id="Sky_f4kfd"]
 sky_material = ExtResource("14_breach_sky")
@@ -79,6 +80,9 @@ script = ExtResource("9_music_intensity")
 
 [node name="RoundController" type="Node" parent="." unique_id=1564607864]
 script = ExtResource("7_gameover")
+
+[node name="ChenComms" type="Node" parent="."]
+script = ExtResource("15_chen_comms")
 
 [node name="VRMenuPresenter" type="Node3D" parent="." unique_id=699288695]
 script = ExtResource("13_menu_presenter")

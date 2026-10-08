@@ -134,6 +134,9 @@ func _wrist(rift: Node3D) -> void:
 	round.time_changed.emit(142.0)
 	round.combo_changed.emit(4, 2.5)
 	round.score_changed.emit(12840, 220, &"sweet_spot")
+	var comms := get_tree().get_first_node_in_group("ChenComms")
+	if comms:
+		comms.say("rift_oclock_4")
 	await _settle(6)
 	await _shot("wrist", panel + facing * 0.22, panel)
 	await _shot("wrist-in-view", Vector3(0.0, 1.62, 0.12), Vector3(0.0, 1.2, -0.6))

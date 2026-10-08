@@ -1,0 +1,92 @@
+{
+  "speaker": "CHEN",
+  "voice": "Dr. Elara Chen, RSF science lead, on comms to the operator. Clipped and focused, quietly urgent, dry under pressure. Never shouts except at critical life force. Each line is short enough to say in under three seconds. The game adds a radio filter, so record clean.",
+  "files": "Each line is a file named <event>_<number>.ogg in this folder, numbered from 1 in the order listed. Drop in a new recording with the same name to replace a placeholder.",
+  "events": {
+    "mission_start": {
+      "priority": 2, "cooldown": 0,
+      "note": "The countdown just ended. Calm, ready.",
+      "lines": ["Gauntlets are live. Here they come.", "Resonance is stable. Go to work, operator.", "Breach is open. Stay inside the ring."]
+    },
+    "rift_ahead": {
+      "priority": 1, "cooldown": 6,
+      "note": "A new rift opened in front of the operator.",
+      "lines": ["Another rift, dead ahead.", "New rift, right in front of you."]
+    },
+    "rift_oclock_2": {"priority": 2, "cooldown": 0, "note": "A rift opened out of view. Give the bearing crisply.", "lines": ["New rift, your two o'clock.", "Rift opening at two o'clock."]},
+    "rift_oclock_3": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your three o'clock.", "Rift on your right. Three o'clock."]},
+    "rift_oclock_4": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your four o'clock.", "Rift opening at four o'clock."]},
+    "rift_oclock_5": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your five o'clock.", "Rift opening at five o'clock."]},
+    "rift_oclock_6": {"priority": 2, "cooldown": 0, "note": "Behind the operator. A touch more urgent.", "lines": ["New rift, directly behind you.", "Rift at your six. Turn around."]},
+    "rift_oclock_7": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your seven o'clock.", "Rift opening at seven o'clock."]},
+    "rift_oclock_8": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your eight o'clock.", "Rift opening at eight o'clock."]},
+    "rift_oclock_9": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your nine o'clock.", "Rift on your left. Nine o'clock."]},
+    "rift_oclock_10": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your ten o'clock.", "Rift opening at ten o'clock."]},
+    "rift_weakening": {
+      "priority": 1, "cooldown": 10,
+      "note": "A rift just dropped to half strength. Encouraging, but don't relax.",
+      "lines": ["It's destabilizing. Keep hitting.", "Half strength. Don't let up."]
+    },
+    "rift_sealed": {
+      "priority": 1, "cooldown": 4,
+      "note": "A rift closed and more remain. Brief satisfaction.",
+      "lines": ["Rift sealed.", "That one's closed. Good.", "Seal confirmed."]
+    },
+    "first_yellow": {"priority": 1, "cooldown": 0, "note": "First yellow Angler of the session. Teaching, quick.", "lines": ["Yellow. Left hand. Go for the lure."]},
+    "first_blue": {"priority": 1, "cooldown": 0, "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure."]},
+    "first_green": {"priority": 1, "cooldown": 0, "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands."]},
+    "first_pink": {"priority": 2, "cooldown": 0, "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane."]},
+    "wrong_hand": {
+      "priority": 1, "cooldown": 20,
+      "note": "The operator hit with the wrong hand. Corrective, not scolding.",
+      "lines": ["Wrong hand. Match the color.", "Other hand, operator."]
+    },
+    "combo_rising": {
+      "priority": 0, "cooldown": 25,
+      "note": "The chain multiplier passed 2x. Approving.",
+      "lines": ["That's resonance. Keep the chain.", "Good rhythm. Don't break it."]
+    },
+    "combo_max": {
+      "priority": 0, "cooldown": 30,
+      "note": "The chain hit its maximum. A rare flash of excitement.",
+      "lines": ["Maximum resonance!", "Full resonance. Hold it there."]
+    },
+    "life_caution": {
+      "priority": 1, "cooldown": 20,
+      "note": "Life force is slipping. A heads-up.",
+      "lines": ["You're taking drain. Watch your space.", "Life force dropping. Stay sharp."]
+    },
+    "life_danger": {
+      "priority": 2, "cooldown": 15,
+      "note": "Life force is low. Concerned.",
+      "lines": ["Your readings are falling fast.", "You can't take many more of those."]
+    },
+    "life_critical": {
+      "priority": 3, "cooldown": 12,
+      "note": "One more touch could end it. The only place she raises her voice.",
+      "lines": ["You're critical! Dodge, block, anything!", "Life force critical. Don't let them touch you."]
+    },
+    "possessed": {
+      "priority": 2, "cooldown": 9,
+      "note": "A phantom just got into the operator. Sharp.",
+      "lines": ["It's in you. Shake it off!", "Contact! Push through it.", "Drain spike. Keep moving."]
+    },
+    "time_60": {"priority": 2, "cooldown": 0, "note": "One minute left on the mission window.", "lines": ["Sixty seconds on the window."]},
+    "time_30": {"priority": 2, "cooldown": 0, "note": "Thirty seconds left.", "lines": ["Thirty seconds. Close it now.", "Thirty seconds left. Finish it."]},
+    "victory": {
+      "priority": 3, "cooldown": 0,
+      "note": "Every rift sealed. Relief, quiet pride.",
+      "lines": ["Rifts sealed. That's a clean breach, operator.", "All seals holding. Good work."]
+    },
+    "defeat": {
+      "priority": 3, "cooldown": 0,
+      "note": "The operator's life force collapsed. Urgent, then steady.",
+      "lines": ["Operator down. Pulling you out.", "We lost you. Pulling you back."]
+    },
+    "timeout": {
+      "priority": 3, "cooldown": 0,
+      "note": "The mission window closed with rifts still open. Disappointed, practical.",
+      "lines": ["The window's closed. We'll go again."]
+    }
+  }
+}
