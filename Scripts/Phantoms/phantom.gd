@@ -48,6 +48,8 @@ enum Phase { APPROACH, TELEGRAPH, COMMIT, RECOVER }
 @export var arc_scale: float = 2.4
 ## Punches land once the phantom is this close. The arrival itself is the timing.
 @export var strike_reach: float = 1.7
+## Which body form this phantom wears (CreatureMesh.FORM_NAMES). -1 picks one at random.
+@export var creature_form: int = -1
 
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var contact_area: Area3D = $Area3D
@@ -82,6 +84,7 @@ var _stalls: int = 0
 var _alive_time: float = 0.0
 var _impact_drop: float = 0.22
 var _glow: MeshInstance3D
+var _form: int = 0
 
 func _ready() -> void:
 	# The body is punchable but does not physically block on the player's hurtbox.
@@ -99,10 +102,12 @@ func _ready() -> void:
 		push_warning("Phantom: XRCamera3D not found; using origin as target")
 
 	var material := CREATURE_MATERIAL.duplicate() as ShaderMaterial
+	_form = creature_form if creature_form >= 0 else randi() % CreatureMesh.FORMS
 	var creature := _creature_mesh()
 	if creature:
 		mesh_instance.mesh = creature
 		mesh_instance.transform = Transform3D.IDENTITY
+		mesh_instance.scale = Vector3.ONE * _body_scale()
 	mesh_instance.material_override = material
 	material.set_shader_parameter("dissolve_amount", 0.0)
 	material.set_shader_parameter("impact_point", global_position)
@@ -430,6 +435,10 @@ func _update_pattern_visual() -> void:
 ## The creature body each variant wears. The unaligned phantom is a Drifter.
 func _creature_mesh() -> Mesh:
 	return CreatureMesh.drifter()
+
+## A little size variety, so a swarm never looks stamped out.
+func _body_scale() -> float:
+	return randf_range(0.92, 1.08)
 
 ## Variants tune how their body moves (sway speed, flapping, snapping claws).
 func _tune_creature_material(_material: ShaderMaterial) -> void:

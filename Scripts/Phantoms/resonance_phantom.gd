@@ -32,7 +32,7 @@ func _ready() -> void:
 func place_sweet_spot(face: int = -1) -> void:
 	sweet_spot_visual.position = _spot_for(face if face >= 0 else randi() % 3)
 	if mesh_instance:
-		mesh_instance.mesh = CreatureMesh.angler(sweet_spot_visual.position)
+		mesh_instance.mesh = CreatureMesh.angler(sweet_spot_visual.position, _form)
 
 ## Every place a lure can hang, for building the meshes before the first spawn.
 static func lure_spots() -> Array[Vector3]:
@@ -58,7 +58,11 @@ func _hook_side() -> float:
 	return side if absf(side) > 0.01 else 1.0
 
 func _creature_mesh() -> Mesh:
-	return CreatureMesh.angler(_spot_for(0))
+	return CreatureMesh.angler(_spot_for(0), _form)
+
+## Anglers keep exact scale: the lure stalk has to meet the sweet spot it points at.
+func _body_scale() -> float:
+	return 1.0
 
 func _tune_creature_material(material: ShaderMaterial) -> void:
 	material.set_shader_parameter("sway_speed", 2.2)

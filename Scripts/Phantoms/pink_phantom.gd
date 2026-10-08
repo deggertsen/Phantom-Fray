@@ -28,7 +28,7 @@ func _ready() -> void:
 
 ## The Spearfin: a needle-billed fish built to charge.
 func _creature_mesh() -> Mesh:
-	return CreatureMesh.spearfin()
+	return CreatureMesh.spearfin(_form)
 
 func _tune_creature_material(material: ShaderMaterial) -> void:
 	material.set_shader_parameter("sway_speed", 5.0)
