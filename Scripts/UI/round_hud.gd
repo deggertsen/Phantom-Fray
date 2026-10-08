@@ -3,8 +3,8 @@ extends Node3D
 ## The ERM wrist display: one holographic panel projected just above the left bracer and
 ## tilted toward the eyes, so it sits below the line of sight instead of floating in it.
 ##
-## Read top to bottom (top is toward the fingers): mission and time, life force, one pip per
-## rift showing how close it is to sealing, then score and the combo with its countdown.
+## Read top to bottom (top is toward the fingers): Chen's comms caption, mission and time,
+## life force, one pip per rift showing how close it is to sealing, then score and combo.
 ## It is drawn in 2D into a small viewport that only re-renders when something changes,
 ## at most 30 times a second.
 
@@ -15,7 +15,9 @@ extends Node3D
 @export var tilt_degrees: float = 53.0
 @export var panel_width: float = 0.115
 
-const CANVAS := Vector2i(440, 320)
+const CANVAS := Vector2i(440, 384)
+## The comms caption row across the top; everything else draws below it.
+const CAPTION_ROW := 64.0
 const CYAN := Color(0.1, 0.72, 1.0)
 const INK := Color(0.89, 0.92, 0.97)
 const MUTED := Color(0.55, 0.61, 0.72)
@@ -56,6 +58,9 @@ var _life_state: StringName = &"healthy"
 ## One entry per rift in the mission: {state: &"pending"/&"open"/&"sealed", progress: 0..1}.
 var _rifts: Array[Dictionary] = []
 var _rift_slot: Dictionary = {}
+var _caption: String = ""
+var _caption_speaker: String = ""
+var _caption_left: float = 0.0
 
 func _ready() -> void:
 	transform = Transform3D(Basis.from_euler(Vector3(-deg_to_rad(tilt_degrees), 0.0, 0.0)), mount_offset)
@@ -69,6 +74,7 @@ func _ready() -> void:
 	_connect_round()
 	_connect_life()
 	_connect_rifts()
+	_connect_comms()
 	_mark_dirty()
 
 func _process(delta: float) -> void:
@@ -77,6 +83,11 @@ func _process(delta: float) -> void:
 	if _combo_left > 0.0:
 		_combo_left = maxf(_combo_left - delta, 0.0)
 		animating = true
+	if _caption_left > 0.0:
+		_caption_left = maxf(_caption_left - delta, 0.0)
+		animating = true
+		if _caption_left <= 0.0:
+			_mark_dirty()
 	if _delta_age < 0.8:
 		_delta_age += delta
 		animating = true
@@ -123,6 +134,17 @@ func _connect_rifts() -> void:
 		return
 	director.rift_spawned.connect(_on_rift_spawned)
 	director.rift_closed.connect(_on_rift_closed)
+
+func _connect_comms() -> void:
+	var comms := get_tree().get_first_node_in_group("ChenComms")
+	if comms:
+		comms.line_started.connect(_on_comms_line)
+
+func _on_comms_line(speaker: String, text: String, seconds: float) -> void:
+	_caption_speaker = speaker
+	_caption = text
+	_caption_left = seconds + 0.8
+	_mark_dirty()
 
 func _on_score_changed(total: int, delta: int, reason: StringName) -> void:
 	if reason == &"reset":
@@ -253,6 +275,8 @@ func _draw_panel() -> void:
 	for y in range(8, int(h) - 8, 4):
 		c.draw_line(Vector2(10.0, y), Vector2(w - 10.0, y), Color(CYAN, 0.03), 1.0)
 	_draw_brackets(c, w, h)
+	_draw_caption(c, w)
+	c.draw_set_transform(Vector2(0.0, CAPTION_ROW))
 
 	if not _in_mission:
 		_text(c, "ERM // STANDBY", Vector2(24.0, 58.0), 30, CYAN, _bold)
@@ -292,6 +316,38 @@ func _draw_panel() -> void:
 		c.draw_rect(Rect2(chip.position.x, chip.end.y + 6.0, chip.size.x * left, 5.0), GOLD)
 	else:
 		_text_right(c, "×1.0", Vector2(w - 24.0, 286.0), 30, MUTED)
+
+## Chen's line while she speaks, with a pulsing comms light; a dim COMMS label otherwise.
+func _draw_caption(c: Control, w: float) -> void:
+	var speaking := _caption_left > 0.0
+	var light := Color(CYAN, 0.4 + 0.6 * absf(sin(_time * 7.0))) if speaking else Color(MUTED, 0.35)
+	c.draw_circle(Vector2(32.0, 36.0), 6.0, light)
+	if not speaking:
+		_text(c, "COMMS", Vector2(48.0, 43.0), 20, Color(MUTED, 0.6))
+	else:
+		var label := _caption_speaker + "  "
+		var label_width := _bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 20).x
+		_text(c, label, Vector2(48.0, 34.0), 20, CYAN, _bold)
+		var lines := _wrap(_caption, w - 72.0 - label_width, w - 72.0, 22)
+		_text(c, lines[0], Vector2(48.0 + label_width, 34.0), 22, INK)
+		if lines.size() > 1:
+			_text(c, lines[1], Vector2(48.0, 58.0), 22, INK)
+	c.draw_line(Vector2(24.0, CAPTION_ROW - 1.0), Vector2(w - 24.0, CAPTION_ROW - 1.0), Color(CYAN, 0.25), 2.0)
+
+## Splits a caption into at most two lines: the first narrower to leave room for the speaker.
+func _wrap(text: String, first_width: float, width: float, size: int) -> Array[String]:
+	var lines: Array[String] = [""]
+	for word in text.split(" ", false):
+		var limit := first_width if lines.size() == 1 else width
+		var trial := word if lines[-1] == "" else lines[-1] + " " + word
+		if _font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x <= limit or lines[-1] == "":
+			lines[-1] = trial
+		elif lines.size() < 2:
+			lines.append(word)
+		else:
+			lines[-1] += "…"
+			break
+	return lines
 
 func _draw_life(c: Control, top: float) -> void:
 	var w := float(CANVAS.x)
