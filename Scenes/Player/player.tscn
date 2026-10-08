@@ -42,7 +42,6 @@ script = ExtResource("6_feedback")
 life_force_manager_path = NodePath("../../LifeForceManager")
 
 [node name="RoundHUD" type="Node3D" parent="LeftHandController"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.12, -0.075)
 script = ExtResource("2_iu2wh")
 
 [node name="RightHandController" type="XRController3D" parent="."]
