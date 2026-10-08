@@ -1,4 +1,4 @@
-[gd_resource type="AudioBusLayout" load_steps=5 format=3]
+[gd_resource type="AudioBusLayout" format=3 uid="uid://3r8hh5r32n8g"]
 
 [sub_resource type="AudioEffectCompressor" id="AudioEffectCompressor_duck"]
 resource_name = "DuckUnderVoice"
@@ -20,17 +20,11 @@ cutoff_hz = 3400.0
 resource_name = "RadioPunch"
 threshold = -20.0
 ratio = 5.0
+gain = 6.0
 attack_us = 4000.0
 release_ms = 60.0
-gain = 6.0
 
 [resource]
-bus/0/name = &"Master"
-bus/0/solo = false
-bus/0/mute = false
-bus/0/bypass_fx = false
-bus/0/volume_db = 0.0
-bus/0/send = &""
 bus/1/name = &"Music"
 bus/1/solo = false
 bus/1/mute = false
