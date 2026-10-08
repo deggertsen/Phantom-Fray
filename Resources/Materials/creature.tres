@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" load_steps=4 format=3]
+
+[ext_resource type="Shader" path="res://Resources/Materials/creature.gdshader" id="1_creature"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_creature"]
+frequency = 0.035
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_creature"]
+width = 128
+height = 128
+seamless = true
+noise = SubResource("FastNoiseLite_creature")
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_creature")
+shader_parameter/dissolve_amount = 0.0
+shader_parameter/impact_point = Vector3(0, 0, 0)
+shader_parameter/dissolve_direction = Vector3(0, 1, 0)
+shader_parameter/noise_tex = SubResource("NoiseTexture2D_creature")

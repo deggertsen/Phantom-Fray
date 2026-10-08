@@ -5,6 +5,7 @@ const VIOLET := Color(0.45, 0.12, 0.85, 1.0)
 const DARK := Color(0.012, 0.018, 0.04, 1.0)
 
 func _ready() -> void:
+	CreatureMesh.prewarm()
 	_build_floor()
 	_build_safe_ring()
 	_build_pylons()
