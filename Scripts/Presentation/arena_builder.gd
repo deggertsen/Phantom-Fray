@@ -23,6 +23,11 @@ func _ready() -> void:
 	vfx.name = "CombatVFX"
 	add_child(vfx)
 	_build_briefing_panel()
+	_warm_shaders.call_deferred()
+
+## Compile combat shaders while the menu is up, not when the first phantom appears.
+func _warm_shaders() -> void:
+	ShaderWarmup.attach(get_tree())
 
 func _process(delta: float) -> void:
 	_update_corruption(delta)
