@@ -25,6 +25,13 @@ var _depletion_stinger: AudioStreamPlayer
 var _fill_material: StandardMaterial3D
 var _tint_material: StandardMaterial3D
 var _base_fill_width: float = 0.12
+var _veins_mesh: MeshInstance3D
+var _veins_material: ShaderMaterial
+var _veins_tween: Tween
+var _veins_strength: float = 0.0
+
+const VEIN_STRENGTH := {&"healthy": 0.0, &"caution": 0.3, &"danger": 0.6, &"critical": 0.9, &"depleted": 1.0}
+const VEIN_BEAT := {&"healthy": 1.0, &"caution": 1.15, &"danger": 1.4, &"critical": 1.8, &"depleted": 0.0}
 
 const COLOR_HEALTHY := Color(0.25, 0.65, 1.0)
 const COLOR_CAUTION := Color(0.55, 0.35, 0.95)
@@ -113,7 +120,47 @@ func _build_camera_tint() -> void:
 	_tint_mesh.material_override = _tint_material
 	_tint_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	camera.add_child(_tint_mesh)
+	_build_veins(camera)
 	_build_damage_distort(camera)
+
+## Frost and glowing veins at the edges of view, deeper as life force falls.
+func _build_veins(camera: XRCamera3D) -> void:
+	_veins_mesh = MeshInstance3D.new()
+	_veins_mesh.name = "LifeForceVeins"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.6, 0.6)
+	_veins_mesh.mesh = quad
+	_veins_mesh.position = Vector3(0.0, 0.0, -0.2)
+	_veins_material = ShaderMaterial.new()
+	_veins_material.shader = preload("res://Resources/Materials/life_veins.gdshader")
+	_veins_material.set_shader_parameter("noise_tex", preload("res://Resources/Materials/breach_noise.tres"))
+	_veins_material.set_shader_parameter("strength", 0.0)
+	_veins_material.render_priority = 11
+	_veins_mesh.material_override = _veins_material
+	_veins_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_veins_mesh.visible = false
+	camera.add_child(_veins_mesh)
+
+func _update_veins(state: StringName) -> void:
+	if _veins_material == null:
+		return
+	var target: float = VEIN_STRENGTH.get(state, 0.0)
+	var settings := get_node_or_null("/root/GameSettings")
+	if settings and settings.reduced_flashes:
+		target *= 0.5
+	_veins_material.set_shader_parameter("beat_rate", VEIN_BEAT.get(state, 1.0))
+	if target > 0.0:
+		_veins_mesh.visible = true
+	if _veins_tween != null and _veins_tween.is_valid():
+		_veins_tween.kill()
+	_veins_tween = create_tween()
+	_veins_tween.tween_method(_set_veins_strength, _veins_strength, target, 0.8).set_trans(Tween.TRANS_SINE)
+	if target <= 0.0:
+		_veins_tween.tween_callback(_veins_mesh.hide)
+
+func _set_veins_strength(value: float) -> void:
+	_veins_strength = value
+	_veins_material.set_shader_parameter("strength", value)
 
 func _build_damage_distort(camera: XRCamera3D) -> void:
 	_distort_mesh = MeshInstance3D.new()
@@ -190,6 +237,7 @@ func _on_life_force_state_changed(state: StringName) -> void:
 	if _label:
 		_label.modulate = color
 	_update_tint(state)
+	_update_veins(state)
 	_update_heartbeat(state)
 
 func _on_damage_applied(_amount: float, _current: float) -> void:
