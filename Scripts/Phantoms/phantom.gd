@@ -2,6 +2,8 @@ extends CharacterBody3D
 class_name Phantom
 
 const SfxVariations := preload("res://Scripts/Audio/sfx_variations.gd")
+const CREATURE_MATERIAL := preload("res://Resources/Materials/creature.tres")
+const GLOW_STRENGTH := 0.3
 
 ## One continuous arc into reach. Speed ramps by acceleration, never a stop-then-dash.
 ## A punch counts once the body is in reach, because that is when the fist can meet it.
@@ -79,6 +81,7 @@ var _stall_time: float = 0.0
 var _stalls: int = 0
 var _alive_time: float = 0.0
 var _impact_drop: float = 0.22
+var _glow: MeshInstance3D
 
 func _ready() -> void:
 	# The body is punchable but does not physically block on the player's hurtbox.
@@ -95,8 +98,11 @@ func _ready() -> void:
 	if _player_camera == null:
 		push_warning("Phantom: XRCamera3D not found; using origin as target")
 
-	var base_material := preload("res://Resources/Materials/dissolve.tres") as ShaderMaterial
-	var material := base_material.duplicate() as ShaderMaterial
+	var material := CREATURE_MATERIAL.duplicate() as ShaderMaterial
+	var creature := _creature_mesh()
+	if creature:
+		mesh_instance.mesh = creature
+		mesh_instance.transform = Transform3D.IDENTITY
 	mesh_instance.material_override = material
 	material.set_shader_parameter("dissolve_amount", 0.0)
 	material.set_shader_parameter("impact_point", global_position)
@@ -104,7 +110,12 @@ func _ready() -> void:
 	material.set_shader_parameter("base_color", phantom_color)
 	material.set_shader_parameter("edge_color", phantom_color.lightened(0.35))
 	material.set_shader_parameter("alert", 0.0)
+	material.set_shader_parameter("phase_offset", randf() * 20.0)
+	_tune_creature_material(material)
 	_mesh_basis_scale = mesh_instance.scale
+	_glow = GlowSprite.create(phantom_color, 1.7, GLOW_STRENGTH)
+	_glow.name = "CreatureGlow"
+	mesh_instance.add_child(_glow)
 
 	# https://docs.godotengine.org/en/stable/classes/class_audiostreamplayer3d.html
 	_audio_player = AudioStreamPlayer3D.new()
@@ -149,6 +160,8 @@ func _process(delta: float) -> void:
 		var material := mesh_instance.material_override as ShaderMaterial
 		if material:
 			material.set_shader_parameter("dissolve_amount", _dissolve_amount)
+		if _glow:
+			(_glow.material_override as StandardMaterial3D).albedo_color.a = GLOW_STRENGTH * (1.0 - _dissolve_amount)
 		if _dissolve_amount >= 1.0:
 			queue_free()
 		return
@@ -411,14 +424,26 @@ func _update_pattern_visual() -> void:
 		_mesh_basis_scale.z * pulse
 	)
 
+## The creature body each variant wears. The unaligned phantom is a Drifter.
+func _creature_mesh() -> Mesh:
+	return CreatureMesh.drifter()
+
+## Variants tune how their body moves (sway speed, flapping, snapping claws).
+func _tune_creature_material(_material: ShaderMaterial) -> void:
+	pass
+
 func _begin_dissolve(impact_position: Vector3, direction: Vector3, play_death_sound: bool = true) -> void:
 	_dissolving = true
+	_on_dissolve_started()
 	var material := mesh_instance.material_override as ShaderMaterial
 	if material:
 		material.set_shader_parameter("impact_point", impact_position)
 		material.set_shader_parameter("dissolve_direction", direction.normalized() if direction.length_squared() > 0.001 else Vector3.UP)
 	if play_death_sound:
 		_play_death_sound()
+
+func _on_dissolve_started() -> void:
+	pass
 
 func _try_possess_between(from_position: Vector3, to_position: Vector3) -> bool:
 	if _terminal:

@@ -25,6 +25,15 @@ func _ready() -> void:
 	body_widen = 1.5
 	super()
 
+## The Carapace: one crystal claw per hand says "block with both".
+func _creature_mesh() -> Mesh:
+	return CreatureMesh.carapace()
+
+func _tune_creature_material(material: ShaderMaterial) -> void:
+	material.set_shader_parameter("snap", 1.0)
+	material.set_shader_parameter("flap_speed", 3.2)
+	material.set_shader_parameter("sway_speed", 3.0)
+
 func _process(delta: float) -> void:
 	super(delta)
 	if _block_window_remaining > 0.0:
