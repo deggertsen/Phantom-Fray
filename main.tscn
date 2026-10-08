@@ -12,18 +12,23 @@
 [ext_resource type="Script" uid="uid://bfr5pdkelr82w" path="res://Scripts/XR/xr_lifecycle_controller.gd" id="11_xr_lifecycle"]
 [ext_resource type="Script" uid="uid://cwb5yux81m237" path="res://Scripts/Debug/performance_monitor.gd" id="12_perf"]
 [ext_resource type="Script" uid="uid://xi4845eyogjx" path="res://Scripts/UI/vr_menu_presenter.gd" id="13_menu_presenter"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aj3qk"]
-sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
-ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+[ext_resource type="Material" path="res://Resources/Materials/breach_sky.tres" id="14_breach_sky"]
 
 [sub_resource type="Sky" id="Sky_f4kfd"]
-sky_material = SubResource("ProceduralSkyMaterial_aj3qk")
+sky_material = ExtResource("14_breach_sky")
 
 [sub_resource type="Environment" id="Environment_eikpw"]
 background_mode = 2
 sky = SubResource("Sky_f4kfd")
+ambient_light_source = 2
+ambient_light_color = Color(0.3, 0.26, 0.48, 1)
+ambient_light_energy = 0.55
+reflected_light_source = 1
 tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.09, 0.055, 0.16, 1)
+fog_density = 0.012
+fog_sky_affect = 0.0
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_8uwq6"]
 size = Vector2(20, 20)
@@ -38,8 +43,8 @@ environment = SubResource("Environment_eikpw")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=339219332]
 transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
-light_color = Color(0.55, 0.7, 1, 1)
-light_energy = 0.85
+light_color = Color(0.62, 0.55, 1, 1)
+light_energy = 0.45
 
 [node name="XRLifecycleController" type="Node" parent="." unique_id=81594756]
 script = ExtResource("11_xr_lifecycle")

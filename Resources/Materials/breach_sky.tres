@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://Resources/Materials/breach_sky.gdshader" id="1_sky"]
+[ext_resource type="Texture2D" path="res://Resources/Materials/breach_noise.tres" id="2_noise"]
+
+[resource]
+shader = ExtResource("1_sky")
+shader_parameter/noise_tex = ExtResource("2_noise")

@@ -31,6 +31,7 @@ var _telegraph_scale: float = 1.0
 var _rift_scale: float = 1.0
 var _beacon: Node3D
 var _beacon_time: float = 0.0
+var _debris: MultiMeshInstance3D
 
 func _ready() -> void:
 	add_to_group("active_rift")
@@ -97,6 +98,9 @@ func is_marked() -> bool:
 
 func _process(delta: float) -> void:
 	_pulse_beacon(delta)
+	if _debris:
+		_debris.rotate_object_local(Vector3.BACK, delta * 0.12)
+		_debris.visible = not _closing
 	_damage_flash = maxf(_damage_flash - delta * 4.0, 0.0)
 	if _portal_material:
 		_portal_material.set_shader_parameter("damage_flash", _damage_flash)
@@ -201,8 +205,42 @@ func _initialize_rift_visuals() -> void:
 	_portal_material = preload("res://Resources/Materials/rift_video.tres").duplicate() as ShaderMaterial
 	portal.material_override = _portal_material
 	add_child(portal)
+	var glow := GlowSprite.create(Color(0.55, 0.2, 1.0), 9.0, 0.32)
+	glow.name = "PortalGlow"
+	portal.add_child(glow)
+	_build_debris()
 	_build_beacon()
 	_update_health_shader()
+
+## Broken shards caught in the rift's pull, orbiting its rim. Drawn after the portal so
+## they stay in front of it. One multimesh.
+func _build_debris() -> void:
+	_debris = MultiMeshInstance3D.new()
+	_debris.name = "Debris"
+	var shard := CylinderMesh.new()
+	shard.top_radius = 0.0
+	shard.bottom_radius = 0.16
+	shard.height = 0.42
+	shard.radial_segments = 3
+	shard.rings = 1
+	var shards := MultiMesh.new()
+	shards.transform_format = MultiMesh.TRANSFORM_3D
+	shards.instance_count = 12
+	shards.mesh = shard
+	for i in shards.instance_count:
+		var angle := TAU * float(i) / float(shards.instance_count) + randf_range(-0.2, 0.2)
+		var distance := randf_range(2.1, 2.9)
+		var tumble := Basis.from_euler(Vector3(randf() * TAU, randf() * TAU, randf() * TAU)).scaled(Vector3.ONE * randf_range(0.5, 1.4))
+		shards.set_instance_transform(i, Transform3D(tumble, Vector3(cos(angle) * distance, sin(angle) * distance * 0.85, randf_range(-0.6, 0.6))))
+	_debris.multimesh = shards
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color(0.16, 0.06, 0.3, 1.0)
+	material.render_priority = 1
+	_debris.material_override = material
+	_debris.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_debris)
 
 func _build_beacon() -> void:
 	_beacon = Node3D.new()
@@ -216,7 +254,7 @@ func _build_beacon() -> void:
 	column.bottom_radius = 0.16
 	column.height = 7.2
 	beam.mesh = column
-	beam.material_override = _beacon_material(Color(0.35, 0.9, 1.0), 2.4)
+	beam.material_override = _beacon_material(Color(0.78, 0.6, 1.0), 2.4)
 	_beacon.add_child(beam)
 	var ring := MeshInstance3D.new()
 	ring.name = "FloorRing"
@@ -227,7 +265,7 @@ func _build_beacon() -> void:
 	torus.ring_segments = 24
 	ring.mesh = torus
 	ring.position = Vector3(0.0, -3.55, 0.0)
-	ring.material_override = _beacon_material(Color(1.0, 0.25, 0.75), 1.8)
+	ring.material_override = _beacon_material(Color(0.6, 0.25, 1.0), 1.8)
 	_beacon.add_child(ring)
 	var sign := Label3D.new()
 	sign.name = "BeaconLabel"
@@ -236,7 +274,7 @@ func _build_beacon() -> void:
 	sign.pixel_size = 0.012
 	sign.position = Vector3(0.0, 3.85, 0.0)
 	sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	sign.modulate = Color(0.75, 0.95, 1.0)
+	sign.modulate = Color(0.88, 0.8, 1.0)
 	sign.outline_size = 16
 	sign.outline_modulate = Color(0.05, 0.0, 0.12)
 	sign.no_depth_test = true
@@ -278,6 +316,12 @@ func _apply_rift_scale(rift_scale: float) -> void:
 		var quad := portal.mesh as QuadMesh
 		quad.size = Vector2(4.0, 4.0) * _rift_scale
 		portal.position.y = 2.0 * (_rift_scale - 1.0)
+		var glow := portal.get_node_or_null("PortalGlow") as Node3D
+		if glow:
+			glow.scale = Vector3.ONE * _rift_scale
+		if _debris:
+			_debris.scale = Vector3.ONE * _rift_scale
+			_debris.position.y = portal.position.y
 	var ring := _beacon.get_node_or_null("FloorRing") as MeshInstance3D if _beacon else null
 	if ring and ring.mesh is TorusMesh:
 		var torus := ring.mesh as TorusMesh

@@ -1,13 +1,15 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://b8x7k2m9n4p5q"]
+[gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://b8x7k2m9n4p5q"]
 
 [ext_resource type="Shader" path="res://Resources/Materials/rift_portal.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" path="res://Resources/Materials/breach_noise.tres" id="2_noise"]
 
 [resource]
 shader = ExtResource("1_shader")
+shader_parameter/noise_tex = ExtResource("2_noise")
 shader_parameter/time_scale = 1.0
-shader_parameter/inner_color = Color(0.4, 0.8, 1, 1)
-shader_parameter/outer_color = Color(0.1, 0.2, 0.8, 1)
-shader_parameter/rim_color = Color(0.8, 0.9, 1, 1)
-shader_parameter/spiral_speed = 1.5
-shader_parameter/spiral_density = 6.0
+shader_parameter/inner_color = Color(0.35, 0.08, 0.75, 1)
+shader_parameter/outer_color = Color(0.012, 0.004, 0.03, 1)
+shader_parameter/rim_color = Color(0.95, 0.82, 1, 1)
+shader_parameter/spiral_speed = 0.6
+shader_parameter/spiral_density = 5.0
 shader_parameter/pulse_speed = 2.0
