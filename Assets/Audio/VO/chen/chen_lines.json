@@ -4,89 +4,89 @@
   "files": "Each line is a file named <event>_<number>.ogg in this folder, numbered from 1 in the order listed. Drop in a new recording with the same name to replace a placeholder.",
   "events": {
     "mission_start": {
-      "priority": 2, "cooldown": 0,
+      "priority": 2, "cooldown": 0, "tag": "[focused]",
       "note": "The countdown just ended. Calm, ready.",
-      "lines": ["Gauntlets are live. Here they come.", "Resonance is stable. Go to work, operator.", "Breach is open. Stay inside the ring."]
+      "lines": ["Gauntlets are live. Here they come.", "Resonance is stable. Go to work, operator.", "Breach is open. Stay inside the ring.", "Readings are spiking. Get ready.", "They know you're here. Hands up."]
     },
     "rift_ahead": {
-      "priority": 1, "cooldown": 6,
+      "priority": 1, "cooldown": 6, "tag": "[alert]",
       "note": "A new rift opened in front of the operator.",
-      "lines": ["Another rift, dead ahead.", "New rift, right in front of you."]
+      "lines": ["Another rift, dead ahead.", "New rift, right in front of you.", "Rift opening ahead of you.", "Fresh tear, straight ahead."]
     },
-    "rift_oclock_2": {"priority": 2, "cooldown": 0, "note": "A rift opened out of view. Give the bearing crisply.", "lines": ["New rift, your two o'clock.", "Rift opening at two o'clock."]},
-    "rift_oclock_3": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your three o'clock.", "Rift on your right. Three o'clock."]},
-    "rift_oclock_4": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your four o'clock.", "Rift opening at four o'clock."]},
-    "rift_oclock_5": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your five o'clock.", "Rift opening at five o'clock."]},
-    "rift_oclock_6": {"priority": 2, "cooldown": 0, "note": "Behind the operator. A touch more urgent.", "lines": ["New rift, directly behind you.", "Rift at your six. Turn around."]},
-    "rift_oclock_7": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your seven o'clock.", "Rift opening at seven o'clock."]},
-    "rift_oclock_8": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your eight o'clock.", "Rift opening at eight o'clock."]},
-    "rift_oclock_9": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your nine o'clock.", "Rift on your left. Nine o'clock."]},
-    "rift_oclock_10": {"priority": 2, "cooldown": 0, "note": "As above.", "lines": ["New rift, your ten o'clock.", "Rift opening at ten o'clock."]},
+    "rift_oclock_2": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "A rift opened out of view. Give the bearing crisply.", "lines": ["New rift, your two o'clock.", "Rift opening at two o'clock.", "Contact, two o'clock. New rift.", "Two o'clock. Another rift's open."]},
+    "rift_oclock_3": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "As above.", "lines": ["New rift, your three o'clock.", "Rift on your right. Three o'clock.", "Contact, three o'clock. New rift.", "Your right side. Rift opening."]},
+    "rift_oclock_4": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "As above.", "lines": ["New rift, your four o'clock.", "Rift opening at four o'clock.", "Contact, four o'clock. New rift.", "Four o'clock. Another rift's open."]},
+    "rift_oclock_5": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "As above.", "lines": ["New rift, your five o'clock.", "Rift opening at five o'clock.", "Contact, five o'clock. New rift.", "Five o'clock. Another rift's open."]},
+    "rift_oclock_6": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "Behind the operator. A touch more urgent.", "lines": ["New rift, directly behind you.", "Rift at your six. Turn around.", "Behind you. New rift.", "Six o'clock. Check your back."]},
+    "rift_oclock_7": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "As above.", "lines": ["New rift, your seven o'clock.", "Rift opening at seven o'clock.", "Contact, seven o'clock. New rift.", "Seven o'clock. Another rift's open."]},
+    "rift_oclock_8": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "As above.", "lines": ["New rift, your eight o'clock.", "Rift opening at eight o'clock.", "Contact, eight o'clock. New rift.", "Eight o'clock. Another rift's open."]},
+    "rift_oclock_9": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "As above.", "lines": ["New rift, your nine o'clock.", "Rift on your left. Nine o'clock.", "Contact, nine o'clock. New rift.", "Your left side. Rift opening."]},
+    "rift_oclock_10": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "As above.", "lines": ["New rift, your ten o'clock.", "Rift opening at ten o'clock.", "Contact, ten o'clock. New rift.", "Ten o'clock. Another rift's open."]},
     "rift_weakening": {
-      "priority": 1, "cooldown": 10,
+      "priority": 1, "cooldown": 10, "tag": "[encouraging]",
       "note": "A rift just dropped to half strength. Encouraging, but don't relax.",
-      "lines": ["It's destabilizing. Keep hitting.", "Half strength. Don't let up."]
+      "lines": ["It's destabilizing. Keep hitting.", "Half strength. Don't let up.", "That rift is buckling. Push it.", "You're tearing it apart. Keep going.", "It's failing. Stay on it."]
     },
     "rift_sealed": {
-      "priority": 1, "cooldown": 4,
+      "priority": 1, "cooldown": 4, "tag": "[satisfied]",
       "note": "A rift closed and more remain. Brief satisfaction.",
-      "lines": ["Rift sealed.", "That one's closed. Good.", "Seal confirmed."]
+      "lines": ["Rift sealed.", "That one's closed. Good.", "Seal confirmed.", "It's shut. Next one.", "Clean seal. Keep moving."]
     },
-    "first_yellow": {"priority": 1, "cooldown": 0, "note": "First yellow Angler of the session. Teaching, quick.", "lines": ["Yellow. Left hand. Go for the lure."]},
-    "first_blue": {"priority": 1, "cooldown": 0, "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure."]},
-    "first_green": {"priority": 1, "cooldown": 0, "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands."]},
-    "first_pink": {"priority": 2, "cooldown": 0, "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane."]},
+    "first_yellow": {"priority": 1, "cooldown": 0, "tag": "[instructive]", "note": "First yellow Angler of the session. Teaching, quick.", "lines": ["Yellow. Left hand. Go for the lure.", "That's a yellow. Hit the lure with your left.", "Yellow means left. Aim for the light.", "Left hand on the yellows. Strike the lure."]},
+    "first_blue": {"priority": 1, "cooldown": 0, "tag": "[instructive]", "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure.", "That's a blue. Hit the lure with your right.", "Blue means right. Aim for the light.", "Right hand on the blues. Strike the lure."]},
+    "first_green": {"priority": 1, "cooldown": 0, "tag": "[instructive]", "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands.", "Greens won't break to one hand. Use both.", "Green incoming. Both fists, block it.", "Catch the green on both hands."]},
+    "first_pink": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane.", "Pink charge. Sidestep it.", "Watch the pink. Get out of its line.", "Pink's lining up on you. Move."]},
     "wrong_hand": {
-      "priority": 1, "cooldown": 20,
+      "priority": 1, "cooldown": 20, "tag": "[firm]",
       "note": "The operator hit with the wrong hand. Corrective, not scolding.",
-      "lines": ["Wrong hand. Match the color.", "Other hand, operator."]
+      "lines": ["Wrong hand. Match the color.", "Other hand, operator.", "That one needs your other hand.", "Match the hand to the color.", "Switch hands."]
     },
     "combo_rising": {
-      "priority": 0, "cooldown": 25,
+      "priority": 0, "cooldown": 25, "tag": "[approving]",
       "note": "The chain multiplier passed 2x. Approving.",
-      "lines": ["That's resonance. Keep the chain.", "Good rhythm. Don't break it."]
+      "lines": ["That's resonance. Keep the chain.", "Good rhythm. Don't break it.", "The field is resonating. Keep it up.", "Nice chain. Stay on it.", "That's the frequency. Hold it."]
     },
     "combo_max": {
-      "priority": 0, "cooldown": 30,
+      "priority": 0, "cooldown": 30, "tag": "[excited]",
       "note": "The chain hit its maximum. A rare flash of excitement.",
-      "lines": ["Maximum resonance!", "Full resonance. Hold it there."]
+      "lines": ["Maximum resonance!", "Full resonance. Hold it there.", "You're peaking. Don't stop now.", "Resonance is maxed. Beautiful."]
     },
     "life_caution": {
-      "priority": 1, "cooldown": 20,
+      "priority": 1, "cooldown": 20, "tag": "[concerned]",
       "note": "Life force is slipping. A heads-up.",
-      "lines": ["You're taking drain. Watch your space.", "Life force dropping. Stay sharp."]
+      "lines": ["You're taking drain. Watch your space.", "Life force dropping. Stay sharp.", "They're feeding on you. Tighten up.", "Your readings dipped. Keep them off you.", "Careful. You're losing life force."]
     },
     "life_danger": {
-      "priority": 2, "cooldown": 15,
+      "priority": 2, "cooldown": 15, "tag": "[worried]",
       "note": "Life force is low. Concerned.",
-      "lines": ["Your readings are falling fast.", "You can't take many more of those."]
+      "lines": ["Your readings are falling fast.", "You can't take many more of those.", "Life force is low. Defend yourself.", "You're fading, operator. Focus.", "That's too much drain. Keep them away."]
     },
     "life_critical": {
-      "priority": 3, "cooldown": 12,
+      "priority": 3, "cooldown": 12, "tag": "[shouting]",
       "note": "One more touch could end it. The only place she raises her voice.",
-      "lines": ["You're critical! Dodge, block, anything!", "Life force critical. Don't let them touch you."]
+      "lines": ["You're critical! Dodge, block, anything!", "Life force critical. Don't let them touch you.", "You're almost gone! Fight!", "Critical! One more and you're out!", "Stay alive, operator! Move!"]
     },
     "possessed": {
-      "priority": 2, "cooldown": 9,
+      "priority": 2, "cooldown": 9, "tag": "[urgent]",
       "note": "A phantom just got into the operator. Sharp.",
-      "lines": ["It's in you. Shake it off!", "Contact! Push through it.", "Drain spike. Keep moving."]
+      "lines": ["It's in you. Shake it off!", "Contact! Push through it.", "Drain spike. Keep moving.", "It got through. Stay up.", "You're hit. Breathe, and keep fighting."]
     },
-    "time_60": {"priority": 2, "cooldown": 0, "note": "One minute left on the mission window.", "lines": ["Sixty seconds on the window."]},
-    "time_30": {"priority": 2, "cooldown": 0, "note": "Thirty seconds left.", "lines": ["Thirty seconds. Close it now.", "Thirty seconds left. Finish it."]},
+    "time_60": {"priority": 2, "cooldown": 0, "tag": "[focused]", "note": "One minute left on the mission window.", "lines": ["Sixty seconds on the window.", "One minute left.", "Clock's running. Sixty seconds.", "A minute to close this."]},
+    "time_30": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "Thirty seconds left.", "lines": ["Thirty seconds. Close it now.", "Thirty seconds left. Finish it.", "We're nearly out of time.", "Thirty seconds, operator. Everything you've got."]},
     "victory": {
-      "priority": 3, "cooldown": 0,
+      "priority": 3, "cooldown": 0, "tag": "[relieved]",
       "note": "Every rift sealed. Relief, quiet pride.",
-      "lines": ["Rifts sealed. That's a clean breach, operator.", "All seals holding. Good work."]
+      "lines": ["Rifts sealed. That's a clean breach, operator.", "All seals holding. Good work.", "Breach closed. You did it.", "It's quiet. That's your work, operator.", "Every rift sealed. Come on home."]
     },
     "defeat": {
-      "priority": 3, "cooldown": 0,
+      "priority": 3, "cooldown": 0, "tag": "[urgent]",
       "note": "The operator's life force collapsed. Urgent, then steady.",
-      "lines": ["Operator down. Pulling you out.", "We lost you. Pulling you back."]
+      "lines": ["Operator down. Pulling you out.", "We lost you. Pulling you back.", "Your signal's gone. Extracting now.", "Life force collapsed. Bringing you home."]
     },
     "timeout": {
-      "priority": 3, "cooldown": 0,
+      "priority": 3, "cooldown": 0, "tag": "[disappointed]",
       "note": "The mission window closed with rifts still open. Disappointed, practical.",
-      "lines": ["The window's closed. We'll go again."]
+      "lines": ["The window's closed. We'll go again.", "Out of time. The rifts are holding.", "The window's gone. Regroup.", "We missed the window. Next time."]
     }
   }
 }
