@@ -1,65 +1,73 @@
 extends Node3D
 
+## Dresses the breach site: the floor, the RSF pylons, the dead city and its rubble.
+## The floor's corruption veins follow whichever rifts are open and fade as they seal.
+
 const CYAN := Color(0.08, 0.7, 1.0, 1.0)
-const VIOLET := Color(0.45, 0.12, 0.85, 1.0)
 const DARK := Color(0.012, 0.018, 0.04, 1.0)
+const FLOOR_SHADER := preload("res://Resources/Materials/arena_floor.gdshader")
+const NOISE := preload("res://Resources/Materials/breach_noise.tres")
+const MAX_RIFTS := 4
+
+var _floor_material: ShaderMaterial
+## Rift instance id -> [floor position, corruption strength].
+var _corruption: Dictionary = {}
 
 func _ready() -> void:
 	CreatureMesh.prewarm()
 	_build_floor()
-	_build_safe_ring()
-	_build_pylons()
+	add_child(BreachCity.pylons())
+	add_child(BreachCity.city())
+	add_child(BreachCity.rubble())
 	_build_briefing_panel()
+
+func _process(delta: float) -> void:
+	_update_corruption(delta)
 
 func _build_floor() -> void:
 	var floor_mesh := get_node_or_null("../Floor/MeshInstance3D") as MeshInstance3D
-	if floor_mesh:
-		var material := StandardMaterial3D.new()
-		material.albedo_color = Color(0.025, 0.035, 0.07)
-		material.metallic = 0.35
-		material.roughness = 0.72
-		floor_mesh.material_override = material
+	if floor_mesh == null:
+		return
+	# The Floor node is scaled 2x, so this reaches 260 m across, out past the city.
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(130.0, 130.0)
+	floor_mesh.mesh = plane
+	_floor_material = ShaderMaterial.new()
+	_floor_material.shader = FLOOR_SHADER
+	_floor_material.set_shader_parameter("noise_tex", NOISE)
+	floor_mesh.material_override = _floor_material
 
-func _build_safe_ring() -> void:
-	var ring := MeshInstance3D.new()
-	ring.name = "SafeAreaRing"
-	var torus := TorusMesh.new()
-	torus.inner_radius = 1.35
-	torus.outer_radius = 1.4
-	torus.rings = 32
-	torus.ring_segments = 8
-	ring.mesh = torus
-	ring.position.y = 0.015
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = CYAN
-	material.emission_enabled = true
-	material.emission = CYAN
-	material.emission_energy_multiplier = 1.5
-	ring.material_override = material
-	add_child(ring)
-
-func _build_pylons() -> void:
-	var box := BoxMesh.new()
-	box.size = Vector3(0.3, 3.4, 0.3)
-	var materials := [_make_pylon_material(CYAN), _make_pylon_material(VIOLET)]
-	for index in range(8):
-		var angle := TAU * float(index) / 8.0
-		var pylon := MeshInstance3D.new()
-		pylon.name = "RSFPylon%d" % index
-		pylon.mesh = box
-		pylon.position = Vector3(sin(angle) * 6.5, 1.7, cos(angle) * 6.5)
-		pylon.material_override = materials[index % 2]
-		add_child(pylon)
-
-func _make_pylon_material(emission_color: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = DARK
-	material.metallic = 0.65
-	material.emission_enabled = true
-	material.emission = emission_color
-	material.emission_energy_multiplier = 0.55
-	return material
+func _update_corruption(delta: float) -> void:
+	if _floor_material == null:
+		return
+	var seen := {}
+	for node in get_tree().get_nodes_in_group("active_rift"):
+		var rift := node as Node3D
+		if rift == null:
+			continue
+		var id := rift.get_instance_id()
+		seen[id] = true
+		var target := 0.0
+		if rift.has_method("is_marked") and rift.is_marked():
+			var health := float(rift.get("rift_health")) / maxf(float(rift.get("maximum_health")), 1.0)
+			target = lerpf(0.35, 1.0, clampf(health, 0.0, 1.0))
+		var entry: Array = _corruption.get(id, [rift.global_position, 0.0])
+		entry[0] = rift.global_position
+		entry[1] = move_toward(entry[1], target, delta * 0.6)
+		_corruption[id] = entry
+	for id in _corruption.keys():
+		if not seen.has(id):
+			_corruption[id][1] = move_toward(_corruption[id][1], 0.0, delta * 0.6)
+			if _corruption[id][1] <= 0.0:
+				_corruption.erase(id)
+	var packed := PackedVector4Array()
+	for entry in _corruption.values():
+		if packed.size() >= MAX_RIFTS:
+			break
+		packed.append(Vector4(entry[0].x, entry[0].z, 0.0, entry[1]))
+	while packed.size() < MAX_RIFTS:
+		packed.append(Vector4.ZERO)
+	_floor_material.set_shader_parameter("rifts", packed)
 
 func _build_briefing_panel() -> void:
 	var label := Label3D.new()
