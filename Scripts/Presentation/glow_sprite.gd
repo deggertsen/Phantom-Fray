@@ -5,6 +5,7 @@ extends RefCounted
 ## which is too expensive in stereo on Quest.
 
 static var _texture: Texture2D
+static var _ring_texture: Texture2D
 
 ## A soft round halo quad. `strength` is how much light it adds at its center.
 static func create(color: Color, size: float, strength: float) -> MeshInstance3D:
@@ -28,6 +29,22 @@ static func material(color: Color, strength: float) -> StandardMaterial3D:
 	mat.albedo_texture = texture()
 	mat.albedo_color = Color(color.r, color.g, color.b, strength)
 	return mat
+
+## A thin bright ring with a soft inner edge, for shockwaves.
+static func ring_texture() -> Texture2D:
+	if _ring_texture == null:
+		var gradient := Gradient.new()
+		gradient.offsets = PackedFloat32Array([0.0, 0.62, 0.86, 0.93, 1.0])
+		gradient.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 0.08), Color(1, 1, 1, 1), Color(1, 1, 1, 0.3), Color(1, 1, 1, 0)])
+		var tex := GradientTexture2D.new()
+		tex.gradient = gradient
+		tex.fill = GradientTexture2D.FILL_RADIAL
+		tex.fill_from = Vector2(0.5, 0.5)
+		tex.fill_to = Vector2(1.0, 0.5)
+		tex.width = 128
+		tex.height = 128
+		_ring_texture = tex
+	return _ring_texture
 
 static func texture() -> Texture2D:
 	if _texture == null:

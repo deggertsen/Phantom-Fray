@@ -54,6 +54,7 @@ func _ready() -> void:
 		var front := phantom.global_position + phantom.global_transform.basis.z * 2.1 + Vector3(0.7, 0.35, 0.0)
 		await _shot("phantom-%s" % id, front, phantom.global_position)
 	await _shot("gauntlets", Vector3(0.0, 1.62, 0.12), Vector3(0.0, 1.2, -0.6))
+	await _hits()
 	print("ART CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
 
@@ -78,6 +79,28 @@ func _spawn(id: String, at: Vector3) -> void:
 	if phantom.has_method("_update_lane"):
 		phantom._update_lane(1.0)
 	_phantoms[id] = phantom
+
+## The moment of impact: a sweet-spot hit on yellow, a plain hit burning through blue,
+## and a half-block spark on green.
+func _hits() -> void:
+	var vfx := get_tree().get_first_node_in_group("CombatVFX")
+	if vfx == null:
+		return
+	var yellow := _phantoms["yellow"] as Node3D
+	var blue := _phantoms["blue"] as Node3D
+	var green := _phantoms["green"] as Node3D
+	var lure := (yellow.get_node("SweetSpotVisual") as Node3D).global_position
+	vfx.play(&"sweet", lure, 1.0, yellow.get("phantom_color"))
+	var struck := blue.global_position + Vector3(-0.25, 0.0, 0.3)
+	blue._begin_dissolve(struck, Vector3.FORWARD, false)
+	vfx.play(&"hit", struck, 0.7, blue.get("phantom_color"))
+	vfx.play(&"guard", green.global_position + Vector3(0.3, 0.0, 0.5), 0.35, green.get("phantom_color"))
+	_camera.global_position = Vector3(0.0, 1.6, 0.0)
+	_camera.look_at(Vector3(0.0, 1.5, -4.0), Vector3.UP)
+	await _settle(5)
+	RenderingServer.force_draw()
+	await get_tree().process_frame
+	get_viewport().get_texture().get_image().save_png("%s/hits.png" % _out_dir)
 
 func _place_hands() -> void:
 	var player := _main.get_node("Player") as Node3D

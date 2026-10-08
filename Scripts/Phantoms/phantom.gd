@@ -116,6 +116,9 @@ func _ready() -> void:
 	_glow = GlowSprite.create(phantom_color, 1.7, GLOW_STRENGTH)
 	_glow.name = "CreatureGlow"
 	mesh_instance.add_child(_glow)
+	var vfx := get_tree().get_first_node_in_group("CombatVFX")
+	if vfx:
+		feedback_requested.connect(vfx.play.bind(phantom_color))
 
 	# https://docs.godotengine.org/en/stable/classes/class_audiostreamplayer3d.html
 	_audio_player = AudioStreamPlayer3D.new()

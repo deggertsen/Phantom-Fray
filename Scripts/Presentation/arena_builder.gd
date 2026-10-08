@@ -19,6 +19,9 @@ func _ready() -> void:
 	add_child(BreachCity.pylons())
 	add_child(BreachCity.city())
 	add_child(BreachCity.rubble())
+	var vfx := CombatVFX.new()
+	vfx.name = "CombatVFX"
+	add_child(vfx)
 	_build_briefing_panel()
 
 func _process(delta: float) -> void:
