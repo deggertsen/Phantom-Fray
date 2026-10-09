@@ -564,8 +564,8 @@ func _validate_mission_catalog() -> void:
 	var maw_waves: Array = maw.get("rifts", [])
 	if maw_waves.size() != 1 or int(maw.get("max_concurrent", 1)) != 1:
 		failures.append("The Maw is not a single rift")
-	elif int(maw_waves[0].get("health", 0)) != 200 or not is_equal_approx(float(maw_waves[0].get("interval", 0.0)), 1.75) or not is_equal_approx(float(maw_waves[0].get("scale", 1.0)), 2.0):
-		failures.append("The Maw is not twice the mouth, the feed, and the damage")
+	elif int(maw_waves[0].get("health", 0)) != 800 or not is_equal_approx(float(maw_waves[0].get("interval", 0.0)), 0.875) or int(maw_waves[0].get("max_live", 0)) != 8 or not is_equal_approx(float(maw_waves[0].get("scale", 1.0)), 2.0):
+		failures.append("The Maw is not a doubled mouth pouring a steady flood")
 	await _validate_maw_rift()
 	var first := MissionCatalog.get_mission("first_light")
 	if int(first.get("max_concurrent", 1)) != 1 or bool(first.get("cluster_rifts", false)) or first.get("rifts", []).size() != 2:
@@ -789,7 +789,7 @@ func _validate_maw_rift() -> void:
 	rift.configure_wave(wave)
 	var portal := rift.get_node_or_null("Portal") as MeshInstance3D
 	var quad := portal.mesh as QuadMesh if portal else null
-	if rift.maximum_health != 200 or not is_equal_approx(rift.spawn_interval, 1.75):
+	if rift.maximum_health != 800 or not is_equal_approx(rift.spawn_interval, 0.875) or rift.max_live_phantoms != 8:
 		failures.append("The Maw rift did not take the doubled feed")
 	elif quad == null or not quad.size.is_equal_approx(Vector2(8.0, 8.0)) or rift.spawn_radius < 4.9:
 		failures.append("The Maw rift did not grow")

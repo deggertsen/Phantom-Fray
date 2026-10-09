@@ -201,17 +201,17 @@ static func _the_maw() -> Dictionary:
 		"id": "the_maw",
 		"codename": "OP-06",
 		"title": "THE MAW",
-		"summary": "One vast rift. It feeds twice as fast and takes twice the damage to shut.",
+		"summary": "One vast rift. Phantoms pour out in a steady flood, and the mouth takes a long chew to shut.",
 		"objective": "SEAL THE MAW",
 		"arc_rifts": true,
-		"start_line": "CHEN: ONE MOUTH. TWICE THE TEETH. TWICE THE HUNGER.",
+		"start_line": "CHEN: ONE MOUTH. IT DOES NOT STOP FEEDING.",
 		"pressure_labels": ["THE MAW"],
 		"open_barks": [""],
 		"seal_lines": [],
 		"victory_line": "Chen: The Maw is shut. It will remember how long you made it chew.",
 		"defeat_line": "Chen: The Maw outpaced you. Kill faster than it can replace them.",
 		"rifts": [
-			_wave(200, 1.75, 4, 1.0, 1.0, ["yellow", "blue", "green", "pink"], 2.0),
+			_wave(800, 0.875, 8, 1.0, 1.0, ["yellow", "blue", "green", "pink"], 2.0),
 		],
 	}
 
