@@ -320,3 +320,7 @@ func _clear_message(label: Label3D) -> void:
 	if is_instance_valid(label):
 		label.queue_free()
 
+
+## The mission this round is playing, as MissionCatalog describes it.
+func current_mission() -> Dictionary:
+	return _mission

@@ -398,6 +398,7 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 	_next_mission_title = ""
 	if outcome == &"victory" and _settings:
 		_settings.mark_mission_cleared(_active_mission_id)
+		_settings.record_score(_active_mission_id, score)
 		var follow_id := MissionCatalog.unlocked_followup(_active_mission_id, _settings)
 		if follow_id != "":
 			_next_mission_title = String(MissionCatalog.get_mission(follow_id).get("title", ""))

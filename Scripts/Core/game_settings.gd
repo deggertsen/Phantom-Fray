@@ -15,6 +15,8 @@ var haptic_scale: float = 1.0
 var reduced_flashes: bool = false
 var tutorial_completed: bool = false
 var cleared_missions: PackedStringArray = PackedStringArray()
+## Mission id -> the best score a victory has earned there.
+var best_scores: Dictionary = {}
 var pending_mission_id: String = ""
 
 func _ready() -> void:
@@ -41,6 +43,9 @@ func load_settings() -> void:
 		cleared_missions = saved_clears
 	elif saved_clears is Array:
 		cleared_missions = PackedStringArray(saved_clears)
+	var saved_bests: Variant = config.get_value("progress", "best_scores", {})
+	if saved_bests is Dictionary:
+		best_scores = saved_bests
 	_snap_volumes(true)
 
 func save_settings() -> void:
@@ -54,6 +59,7 @@ func save_settings() -> void:
 	config.set_value("comfort", "reduced_flashes", reduced_flashes)
 	config.set_value("progress", "tutorial_completed", tutorial_completed)
 	config.set_value("progress", "cleared_missions", cleared_missions)
+	config.set_value("progress", "best_scores", best_scores)
 	config.save(SETTINGS_PATH)
 	apply_audio()
 
@@ -117,8 +123,19 @@ func mark_mission_cleared(mission_id: String) -> void:
 	cleared_missions.append(mission_id)
 	save_settings()
 
+func best_score(mission_id: String) -> int:
+	return int(best_scores.get(mission_id, 0))
+
+## Keeps the higher of the stored best and this victory's score.
+func record_score(mission_id: String, score: int) -> void:
+	if mission_id == "" or score <= best_score(mission_id):
+		return
+	best_scores[mission_id] = score
+	save_settings()
+
 func clear_mission_progress() -> void:
 	cleared_missions = PackedStringArray()
+	best_scores = {}
 	pending_mission_id = ""
 
 func reset_mission_progress() -> void:
