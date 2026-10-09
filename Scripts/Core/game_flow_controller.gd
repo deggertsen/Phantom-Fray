@@ -408,7 +408,8 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 		_settings.record_time(_active_mission_id, _last_seconds)
 		var follow_id := MissionCatalog.unlocked_followup(_active_mission_id, _settings)
 		if follow_id != "":
-			_next_mission_title = String(MissionCatalog.get_mission(follow_id).get("title", ""))
+			var follow := MissionCatalog.get_mission(follow_id)
+			_next_mission_title = "%s  •  %s" % [follow.get("title", ""), MissionCatalog.expected_minutes_text(follow)]
 	_state = STATE_RESULTS
 	_menu_input_armed = false
 	_show_results()

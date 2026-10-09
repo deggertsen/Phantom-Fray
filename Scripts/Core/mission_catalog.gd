@@ -11,6 +11,15 @@ const SCENE_BY_ID := {
 static func scene_path(variant_id: String) -> String:
 	return String(SCENE_BY_ID.get(variant_id, ""))
 
+## "3 TO 4 MIN" from the mission's expected_minutes pair, or "" when it has none.
+static func expected_minutes_text(mission: Dictionary) -> String:
+	var minutes: Array = mission.get("expected_minutes", [])
+	if minutes.size() != 2:
+		return ""
+	if int(minutes[0]) == int(minutes[1]):
+		return "%d MIN" % int(minutes[0])
+	return "%d TO %d MIN" % [int(minutes[0]), int(minutes[1])]
+
 static func all_missions() -> Array[Dictionary]:
 	return [_first_light(), _widen_the_ring(), _chens_gambit(), _double_breach(), _open_arc(), _the_maw()]
 
@@ -59,11 +68,11 @@ static func unlocked_followup(mission_id: String, settings: Object) -> String:
 static func deploy_detail(settings: Object) -> String:
 	var mission := get_mission(next_unlocked_id(settings))
 	if mission.is_empty():
-		return "Seal the next live rift before the window collapses"
+		return "Seal the next live rift"
 	var cleared := _cleared_from(settings)
 	var replay := String(mission.get("id", "")) in cleared
 	var prefix := "REPLAY" if replay else "NEXT"
-	return "%s • %s %s" % [prefix, mission.get("codename", "OP"), mission.get("title", "MISSION")]
+	return "%s • %s %s • %s" % [prefix, mission.get("codename", "OP"), mission.get("title", "MISSION"), expected_minutes_text(mission)]
 
 static func operation_entries(settings: Object) -> Array[Dictionary]:
 	var cleared := _cleared_from(settings)
@@ -81,6 +90,8 @@ static func operation_entries(settings: Object) -> Array[Dictionary]:
 			"codename": mission.get("codename", ""),
 			"title": mission.get("title", ""),
 			"summary": mission.get("summary", ""),
+			"expected_minutes": mission.get("expected_minutes", []),
+			"best_seconds": _best_time_from(settings, mission_id),
 			"unlocked": unlocked,
 			"cleared": mission_id in cleared,
 			"lock_reason": lock_reason,
@@ -95,12 +106,22 @@ static func _cleared_from(settings: Object) -> PackedStringArray:
 		return value
 	return PackedStringArray()
 
+static func _best_time_from(settings: Object, mission_id: String) -> float:
+	if settings == null or not settings.has_method("best_time"):
+		return 0.0
+	return float(settings.call("best_time", mission_id))
+
+# expected_minutes is [min, max] minutes of play, shown on the mission card. Every pair is an
+# estimate from the wave tables (rift health over roughly 13 rift damage per kill, times the
+# spawn interval, plus misses and rift openings), not a timed headset run. Replace them with
+# timed runs; see Known_Issues.md.
 static func _first_light() -> Dictionary:
 	return {
 		"id": "first_light",
 		"codename": "OP-01",
 		"title": "FIRST LIGHT",
 		"summary": "Proving ground. Gold lunges left, blue lunges right. Read it, then answer.",
+		"expected_minutes": [1, 2],
 		"objective": "SEAL TWO RIFTS",
 		"start_line": "CHEN: READ THE LUNGE. THEN ANSWER.",
 		"pressure_labels": ["CONTACT", "ADAPTING"],
@@ -120,6 +141,7 @@ static func _widen_the_ring() -> Dictionary:
 		"codename": "OP-02",
 		"title": "WIDEN THE RING",
 		"summary": "Civic ring. Greens crash the chest. Pinks paint a line and own it.",
+		"expected_minutes": [3, 4],
 		"objective": "SEAL SIX RIFTS",
 		"start_line": "CHEN: GREENS CRASH. PINKS OWN A LINE.",
 		"pressure_labels": ["CONTACT", "MIXED", "RING LOUD", "SECOND WAVE", "RING HOT", "LAST DOOR"],
@@ -143,6 +165,7 @@ static func _chens_gambit() -> Dictionary:
 		"codename": "OP-03",
 		"title": "CHEN'S GAMBIT",
 		"summary": "Junction rift. The Overseer is aiming them. Shorter tells. No free swings.",
+		"expected_minutes": [3, 4],
 		"objective": "SEAL THE JUNCTION",
 		"start_line": "CHEN: THE OVERSEER IS AIMING THEM.",
 		"pressure_labels": ["MARKED", "HUNTED", "JUNCTION", "IT ANSWERED", "NO MERCY", "LAST SEAL"],
@@ -166,6 +189,7 @@ static func _double_breach() -> Dictionary:
 		"codename": "OP-04",
 		"title": "DOUBLE BREACH",
 		"summary": "Two rifts open in the same view. Their scouts arrive out of step.",
+		"expected_minutes": [3, 5],
 		"objective": "SEAL THE PAIRED RIFTS",
 		"max_concurrent": 2,
 		"cluster_rifts": true,
@@ -184,6 +208,7 @@ static func _open_arc() -> Dictionary:
 		"codename": "OP-05",
 		"title": "OPEN ARC",
 		"summary": "The paired doors again, set wider across the arc in front of you.",
+		"expected_minutes": [3, 5],
 		"objective": "SEAL THE OPEN ARC",
 		"max_concurrent": 2,
 		"arc_rifts": true,
@@ -202,6 +227,7 @@ static func _the_maw() -> Dictionary:
 		"codename": "OP-06",
 		"title": "THE MAW",
 		"summary": "One vast rift. Phantoms pour out in a steady flood, and the mouth takes a long chew to shut.",
+		"expected_minutes": [2, 3],
 		"objective": "SEAL THE MAW",
 		"arc_rifts": true,
 		"start_line": "CHEN: ONE MOUTH. IT DOES NOT STOP FEEDING.",

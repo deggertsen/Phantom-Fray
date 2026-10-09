@@ -19,12 +19,12 @@ Ideas that are not scheduled live in [Ideas_Backlog.md](Ideas_Backlog.md).
 - Phantoms arrive on one continuous accelerating arc and lunge for the head. A strike counts once the body is in reach.
 - Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift. A sealed rift's phantoms stay in play; the operation is won when the last one is dealt with.
 - Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the operator out. Operators never die.
-- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score and fastest victory per operation are stored; results show the completion time and call a new best time.
+- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score and fastest victory per operation are stored; results show the completion time and call a new best time. Each Operations card shows an expected time range and the best time beside it.
 - Dr. Chen on comms: 33 moments, 4 to 5 takes each, voiced with ElevenLabs. Cooldown and max-wait pacing so she never cuts herself off. Opening line knows if this is a first attempt, a retry after the failsafe, or a replay; victory line knows if it was flawless, at critical, or a new best.
 - Play My Own Music: a settings switch silences the soundtrack so any music app plays through.
 - Breach-site arena: hex floor with corruption veins that follow open rifts, RSF pylons, dead-city skyline, rubble, sky crack.
 - Bracer wrist panel: operation, elapsed time, life force, rift hexes, score, multiplier, Chen caption.
-- World-space menu with dual lasers: main, Operations (six contracts with lock state), six-page Training, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation.
+- World-space menu with dual lasers: main (next mission with its expected time), Operations (six contracts with lock state, expected time, and best time), six-page Training, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation.
 - Mission progress, best scores, best times, and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, own-music settings, rift stragglers, and the pink dodge.
 - Quest debug and release build scripts, signed-package evidence, export guide, ElevenLabs generation and transcription check for Chen's lines.
 
@@ -70,6 +70,7 @@ Fitness is the product. The campaign is the on-ramp.
 - [ ] Show the best score on Operations and on results, so a player can see that lures and chains pay.
 - [ ] Medals per operation (bronze, silver, gold) from score thresholds that reward crits and unbroken chains.
 - [ ] Endless "Hold the Breach" mode: cycle the existing wave tables with rising speed and shrinking telegraph scale until the failsafe fires. Length options 10, 20, 30 minutes.
+- [x] Expected mission time on every mission card: an `expected_minutes` range per operation ("3 TO 4 MIN") with the player's best time beside it once they have one. The ranges are estimates from the wave tables; replace them from timed headset runs.
 - [ ] Workout-length framing in the menu: a quick 10-minute hold, a 20-minute operation set, a 30-minute campaign.
 - [ ] Meta fitness tracking tag for the store listing and Horizon OS Move integration if the SDK exposes it.
 - [ ] Difficulty tiers: Assist, Standard, Operator. Implemented as multipliers on the wave fields `speed_scale`, `telegraph_scale`, rift health, and contact damage.

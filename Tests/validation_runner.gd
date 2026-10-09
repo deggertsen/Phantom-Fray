@@ -443,9 +443,23 @@ func _validate_results_menu() -> void:
 			await process_frame
 			if screen_shape.disabled:
 				failures.append("Results screen collider stayed disabled")
-	presenter.show_operations(MissionCatalog.operation_entries(null))
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.cleared_missions = PackedStringArray(["first_light"])
+	profile.best_times = {"first_light": 342.0}
+	var entries := MissionCatalog.operation_entries(profile)
+	profile.free()
+	presenter.show_operations(entries)
 	for _frame in 4:
 		await process_frame
+	for entry in entries:
+		var card := _find_button(presenter, "%s  %s" % [entry.get("codename", ""), entry.get("title", "")])
+		var expected := MissionCatalog.expected_minutes_text(entry)
+		if card == null or expected == "" or expected not in card.text:
+			failures.append("Operations card for %s does not show its expected time" % entry.get("id", ""))
+		elif entry.get("id", "") == "first_light" and "%s  •  YOUR BEST 5:42" % expected not in card.text:
+			failures.append("Operations card does not show the best time beside the range: %s" % card.text)
+		elif entry.get("id", "") != "first_light" and "YOUR BEST" in card.text:
+			failures.append("Operations card shows a best time it does not have: %s" % card.text)
 	var operation_buttons := 0
 	var operation_panel := Rect2(Vector2.ZERO, Vector2(1280, 780))
 	var stack := presenter.get_node("MenuScreen/Viewport").get_child(0)
@@ -456,6 +470,15 @@ func _validate_results_menu() -> void:
 			failures.append("Operations button sits outside the panel %s" % op_rect)
 	if operation_buttons < 7:
 		failures.append("Operations list is missing a contract or the back button")
+	var operations_footer := _find_label(stack, "LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
+	if operations_footer == null or operations_footer.get_global_rect().end.y > 750.0:
+		failures.append("Operations footer runs off the bottom of the panel")
+	presenter.show_main_menu(MissionCatalog.deploy_detail(null))
+	for _frame in 4:
+		await process_frame
+	var main_footer := _find_label(stack, "POINT AT A BUTTON  •  PULL TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
+	if main_footer == null or main_footer.get_global_rect().end.y > 750.0:
+		failures.append("Main menu footer runs off the bottom of the panel")
 	presenter.queue_free()
 	player.queue_free()
 	await process_frame
@@ -515,6 +538,16 @@ func _validate_possession(yellow_scene: PackedScene) -> void:
 func _validate_mission_catalog() -> void:
 	if MissionCatalog.all_missions().size() != 6:
 		failures.append("Mission catalog does not contain six operations")
+	for mission in MissionCatalog.all_missions():
+		var minutes: Variant = mission.get("expected_minutes")
+		if not minutes is Array or minutes.size() != 2 or typeof(minutes[0]) != TYPE_INT or typeof(minutes[1]) != TYPE_INT:
+			failures.append("%s has no expected_minutes pair" % mission.get("id", ""))
+		elif minutes[0] < 1 or minutes[1] < minutes[0] or minutes[1] > 30:
+			failures.append("%s has an invalid expected_minutes range %s" % [mission.get("id", ""), minutes])
+	if MissionCatalog.expected_minutes_text({"expected_minutes": [6, 8]}) != "6 TO 8 MIN":
+		failures.append("Expected time range does not read as 6 TO 8 MIN")
+	if MissionCatalog.deploy_detail(null) != "NEXT • OP-01 FIRST LIGHT • %s" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("first_light")):
+		failures.append("Deploy button does not show the next mission's expected time: %s" % MissionCatalog.deploy_detail(null))
 	var none := PackedStringArray()
 	if not MissionCatalog.is_unlocked_with_clears("first_light", none):
 		failures.append("First Light should be available immediately")
@@ -774,12 +807,16 @@ func _validate_elapsed_timer() -> void:
 	await process_frame
 
 func _has_label(node: Node, text: String) -> bool:
+	return _find_label(node, text) != null
+
+func _find_label(node: Node, text: String) -> Label:
 	if node is Label and (node as Label).text == text:
-		return true
+		return node as Label
 	for child in node.get_children():
-		if _has_label(child, text):
-			return true
-	return false
+		var found := _find_label(child, text)
+		if found:
+			return found
+	return null
 
 func _validate_maw_rift() -> void:
 	var rift := RiftManager.new()
