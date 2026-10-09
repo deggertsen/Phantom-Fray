@@ -23,13 +23,26 @@ static func expected_minutes_text(mission: Dictionary) -> String:
 static func all_missions() -> Array[Dictionary]:
 	return [_first_light(), _widen_the_ring(), _chens_gambit(), _double_breach(), _open_arc(), _the_maw()]
 
+## Missions outside the campaign and the Operations menu, playable only in debug builds.
+## The boss Maw lives here until the war map and its difficulties exist.
+static func debug_missions() -> Array[Dictionary]:
+	return [_the_maw_boss()]
+
+static func is_debug_mission(mission_id: String) -> bool:
+	for mission in debug_missions():
+		if mission.get("id", "") == mission_id:
+			return true
+	return false
+
 static func get_mission(mission_id: String) -> Dictionary:
-	for mission in all_missions():
+	for mission in all_missions() + debug_missions():
 		if mission.get("id", "") == mission_id:
 			return mission
 	return {}
 
 static func is_unlocked_with_clears(mission_id: String, cleared: PackedStringArray) -> bool:
+	if is_debug_mission(mission_id):
+		return OS.is_debug_build()
 	var missions := all_missions()
 	for index in range(missions.size()):
 		if missions[index].get("id", "") != mission_id:
@@ -230,11 +243,36 @@ static func _the_maw() -> Dictionary:
 		"seal_lines": [],
 		"victory_line": "Chen: The Maw is shut. It will remember how long you made it chew.",
 		"defeat_line": "Chen: The Maw outpaced you. Kill faster than it can replace them.",
+		# Phase one only. As it seals, a tentacle sometimes grips the rim and is dragged back.
+		"glimpse": true,
 		# One mouth, so its length comes from health rather than a second rift.
 		"rifts": [
 			_wave(1600, 0.875, 8, 1.0, 1.0, ["yellow", "blue", "green", "pink"], 2.0),
 		],
 	}
+
+## The Maw at the movement difficulty: phase one, and on a Maw that breaks, the turn and the
+## tentacles. Debug only until the war map's difficulties exist. See MawBoss and
+## development/Exercise_Mechanics_Exploration.md, "The Maw".
+static func _the_maw_boss() -> Dictionary:
+	var mission := _the_maw()
+	mission.erase("glimpse")
+	mission["id"] = "the_maw_boss"
+	mission["title"] = "THE MAW // FULL RESONANCE"
+	mission["summary"] = "The Maw at the movement difficulty. Sometimes something comes through after it."
+	# Covers both outcomes, a seal after phase one or a shortened phase one and the tentacles.
+	mission["expected_minutes"] = [4, 7]
+	mission["boss"] = {
+		"name": "THE MAW",
+		# On a Maw that breaks, phase one runs on this share of the rift's health, so the whole
+		# mission stays inside five to ten minutes. The bar does not show it.
+		"phase_one_scale": 0.5,
+		"anchor": 840,
+		# With no hits taken and no work done, the anchor runs out in this many seconds.
+		"anchor_seconds": 210.0,
+		"squat_depth": 0.20,
+	}
+	return mission
 
 static func _paired_assault_waves() -> Array:
 	return _repeat([

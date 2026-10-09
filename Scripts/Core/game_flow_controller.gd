@@ -221,6 +221,17 @@ func _unhandled_input(event: InputEvent) -> void:
 					_on_menu_action(&"resume")
 			KEY_T:
 				_on_menu_action(&"training")
+			KEY_B:
+				# Debug builds only: the boss Maw, outside the campaign. Shift forces a break.
+				if OS.is_debug_build() and _state == STATE_MENU:
+					MawBoss.force_next_break = event.shift_pressed
+					_start_mission("the_maw_boss")
+			KEY_P:
+				# Debug builds only: one push-up, until push-up detection exists.
+				if OS.is_debug_build() and _state == STATE_PLAYING:
+					var boss := get_tree().get_first_node_in_group("MawBoss") as MawBoss
+					if boss:
+						boss.register_push_up()
 			KEY_S:
 				_show_settings(_state)
 			KEY_ESCAPE:

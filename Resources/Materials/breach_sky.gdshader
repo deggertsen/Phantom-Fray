@@ -11,6 +11,8 @@ uniform vec3 breach_color : source_color = vec3(0.45, 0.15, 0.9);
 uniform vec3 crack_color : source_color = vec3(1.0, 0.8, 1.0);
 // Where the crack sits around the player, in radians. 0 is straight down -Z.
 uniform float crack_azimuth = 0.0;
+// The boss turn tears the crack wider and brighter, 0 to 1. Set rarely: each change re-renders the radiance map.
+uniform float crack_spread = 0.0;
 
 void sky() {
 	vec3 d = EYEDIR;
@@ -25,9 +27,9 @@ void sky() {
 	float wobble = texture(noise_tex, vec2(az * 0.12, 0.31)).r - 0.5;
 	float line = 0.36 + 0.05 * sin(az * 2.3 + 0.6) + wobble * 0.09;
 	float dist = abs(el - line);
-	float span = 1.0 - smoothstep(0.6, 1.3, abs(az));
+	float span = 1.0 - smoothstep(0.6 + crack_spread * 1.2, 1.3 + crack_spread * 1.6, abs(az));
 	float crack = exp(-dist * 220.0) * span;
-	float glow = exp(-dist * 9.0) * span;
+	float glow = exp(-dist * mix(9.0, 5.0, crack_spread)) * span * (1.0 + crack_spread * 0.8);
 
 	col += mix(vec3(0.035, 0.03, 0.07), breach_color * 0.6, glow) * smoothstep(0.38, 0.75, cloud) * smoothstep(-0.02, 0.22, h);
 	col += breach_color * glow * 0.38 * (0.5 + cloud);

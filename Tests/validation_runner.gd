@@ -20,6 +20,9 @@ func _run_validation() -> void:
 	await _validate_results_menu()
 	await _validate_pink_dodge()
 	_validate_squat_detector()
+	_validate_maw_break_odds()
+	await _validate_maw_boss()
+	await _validate_maw_glimpse()
 	await process_frame
 	if failures.is_empty():
 		print("PHANTOM FRAY VALIDATION PASSED")
@@ -902,3 +905,230 @@ func _drive_head(squat: SquatDetector, from: Vector3, to: Vector3, pitch_from: f
 	for index in steps:
 		var t := float(index + 1) / float(steps)
 		squat.sample(from.lerp(to, t), lerpf(pitch_from, pitch_to, t), step)
+
+func _validate_maw_break_odds() -> void:
+	if not MawBoss.decide_break(0, 0, 0.99):
+		failures.append("The first Maw at the boss difficulty did not break")
+	if MawBoss.decide_break(1, 0, 0.5) or not MawBoss.decide_break(1, 0, 0.2):
+		failures.append("A later Maw does not break about one time in three")
+	if not MawBoss.decide_break(5, 2, 0.99):
+		failures.append("Two Maws in a row without a boss did not force a break")
+	if not is_equal_approx(MawBoss.drain_rate(840, 210.0), 4.0):
+		failures.append("The anchor does not run dry in its set time")
+	var path := "user://validation_maw_odds.cfg"
+	var levels = load("res://Scripts/Core/game_settings.gd").new()
+	levels.settings_path = path
+	# The unluckiest rolls possible still meet a boss every third Maw.
+	var dry := 0
+	var longest_dry := 0
+	for index in 12:
+		var broke := MawBoss.decide_break(levels.boss_maws_faced, levels.maws_without_boss, 0.999)
+		if index == 0 and not broke:
+			failures.append("The first boss Maw of a fresh profile did not break")
+		levels.record_maw(broke)
+		dry = 0 if broke else dry + 1
+		longest_dry = maxi(longest_dry, dry)
+	if longest_dry > 2:
+		failures.append("Three Maws in a row sealed without a boss")
+	var reloaded = load("res://Scripts/Core/game_settings.gd").new()
+	reloaded.settings_path = path
+	reloaded.load_settings()
+	if reloaded.boss_maws_faced != 12 or reloaded.maws_without_boss != levels.maws_without_boss:
+		failures.append("The Maw counters did not persist: %d faced, %d dry" % [reloaded.boss_maws_faced, reloaded.maws_without_boss])
+	reloaded.clear_mission_progress()
+	if reloaded.boss_maws_faced != 0 or reloaded.maws_without_boss != 0:
+		failures.append("Reset progress kept the Maw counters")
+	# With fair rolls a boss comes through a bit more than one Maw in three; the pity rule adds some.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 6
+	var faced := 1
+	var without := 0
+	var breaks := 0
+	for _i in 3000:
+		var broke := MawBoss.decide_break(faced, without, rng.randf())
+		faced += 1
+		without = 0 if broke else without + 1
+		breaks += 1 if broke else 0
+	var share := float(breaks) / 3000.0
+	if share < 0.33 or share > 0.5:
+		failures.append("Boss Maws break at %.2f, not about one in three" % share)
+	levels.free()
+	reloaded.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+## Points the GameSettings autoload at a scratch file for a boss run, and back.
+func _borrow_settings(scratch: bool, saved: Dictionary) -> void:
+	var settings := root.get_node_or_null("GameSettings")
+	if settings == null:
+		return
+	if scratch:
+		saved["path"] = settings.settings_path
+		saved["faced"] = settings.boss_maws_faced
+		saved["dry"] = settings.maws_without_boss
+		saved["cleared"] = settings.cleared_missions
+		settings.settings_path = "user://validation_boss_settings.cfg"
+		settings.cleared_missions = PackedStringArray()
+		return
+	settings.settings_path = saved["path"]
+	settings.boss_maws_faced = saved["faced"]
+	settings.maws_without_boss = saved["dry"]
+	settings.cleared_missions = saved["cleared"]
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://validation_boss_settings.cfg"))
+
+func _validate_maw_boss() -> void:
+	var saved := {}
+	_borrow_settings(true, saved)
+	var container := Node3D.new()
+	container.add_to_group("PhantomContainer")
+	root.add_child(container)
+	var director := RiftDirector.new()
+	director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+	root.add_child(director)
+	var life := LifeForceManager.new()
+	root.add_child(life)
+	var round_controller := RoundController.new()
+	round_controller.countdown_seconds = 0
+	root.add_child(round_controller)
+	await process_frame
+	await process_frame
+	round_controller.set_process(false)
+	var boss := director.get_node("MawBoss") as MawBoss
+	var outcome := [&""]
+	round_controller.round_finished.connect(func(result: StringName, _score: int) -> void: outcome[0] = result)
+	var named := [""]
+	boss.phase_two_started.connect(func(boss_name: String, _rift_id: int) -> void: named[0] = boss_name)
+	MawBoss.force_next_break = true
+	round_controller.begin_round(MissionCatalog.get_mission("the_maw_boss"))
+	round_controller._process(0.0)
+	var rift: RiftManager = director.rift_instances[0] if not director.rift_instances.is_empty() else null
+	if rift == null or not boss.breaks or not rift.hold_open:
+		failures.append("The boss Maw did not arm its rift to break")
+		await _end_boss_validation(round_controller, life, director, container, saved)
+		return
+	if rift.maximum_health != 800:
+		failures.append("A breaking Maw's phase one was not shortened: %d" % rift.maximum_health)
+	var closed := [false]
+	rift.closed.connect(func() -> void: closed[0] = true)
+	await process_frame
+	# Phase one ends the way every rift ends: the last resolve takes it to zero.
+	rift.apply_result({"rift_damage": 5000, "base_score": 10})
+	if closed[0] or not rift.is_held() or boss.stage != MawBoss.Stage.TURN:
+		failures.append("Zero health on a breaking Maw sealed it instead of playing the turn")
+	# Pause holds the turn where it is.
+	boss._process(0.6)
+	var held_clock := boss._clock
+	round_controller.pause_round()
+	if boss.is_processing():
+		failures.append("Pause did not stop the turn")
+	for _i in 4:
+		await process_frame
+	if not is_equal_approx(boss._clock, held_clock):
+		failures.append("The turn ran on while paused")
+	round_controller.resume_round()
+	if not boss.is_processing():
+		failures.append("Resume did not restart the turn")
+	boss._process(0.6)
+	for phantom in rift.live_phantoms():
+		if phantom is Phantom and not (phantom as Phantom).is_escorting():
+			failures.append("A phantom alive at the turn did not flee to the escort ring")
+			break
+	for _i in 12:
+		boss._process(1.0)
+	if boss.stage != MawBoss.Stage.FIGHT or named[0] != "THE MAW":
+		failures.append("The turn did not open the fight under the boss's name")
+	# The bar refills as the anchor.
+	boss._process(MawBoss.REFILL_SECONDS)
+	if rift.maximum_health != boss.anchor_maximum or rift.rift_health != boss.anchor_maximum:
+		failures.append("The anchor did not refill the rift's bar: %d / %d" % [rift.rift_health, rift.maximum_health])
+	var before := rift.rift_health
+	boss._process(10.0)
+	if before - rift.rift_health != 40:
+		failures.append("The anchor did not drain 4 a second on its own: %d" % (before - rift.rift_health))
+	before = rift.rift_health
+	director.player_damaged.emit(5.0)
+	if rift.rift_health - before != MawBoss.POSSESSION_FEED:
+		failures.append("A possession did not feed the anchor")
+	before = rift.rift_health
+	rift.apply_result({"rift_damage": 14, "base_score": 150})
+	if before - rift.rift_health != 14:
+		failures.append("A resolve did not drain the anchor")
+	# The slam, the spent tentacle, the escort holding still, and push-up pulses.
+	boss._summon_escort()
+	before = rift.rift_health
+	boss.register_push_up()
+	if rift.rift_health != before:
+		failures.append("A push-up counted outside a spent tentacle")
+	boss._steps = [{"do": "slam"}]
+	boss._next_step()
+	if boss._slam == null:
+		failures.append("The slam did not start")
+	else:
+		boss._slam.advance(5.0)
+		if not boss.is_spent_window_open():
+			failures.append("A slam did not leave a spent tentacle")
+		for escort in boss._escorts:
+			if is_instance_valid(escort) and not is_zero_approx(escort._escort_orbit_speed):
+				failures.append("The escort kept circling while the tentacle was spent")
+				break
+		before = rift.rift_health
+		for _i in MawBoss.SPENT_PUSH_UPS + 2:
+			boss.register_push_up()
+		if before - rift.rift_health != MawBoss.SPENT_PUSH_UPS * MawBoss.PULSE_DRAIN:
+			failures.append("Ten push-ups did not drain ten pulses: %d" % (before - rift.rift_health))
+		boss._process(0.1)
+		if boss._step_phase != &"recoil":
+			failures.append("The tenth push-up did not tear the tentacle back")
+	# At zero the boss retreats, the rift seals behind it, and the mission is won.
+	rift.drain_health(rift.rift_health)
+	if boss.stage != MawBoss.Stage.RETREAT:
+		failures.append("An empty anchor did not make the boss retreat")
+	for _i in 3:
+		boss._process(1.0)
+	await process_frame
+	if not closed[0] or outcome[0] != &"victory":
+		failures.append("The retreat did not seal the Maw and win the mission (%s)" % outcome[0])
+	await _end_boss_validation(round_controller, life, director, container, saved)
+
+func _end_boss_validation(round_controller: Node, life: Node, director: RiftDirector, container: Node, saved: Dictionary) -> void:
+	director.cleanup_round()
+	for node in [round_controller, life, director, container]:
+		node.queue_free()
+	await process_frame
+	_borrow_settings(false, saved)
+
+func _validate_maw_glimpse() -> void:
+	var saved := {}
+	_borrow_settings(true, saved)
+	var container := Node3D.new()
+	container.add_to_group("PhantomContainer")
+	root.add_child(container)
+	var director := RiftDirector.new()
+	director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+	root.add_child(director)
+	await process_frame
+	var boss := director.get_node("MawBoss") as MawBoss
+	director.start_round(MissionCatalog.get_mission("first_light"))
+	if boss.stage != MawBoss.Stage.IDLE:
+		failures.append("An ordinary mission woke the boss")
+	director.cleanup_round()
+	director.start_round(MissionCatalog.get_mission("the_maw"))
+	var rift: RiftManager = director.rift_instances[0]
+	if boss.breaks or rift.hold_open or not boss.glimpse:
+		failures.append("The tutorial Maw is not phase one with a first-seal glimpse")
+	rift.apply_result({"rift_damage": 5000, "base_score": 10})
+	if boss.stage != MawBoss.Stage.GLIMPSE or rift.dissolve_rate >= 0.75:
+		failures.append("The tutorial Maw sealed without the tentacle glimpse")
+	boss._process(MawBoss.GLIMPSE_SECONDS + 0.1)
+	if boss.stage != MawBoss.Stage.DONE or is_instance_valid(boss._tentacle):
+		failures.append("The glimpse did not end with the tentacle dragged back")
+	director.cleanup_round()
+	director.queue_free()
+	container.queue_free()
+	await process_frame
+	_borrow_settings(false, saved)
+	if not MissionCatalog.get_mission("the_maw_boss").has("boss") or MissionCatalog.all_missions().any(func(mission: Dictionary) -> bool: return mission.has("boss")):
+		failures.append("The boss Maw is not a debug-only mission")
+	var lines: Dictionary = (load("res://Assets/Audio/VO/chen/chen_lines.json") as JSON).data.get("events", {})
+	for event in ["boss_false_seal", "boss_holding_open", "boss_not_a_phantom", "boss_get_ready", "boss_sweep", "boss_slam", "boss_spent", "boss_waking", "boss_volley", "boss_retreat", "maw_glimpse"]:
+		if not lines.has(event):
+			failures.append("Chen has no %s line" % event)

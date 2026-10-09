@@ -106,6 +106,8 @@ func pause_round() -> void:
 		if is_instance_valid(rift):
 			rift.set_process(false)
 	_life_force.set_process(false)
+	# A boss holds its turn and its fight exactly where they are.
+	get_tree().call_group("boss", "set_round_paused", true)
 	for phantom in get_tree().get_nodes_in_group("phantom"):
 		if is_instance_valid(phantom):
 			phantom.set_physics_process(false)
@@ -118,6 +120,7 @@ func resume_round() -> void:
 		return
 	_paused = false
 	_life_force.set_process(true)
+	get_tree().call_group("boss", "set_round_paused", false)
 	for rift in _director.rift_instances:
 		if is_instance_valid(rift):
 			rift.set_process(true)

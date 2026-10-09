@@ -7,7 +7,8 @@ class_name ChenComms
 ## Assets/Audio/VO/chen/chen_lines.json. Each line plays from <event>_<n>.ogg beside it, so a
 ## new recording replaces a placeholder by name. A missing file is skipped and only captioned.
 ##
-## Pacing, as chen_lines.json sets it. Chen never cuts herself off.
+## Pacing, as chen_lines.json sets it. Chen never cuts herself off; only the boss turn
+## cuts her off (cut_off), because the script asks for it.
 ##   cooldown  seconds of silence a moment needs after her previous line (any line) finishes
 ##             before it may start.
 ##   priority  decides which waiting line gets the next slot. 3 skips the cooldown and plays
@@ -16,6 +17,8 @@ class_name ChenComms
 ##             it is dropped, because the moment has passed. Priority 3 is never dropped.
 
 signal line_started(speaker: String, text: String, seconds: float)
+## She was cut off mid-line (cut_off). The caption should go too.
+signal line_cut
 
 const FOLDER := "res://Assets/Audio/VO/chen/"
 const SCRIPT := preload("res://Assets/Audio/VO/chen/chen_lines.json")
@@ -37,6 +40,8 @@ var _ended_at: float = -INF
 var _speaking_until: float = -INF
 var _max_wait: float = DEFAULT_MAX_WAIT
 var _last_take: Dictionary = {}
+## Counts finished lines, so a caption timer from a line that was cut off cannot end the next one.
+var _line_serial: int = 0
 
 var _round: RoundController
 var _director: Node
@@ -140,13 +145,29 @@ func _play(event: String) -> void:
 		seconds = stream.get_length()
 	else:
 		# No recording yet: caption it and hold the line's time as if it were spoken.
-		get_tree().create_timer(seconds).timeout.connect(_on_line_finished)
+		get_tree().create_timer(seconds).timeout.connect(_on_caption_finished.bind(_line_serial))
 	_speaking_until = _clock + seconds
 	line_started.emit(_speaker, String(lines[take]), seconds)
 
 func _on_line_finished() -> void:
 	_ended_at = _clock
 	_playing_event = ""
+	_line_serial += 1
+
+## A captioned line's time ran out, unless she was cut off and has started another since.
+func _on_caption_finished(serial: int) -> void:
+	if serial == _line_serial and _playing_event != "":
+		_on_line_finished()
+
+## Stops her mid-word and forgets what was waiting. Only the boss's turn does this: the one
+## moment the script wants her cut off.
+func cut_off() -> void:
+	_queue.clear()
+	if _playing_event == "":
+		return
+	_player.stop()
+	_on_line_finished()
+	line_cut.emit()
 
 ## Loaded up front: a few dozen short compressed clips, and no hitch on first use.
 func _load_streams() -> void:

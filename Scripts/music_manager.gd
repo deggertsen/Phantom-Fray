@@ -113,6 +113,17 @@ func play_music() -> void:
 	if not is_playing and available_tracks.size() > 0:
 		_play_random_track()
 
+func play_track(track_name: String) -> void:
+	"""Play one named track now, unless the player brings their own music"""
+	if _own_music():
+		return
+	var index := track_names.find(track_name)
+	if index < 0:
+		push_warning("No music track named %s" % track_name)
+		return
+	current_track_index = index
+	_play_current_track()
+
 func stop_music() -> void:
 	"""Stop current music"""
 	audio_player.stop()

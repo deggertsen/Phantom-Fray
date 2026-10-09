@@ -110,6 +110,61 @@
       "note": "Every rift sealed with a new personal best score on this breach. Proud, a little competitive.",
       "lines": ["That's your best score on this breach.", "New record, operator. Faster and harder.", "Best run yet. The numbers don't lie.", "You just beat your own record."]
     },
+    "boss_false_seal": {
+      "priority": 3, "cooldown": 0, "tag": "[relieved]",
+      "note": "The Maw's health hit zero and the seal is starting, like every seal before it. She starts her usual relief and is cut off half a second in; record the whole word, the game stops it.",
+      "lines": ["That's it, it's clos—"]
+    },
+    "boss_holding_open": {
+      "priority": 3, "cooldown": 0, "tag": "[quiet, unsettled]",
+      "note": "Silence after the false seal. The Maw tore wider instead of closing. A breath first, then quietly.",
+      "lines": ["It's not closing. Something's holding it open."]
+    },
+    "boss_not_a_phantom": {
+      "priority": 3, "cooldown": 0, "tag": "[quiet, afraid]",
+      "note": "A tentacle has just risen over the operator. Straight after the line above.",
+      "lines": ["Operator. That is not a phantom."]
+    },
+    "boss_get_ready": {
+      "priority": 3, "cooldown": 0, "tag": "[focused]",
+      "note": "The boss music hits and the fight begins. She steadies herself and the operator.",
+      "lines": ["Get ready to move."]
+    },
+    "boss_sweep": {
+      "priority": 3, "cooldown": 0, "tag": "[urgent]",
+      "note": "A tentacle draws back to one side for a high sweep. One word, sharp.",
+      "lines": ["Low!", "Get low!", "Under it!"]
+    },
+    "boss_slam": {
+      "priority": 3, "cooldown": 0, "tag": "[urgent]",
+      "note": "A tentacle rises overhead and a ring paints the floor around the operator.",
+      "lines": ["Out of the ring!", "Step out!", "Move! It's coming down!"]
+    },
+    "boss_spent": {
+      "priority": 2, "cooldown": 0, "tag": "[urgent, eager]",
+      "note": "The slam missed and the tentacle lies spent on the floor. Push-ups on it drain the boss.",
+      "lines": ["It's spent. Ground the gauntlets on it.", "It's down. Palms flat, drive it in.", "Now. Hands on the floor, put it through."]
+    },
+    "boss_waking": {
+      "priority": 3, "cooldown": 0, "tag": "[firm]",
+      "note": "The spent tentacle twitches. The operator must stand before it recoils.",
+      "lines": ["Up. It's waking."]
+    },
+    "boss_volley": {
+      "priority": 2, "cooldown": 0, "tag": "[alert]",
+      "note": "The phantoms circling the boss break formation and come one at a time.",
+      "lines": ["The escort's breaking off. Count them.", "Here they come, one at a time.", "It's throwing its escort at you."]
+    },
+    "boss_retreat": {
+      "priority": 3, "cooldown": 0, "tag": "[breathless]",
+      "note": "The anchor ran out. The tentacles pull back and the Maw closes behind them.",
+      "lines": ["It's letting go. It's pulling back!", "It can't hold on. It's going back through!"]
+    },
+    "maw_glimpse": {
+      "priority": 3, "cooldown": 0, "tag": "[quiet, unsettled]",
+      "note": "As the Maw closed, one tentacle gripped the rim and was dragged back through. No fight; a story beat.",
+      "lines": ["Did you see that? Something bigger was holding it open."]
+    },
     "defeat": {
       "priority": 3, "cooldown": 0, "tag": "[urgent]",
       "note": "Life force collapsed. The gauntlets' failsafe has just dumped its charge, throwing the phantoms off and knocking the operator out, and Chen is sending in the recovery team from the pylon line. Urgent, then steady.",

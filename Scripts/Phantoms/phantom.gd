@@ -85,6 +85,14 @@ var _alive_time: float = 0.0
 var _impact_drop: float = 0.22
 var _glow: MeshInstance3D
 var _form: int = 0
+## Escorting a boss: circling its rift instead of attacking, until a volley releases it.
+var _escorting: bool = false
+var _escort_center: Vector3 = Vector3.ZERO
+var _escort_right: Vector3 = Vector3.RIGHT
+var _escort_radii: Vector2 = Vector2.ONE
+var _escort_angle: float = 0.0
+## Radians per second around the ring. Zero holds the escort still.
+var _escort_orbit_speed: float = 0.0
 
 func _ready() -> void:
 	# The body is punchable but does not physically block on the player's hurtbox.
@@ -145,6 +153,9 @@ func _physics_process(delta: float) -> void:
 		_knockback_velocity *= pow(0.08, delta)
 		velocity = _knockback_velocity
 		move_and_slide()
+		return
+	if _escorting:
+		_tick_escort(delta)
 		return
 	if not uses_attack_pattern or _player_camera == null:
 		return
@@ -269,6 +280,53 @@ func set_interactions_enabled(enabled: bool) -> void:
 	collision_layer = 4 if enabled else 0
 	contact_area.collision_layer = 8 if enabled else 0
 	contact_area.set_deferred("monitoring", enabled)
+
+## Breaks off the attack and flees to a slot on an upright ring around a boss's rift, then
+## circles there. The ring lies across `right` and UP, centered on `center`.
+func enter_escort(center: Vector3, right: Vector3, radii: Vector2, angle: float, orbit_speed: float) -> void:
+	if _terminal:
+		return
+	_escorting = true
+	_escort_center = center
+	_escort_right = right.normalized() if right.length_squared() > 0.001 else Vector3.RIGHT
+	_escort_radii = radii
+	_escort_angle = angle
+	_escort_orbit_speed = orbit_speed
+	_phase = Phase.APPROACH
+	_curve_ready = false
+	_set_alert(0.0)
+
+func set_escort_orbit_speed(orbit_speed: float) -> void:
+	_escort_orbit_speed = orbit_speed
+
+func is_escorting() -> bool:
+	return _escorting and not _terminal
+
+## Out of the ring and at the player, from wherever it is on the ring, with a fresh lifetime.
+func release_from_escort() -> void:
+	if not _escorting or _terminal:
+		return
+	_escorting = false
+	_alive_time = 0.0
+	_stalls = 0
+	_stall_time = 0.0
+	_phase = Phase.APPROACH
+	_curve_ready = false
+	velocity = Vector3.ZERO
+
+func escort_slot() -> Vector3:
+	return _escort_center + _escort_right * cos(_escort_angle) * _escort_radii.x + Vector3.UP * sin(_escort_angle) * _escort_radii.y
+
+func _tick_escort(delta: float) -> void:
+	_time += delta
+	_escort_angle = wrapf(_escort_angle + _escort_orbit_speed * delta, -PI, PI)
+	var to_slot := escort_slot() - global_position
+	# Flee hard toward the slot, then settle onto it.
+	var desired := to_slot.normalized() * minf(to_slot.length() * 2.2, 7.0) if to_slot.length_squared() > 0.0004 else Vector3.ZERO
+	velocity = velocity.lerp(desired, clampf(4.0 * delta, 0.0, 1.0))
+	if velocity.length_squared() > 0.04:
+		_face_direction(velocity)
+	move_and_slide()
 
 func force_cleanup() -> void:
 	if _terminal:
