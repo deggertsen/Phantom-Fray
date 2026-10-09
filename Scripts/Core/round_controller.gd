@@ -146,6 +146,9 @@ func _process(delta: float) -> void:
 			var bark := String(_mission.get("start_line", _mission.get("objective", "CLOSE THE RIFTS")))
 			_show_message(bark, Color(0.7, 0.95, 1.0), 1.8)
 			_round_active = true
+			# Lay out the rift row before the first rift opens so the HUD has a slot to mark open.
+			var waves: Array = _mission.get("rifts", [])
+			rift_progress_changed.emit(0, waves.size() if not waves.is_empty() else _director.total_rifts)
 			_director.start_round(_mission)
 			_emit_status()
 			_emit_pressure()

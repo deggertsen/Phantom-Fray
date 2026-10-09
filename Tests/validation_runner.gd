@@ -725,8 +725,12 @@ func _validate_elapsed_timer() -> void:
 	round_controller.time_changed.connect(func(seconds: float) -> void: ticks.append(seconds))
 	var outcome := [&""]
 	round_controller.round_finished.connect(func(result: StringName, _score: int) -> void: outcome[0] = result)
+	var rift_row := [-1]
+	round_controller.rift_progress_changed.connect(func(_closed: int, total: int) -> void: rift_row[0] = total)
 	round_controller.begin_round(MissionCatalog.get_mission("first_light"))
 	round_controller._process(0.0)
+	if rift_row[0] != 2:
+		failures.append("Going live did not lay out the mission's rift row: %d" % rift_row[0])
 	for _step in 3:
 		round_controller._process(1.0)
 	if ticks.size() < 4 or not is_zero_approx(ticks[0]) or ticks[-1] <= ticks[0] or not is_equal_approx(round_controller.elapsed_seconds, 3.0):
