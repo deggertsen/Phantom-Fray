@@ -101,9 +101,13 @@ func force_cleanup() -> void:
 func is_marked() -> bool:
 	return not _closing
 
+## Phantoms still in play. One already dissolving from a timeout or stall no longer counts.
 func has_live_phantoms() -> bool:
 	_prune_phantoms()
-	return not _live_phantoms.is_empty()
+	for phantom in _live_phantoms.values():
+		if not phantom.has_method("shows_approach_cue") or phantom.shows_approach_cue():
+			return true
+	return false
 
 func _process(delta: float) -> void:
 	_pulse_beacon(delta)

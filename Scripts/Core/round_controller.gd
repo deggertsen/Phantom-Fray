@@ -217,6 +217,9 @@ func _on_rift_closed(_rift_id: int, closed: int, total: int) -> void:
 	_show_message(text, Color(0.3, 1.0, 0.8), 1.5)
 
 func _on_all_clear() -> void:
+	# Stragglers leaving because the scene is torn down (abort from pause) are not a clear.
+	if not _round_active:
+		return
 	_finish_round(&"victory")
 
 func _on_life_force_depleted() -> void:
