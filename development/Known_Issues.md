@@ -27,6 +27,7 @@ Updated 2026-10-09.
 - The recorded release APK predates the October content. Rebuild and re-sign from current `main` before distribution. Back up the release keystore and password off-machine first.
 - Android export automation can be added to CI only after the export preset and build template versions are established on a trusted workstation.
 - The validation runner now covers stragglers and the own-music view; round and rift integration fixtures for whole operations are still missing.
+- `_validate_arc_motion` in `Tests/validation_runner.gd` is flaky: "Yellow arc stalled during approach" failed 2 of 5 headless runs on 2026-10-09 with no code change between runs. The arc is built from random side, bow, and control-point values, and 120 physics steps is not always enough for every curve to clear 1 m at 0.3 m/s. Seed the RNG in the test or lengthen the run.
 - The project targets Compatibility rendering for standalone Quest reliability. Reassess Mobile/Vulkan only with device measurements on the pinned Godot release.
 
 ## External launch gates
