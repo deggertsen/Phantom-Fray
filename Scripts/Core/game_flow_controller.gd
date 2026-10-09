@@ -47,11 +47,22 @@ func _ready() -> void:
 	if _settings:
 		pending = String(_settings.pending_mission_id)
 		_settings.pending_mission_id = ""
+	if pending == "" and OS.is_debug_build():
+		pending = _mission_from_command_line()
 	if pending != "" and not MissionCatalog.get_mission(pending).is_empty():
 		_start_mission(pending)
 	else:
 		_show_main_menu()
 		_arm_menu_input_after_release()
+
+## Debug builds: --mission=<id> skips the menu and deploys straight into that operation, including
+## the debug-only ones in MissionCatalog.debug_missions(). On Quest, put it in the Quest Debug
+## export preset's Command Line > Extra Args.
+func _mission_from_command_line() -> String:
+	for arg in OS.get_cmdline_user_args() + OS.get_cmdline_args():
+		if arg.begins_with("--mission="):
+			return arg.trim_prefix("--mission=")
+	return ""
 
 func _process(delta: float) -> void:
 	if _menu_action_cooldown > 0.0:
@@ -401,7 +412,8 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 	_last_seconds = _round.elapsed_seconds if _round else 0.0
 	_previous_best_time = 0.0
 	_next_mission_title = ""
-	if outcome == &"victory" and _settings:
+	# A debug drill is not campaign progress, so it records no clear, score, or time.
+	if outcome == &"victory" and _settings and not MissionCatalog.is_debug_mission(_active_mission_id):
 		_previous_best_time = _settings.best_time(_active_mission_id)
 		_settings.mark_mission_cleared(_active_mission_id)
 		_settings.record_score(_active_mission_id, score)

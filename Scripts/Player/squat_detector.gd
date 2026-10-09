@@ -60,6 +60,8 @@ var _max_depth: float = 0.0
 var _max_travel: float = 0.0
 var _far_from_standing: float = 0.0
 var _recent_peak: float = -1.0
+var _last_head: Vector3 = Vector3.ZERO
+var _last_pitch: float = 0.0
 var _label: Label3D
 
 func _ready() -> void:
@@ -93,6 +95,8 @@ func _physics_process(delta: float) -> void:
 func sample(head: Vector3, pitch_degrees: float, delta: float) -> void:
 	if delta <= 0.0:
 		return
+	_last_head = head
+	_last_pitch = pitch_degrees
 	if not is_nan(_previous_y):
 		var measured := (head.y - _previous_y) / delta
 		vertical_speed = lerpf(vertical_speed, measured, clampf(delta * 20.0, 0.0, 1.0))
@@ -141,6 +145,14 @@ func calibrate_now() -> void:
 	standing_height = -1.0
 	_calibration_samples.clear()
 	_calibration_time = 0.0
+
+## Why the dip in progress is not a clean squat, judged now at whatever depth it has reached:
+## `leaned_or_stepped`, `looking_at_floor`, or "" when it is clean or there is no dip.
+## A resonance sweep at duck depth asks for less than a squat, so it asks this instead of waiting for SQUAT.
+func dip_fault() -> StringName:
+	if state == State.CALIBRATING or state == State.STANDING:
+		return &""
+	return _squat_fault(standing_height - _last_head.y, _last_pitch)
 
 func debug_text() -> String:
 	if state == State.CALIBRATING:

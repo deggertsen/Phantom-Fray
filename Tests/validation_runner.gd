@@ -20,6 +20,7 @@ func _run_validation() -> void:
 	await _validate_results_menu()
 	await _validate_pink_dodge()
 	_validate_squat_detector()
+	await _validate_resonance_sweep()
 	await process_frame
 	if failures.is_empty():
 		print("PHANTOM FRAY VALIDATION PASSED")
@@ -38,6 +39,7 @@ func _validate_resources() -> void:
 		"res://Scenes/Phantoms/green_phantom.tscn",
 		"res://Scenes/Phantoms/pink_phantom.tscn",
 		"res://Scenes/Rifts/rift_manager.tscn",
+		"res://Scenes/Hazards/resonance_sweep.tscn",
 	]:
 		if load(path) == null:
 			failures.append("Failed to load %s" % path)
@@ -895,6 +897,176 @@ func _validate_squat_detector() -> void:
 	if short.rep_count != 1:
 		failures.append("Squat detector missed a shorter player's squat")
 	short.free()
+
+func _validate_resonance_sweep() -> void:
+	var sweep_scene := load(MissionCatalog.scene_path("sweep")) as PackedScene
+	if sweep_scene == null:
+		failures.append("Mission pool failed to load sweep")
+		return
+	var drill := MissionCatalog.get_mission("sweep_drill")
+	var in_campaign := false
+	for mission in MissionCatalog.all_missions():
+		in_campaign = in_campaign or mission.get("id", "") == "sweep_drill"
+	if drill.is_empty() or in_campaign or not MissionCatalog.is_unlocked_with_clears("sweep_drill", PackedStringArray()):
+		failures.append("Sweep drill is not a debug-only operation that starts from the command line")
+	elif drill.get("rifts", [])[0].get("pool", []) != ["yellow", "blue", "sweep"]:
+		failures.append("Sweep drill does not mix yellow, blue, and sweep")
+	for entry in MissionCatalog.operation_entries(null):
+		if entry.get("id", "") == "sweep_drill":
+			failures.append("Sweep drill leaked into the Operations list")
+	var player := Node3D.new()
+	player.name = "SweepTestPlayer"
+	player.add_to_group("Player")
+	var camera := Node3D.new()
+	camera.name = "XRCamera3D"
+	player.add_child(camera)
+	root.add_child(player)
+	camera.position = Vector3(0.0, 1.62, 0.0)
+	var ahead := Vector3(0.0, 1.5, -4.0)
+	# A head below the line as the blade crosses resolves like the pink dodge.
+	var low := _spawn_sweep(sweep_scene, ahead)
+	if absf(low.sweep_height - 1.62 * 0.88) > 0.01:
+		failures.append("Sweep did not sit at duck depth below the head at spawn: %.3f" % low.sweep_height)
+	var low_log := _watch_sweep(low)
+	camera.position = Vector3(0.0, 1.30, 0.0)
+	_run_sweep(low, 3.0)
+	var cleared: Dictionary = low_log["resolved"]
+	if cleared.is_empty() or low_log["hurt"] or not cleared.get("on_beat", false) or int(cleared.get("rift_damage", 0)) != 14 or int(cleared.get("base_score", 0)) != 150:
+		failures.append("Sweep over a head below the line did not resolve as a dodge: %s" % cleared)
+	if low.is_in_flight():
+		failures.append("Cleared sweep did not run on past the player")
+	low.free()
+	# A head above the line takes the hit, and the blade goes out short of the face.
+	camera.position = Vector3(0.0, 1.62, 0.0)
+	var high := _spawn_sweep(sweep_scene, ahead)
+	var high_log := _watch_sweep(high)
+	_run_sweep(high, 3.0)
+	if not high_log["hurt"] or not high_log["resolved"].is_empty():
+		failures.append("Sweep over a standing head did not damage the player")
+	elif high._blade_travel > high.start_distance - high.contact_lead + 0.1:
+		failures.append("Sweep drew through the face before it hit")
+	high.free()
+	# Paused, it does not move and cannot hit; resumed, it carries on.
+	var held := _spawn_sweep(sweep_scene, ahead)
+	var held_log := _watch_sweep(held)
+	held.set_interactions_enabled(false)
+	_run_sweep(held, 3.0)
+	if held_log["hurt"] or not held_log["resolved"].is_empty() or held._blade_travel > 0.0:
+		failures.append("Paused sweep still moved or judged the player")
+	held.set_interactions_enabled(true)
+	camera.position = Vector3(0.0, 1.30, 0.0)
+	_run_sweep(held, 3.0)
+	if held_log["resolved"].is_empty():
+		failures.append("Sweep did not resume after pause")
+	held.free()
+	# Reduced Flashes dims the blade's glow.
+	var settings := root.get_node_or_null("GameSettings")
+	if settings == null:
+		failures.append("GameSettings autoload missing; cannot check the sweep under Reduced Flashes")
+	else:
+		var was_reduced: bool = settings.reduced_flashes
+		var glowing := _spawn_sweep(sweep_scene, ahead)
+		settings.reduced_flashes = false
+		glowing._update_visuals()
+		var full_glow: float = glowing._blade_glow_material.albedo_color.a
+		settings.reduced_flashes = true
+		glowing._update_visuals()
+		if glowing._blade_glow_material.albedo_color.a > full_glow * 0.5:
+			failures.append("Sweep blade glow ignores Reduced Flashes")
+		settings.reduced_flashes = was_reduced
+		glowing.free()
+	# Pressure shortens the tell, never below the floor.
+	var rushed := _spawn_sweep(sweep_scene, ahead)
+	rushed.apply_pressure(1.0, 0.1)
+	if not is_equal_approx(rushed.telegraph_seconds, 0.45):
+		failures.append("Sweep telegraph went under its 0.45 s floor")
+	# A second sweep waits for the first to finish, then rests, before it lights.
+	var queued := _spawn_sweep(sweep_scene, ahead)
+	queued.advance(0.5)
+	if not is_equal_approx(queued._telegraph_remaining, queued.telegraph_seconds):
+		failures.append("A second sweep lit while the first was still in flight")
+	rushed.free()
+	queued.free()
+	# With the detector calibrated, the line follows standing height, and a bend loses the bonus.
+	var detector := SquatDetector.new()
+	detector.name = "SquatDetector"
+	player.add_child(detector)
+	var standing := Vector3(0.0, 1.70, 0.0)
+	_drive_head(detector, standing, standing, 0.0, 0.0, 1.5)
+	camera.position = standing
+	var clean := _spawn_sweep(sweep_scene, ahead)
+	if absf(clean.sweep_height - 1.70 * 0.88) > 0.01:
+		failures.append("Sweep did not read standing height from the squat detector")
+	var clean_log := _watch_sweep(clean)
+	_dip_under_sweep(clean, detector, camera, standing, Vector3(0.0, 1.32, 0.04), 0.0, -10.0)
+	if clean_log["resolved"].is_empty() or not clean_log["resolved"].get("on_beat", false):
+		failures.append("Clean squat under the sweep lost its bonus: %s" % clean_log["resolved"])
+	clean.free()
+	_drive_head(detector, camera.position, standing, -10.0, 0.0, 0.6)
+	_drive_head(detector, standing, standing, 0.0, 0.0, 0.5)
+	camera.position = standing
+	var bent := _spawn_sweep(sweep_scene, ahead)
+	var bent_log := _watch_sweep(bent)
+	_dip_under_sweep(bent, detector, camera, standing, Vector3(0.0, 1.40, -0.6), 0.0, -70.0)
+	var bent_result: Dictionary = bent_log["resolved"]
+	if bent_result.is_empty() or bent_log["hurt"] or bent_result.get("on_beat", true) or bent_result.get("form_fault", &"") == &"":
+		failures.append("A bend under the sweep kept the bonus or failed the dodge: %s" % bent_result)
+	bent.free()
+	# The rift hands the wave's squat depth to the sweep it spawns.
+	var container := Node3D.new()
+	container.add_to_group("PhantomContainer")
+	root.add_child(container)
+	var rift := RiftManager.new()
+	rift.phantom_scenes.append(sweep_scene)
+	root.add_child(rift)
+	await process_frame
+	rift.position = ahead
+	var deep := (drill.get("rifts", [{}])[0] as Dictionary).duplicate(true)
+	deep["pool"] = ["sweep"]
+	deep["squat_depth"] = 0.2
+	rift.configure_wave(deep)
+	rift._spawn_phantom()
+	var spawned: ResonanceSweep = null
+	for child in container.get_children():
+		if child is ResonanceSweep:
+			spawned = child
+	if spawned == null or not is_equal_approx(spawned.squat_depth, 0.2) or absf(spawned.sweep_height - 1.70 * 0.8) > 0.01:
+		failures.append("Rift did not pass the wave's squat depth to the sweep")
+	rift.force_cleanup()
+	container.queue_free()
+	player.queue_free()
+	await process_frame
+
+func _spawn_sweep(scene: PackedScene, at: Vector3) -> ResonanceSweep:
+	var sweep := scene.instantiate() as ResonanceSweep
+	sweep.position = at
+	root.add_child(sweep)
+	# The runner steps it by hand, so the tree's own physics frames must not.
+	sweep.set_physics_process(false)
+	sweep.set_process(false)
+	return sweep
+
+func _watch_sweep(sweep: ResonanceSweep) -> Dictionary:
+	var seen := {"resolved": {}, "hurt": false}
+	sweep.resolved.connect(func(result: Dictionary) -> void: seen["resolved"] = result)
+	sweep.player_contact.connect(func(_amount: float) -> void: seen["hurt"] = true)
+	return seen
+
+func _run_sweep(sweep: ResonanceSweep, seconds: float) -> void:
+	var step := 1.0 / 72.0
+	for _index in int(seconds / step):
+		sweep.advance(step)
+
+## Dips the head from standing to the bottom while the telegraph runs, holds it there as the
+## blade crosses, and feeds the same motion to the detector, as a headset would.
+func _dip_under_sweep(sweep: ResonanceSweep, detector: SquatDetector, camera: Node3D, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float) -> void:
+	var step := 1.0 / 72.0
+	for index in int(3.0 / step):
+		var t := clampf(float(index + 1) / (0.7 / step), 0.0, 1.0)
+		var head := from.lerp(to, t)
+		detector.sample(head, lerpf(pitch_from, pitch_to, t), step)
+		camera.position = head
+		sweep.advance(step)
 
 func _drive_head(squat: SquatDetector, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float, seconds: float) -> void:
 	var step := 1.0 / 72.0
