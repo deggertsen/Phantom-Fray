@@ -6,7 +6,7 @@
 
 ## The short answer
 
-Bosses carry the movements. A boss attacks with its tentacles, and each attack has one physical answer: squat under a high sweep, jump a low sweep, and side-step out of a slam. A slam costs the boss so much that the tentacle lies spent on the floor afterwards, and the operator does push-ups on it to drive ERM resonance through the ground into it. A boss cannot hold its shape in our world for long, so the fight is a survival interval with a known length, which is exactly the shape of a workout block; it ends when the boss retreats through its rift. These encounters live in the harder missions on the world map; the current six operations become the tutorial that teaches every mechanic first.
+Bosses carry the movements. A boss attacks with its tentacles, and each attack has one physical answer: squat under a high sweep, jump a low sweep, and side-step out of a slam. A slam costs the boss so much that the tentacle lies spent on the floor afterwards, and the operator does push-ups on it to drive ERM resonance through the ground into it. A boss cannot hold its shape in our world for long, so the fight is a survival interval with a known length, which is exactly the shape of a workout block; it ends when the boss retreats through its rift. Bosses demand far more exertion than anything else in the game, so they appear only at the movement difficulties; Assist, Standard, and Operator never meet one. The current six operations become the tutorial that teaches the combat rules first, and missions run five to ten minutes.
 
 Build squats first: the detector exists, the high sweep is the safest and most readable attack, and it fits the existing rules (it resolves like the pink dodge, so it scores, chains, and damages). Jumps are in scope and Full Resonance assumes the player can jump, but a headset test has to show head tracking can see a jump before the low sweep is built. Push-ups are done on hand tracking, which is required at Full Resonance as the first thing we try.
 
@@ -31,10 +31,17 @@ Second round, on bosses:
 10. **No "No jumps" switch for now.** Full Resonance assumes the player can jump. It may come later.
 11. **What a boss's retreat means on the war map is open.** Decide it while building the map.
 12. **One boss first,** with attacks later bosses can reuse.
-13. **The Maw is probably the tutorial's boss.** Described below.
+13. **The Maw is probably the first boss.** Described below. (Refined in decision 18.)
 14. **Phantoms during a boss fight: maybe at the highest difficulties.** David's idea to explore: phantoms circle the boss, and the boss sends them at the operator as one of its attacks.
 15. **Bosses never die.** A boss always retreats through the rift it came through, before that rift closes. Lore: bosses are gathering enough energy to establish a permanent presence in our world. No banish.
 16. **Hand tracking is required at Full Resonance, as the first try.** Decide after the headset tests. Losing haptics is acceptable. Simultaneous hands and controllers is an acceptable fallback.
+
+Third round:
+
+17. **Bosses only at the higher difficulties.** They require much more physical exertion, so Assist, Standard, and Operator never meet one. Every boss attack is answered with a detected movement; there is no punch-only version.
+18. **The Maw has two phases, and only its tentacles come through.** Phase one is today's behaviour: phantoms pour through and the operator fights them. Phase two is the tentacles.
+19. **A spent tentacle is down for up to 20 seconds or 10 push-ups,** whichever comes first.
+20. **Missions run five to ten minutes each.**
 
 ---
 
@@ -42,13 +49,13 @@ Second round, on bosses:
 
 ### The attacks
 
-| Attack | Telegraph | Answer | Full Resonance | Below Full Resonance |
-|---|---|---|---|---|
-| **High sweep** | The tentacle draws back to one side; the pylons light a line at the sweep height; Chen: "Low!" | Get under it | Head below `standing_height * (1 - 0.20)` as it crosses. A bend survives but loses the bonus. | Duck depth (12 %) |
-| **Low sweep** | It runs in along the floor from one side, so its arrival is visible, like a skipping rope | Jump it | The detected flight covers the moment `T` it crosses the player, or takeoff happened in the 0.35 s before. Runs of up to three, then a rest. | Not used |
-| **Slam** | The tentacle rises overhead and an impact ring paints the floor around the player, the way the pink lane paints a line | Side-step out of the ring | The pink dodge rule: the head leaves the ring before impact | Same |
-| **Spent tentacle** | After a slam it lies on the floor, dimmed, for 6 to 10 seconds | Drive resonance into it | Push-ups on it, palms flat, hand tracking | Punch the wound where it arches up at chest height |
-| **Escort volley** | The phantoms circling the boss break formation | The existing phantom rules | Larger, faster volleys | Small volleys |
+| Attack | Telegraph | Answer | Detected as |
+|---|---|---|---|
+| **High sweep** | The tentacle draws back to one side; the pylons light a line at the sweep height; Chen: "Low!" | Squat under it | Head below `standing_height * (1 - 0.20)` as it crosses. A bend survives but loses the bonus. |
+| **Low sweep** | It runs in along the floor from one side, so its arrival is visible, like a skipping rope | Jump it | The detected flight covers the moment `T` it crosses the player, or takeoff happened in the 0.35 s before. Runs of up to three, then a rest. |
+| **Slam** | The tentacle rises overhead and an impact ring paints the floor around the player, the way the pink lane paints a line | Side-step out of the ring | The pink dodge rule: the head leaves the ring before impact |
+| **Spent tentacle** | After a slam it lies on the floor, dimmed, for up to 20 seconds | Push-ups on it | Push-up rule, palms flat, hand tracking. The window ends at 20 seconds or the 10th push-up, whichever comes first. |
+| **Escort volley** | The phantoms circling the boss break formation | The existing phantom rules | Strikes, blocks, and dodges as today |
 
 The boss frame beats my first pass for three reasons:
 
@@ -68,6 +75,8 @@ David's version is the right one: the slam is dodged, not caught, and the push-u
 
 **Where it lands.** The slam comes down where the player was standing. After a side-step it lies about half a metre away, in reach, so the player turns to it and gets down. No walking.
 
+**How long it stays down.** Up to 20 seconds or 10 push-ups, whichever comes first (decision 19). Ten push-ups in 20 seconds is a steady two seconds a rep, so a strong player ends the window early with every pulse landed, and nobody is asked for more than ten at a time. The tenth pulse makes the tentacle convulse and tear back into the rift, the visible payoff for finishing the set.
+
 **When the window ends.** The tentacle twitches, Chen calls "Up. It's waking.", and it recoils into the rift 1.5 seconds later. The boss then holds every attack for another two to three seconds so the player can stand up before anything comes. Nothing can reach a player who is on the floor.
 
 Why this works:
@@ -77,8 +86,6 @@ Why this works:
 - **The player sets the pace.** Push-ups are controlled reps, not a race to the floor.
 - **The floor is the readout.** Face down, the player sees each pulse run from their palms into the tentacle. No need to look up.
 - **It is a reward, not a toll.** The boss drains on its own, so a player who skips the push-ups still survives the fight. They just face it for longer.
-
-Below Full Resonance the spent tentacle arches up out of the floor with a glowing wound at chest height. Any hand, any punch; each hit is a pulse. Everyone gets the reward window.
 
 Ideas set aside: an overhead two-hand brace to catch the slam (worth keeping for a later slam too wide to dodge), push-ups to recharge life force (exertion should cost life force, not restore it), and push-ups to get up after a knockdown (a punishment that puts the player on the floor while the boss is free).
 
@@ -93,7 +100,7 @@ Ideas set aside: an overhead two-hand brace to catch the slam (worth keeping for
 - **Work drains it faster.** Resolved phantoms (as they damage rifts today) and pulses into a spent tentacle take anchor directly.
 - **At zero it retreats** through the rift, the rift closes, and the mission is won. A faster retreat is a better score and medal (Phase 6 medals).
 
-For fitness: with no hits taken and no work done, the anchor sets a maximum fight length (three to four minutes is a good first number). That is a known interval a player can plan a session around, and the work they put in shortens it.
+For fitness: with no hits taken and no work done, the anchor sets a maximum length for the tentacle phase (three to four minutes is a good first number). That is a known interval a player can plan a session around, and the work they put in shortens it.
 
 What a retreat means on the war map is open (decision 11).
 
@@ -106,15 +113,23 @@ David's escort idea is the strongest of the options:
 - **C. Shield.** Escorts close around the spent tentacle and must be punched away before push-ups pay. **Reject:** it sends phantoms at a player on the floor.
 - **D. A stream from the rift,** as in an ordinary mission. The simplest, and the least boss-like.
 
-Recommended: A wherever bosses appear, since it is the boss's own attack; B at Full Resonance; D only at the very highest difficulty, if ever. The escort holds still while a tentacle is spent.
+Recommended: A in every boss fight, since it is the boss's own attack; B as well, scaled up at the very top difficulty; D only at the very top, if ever. The escort holds still while a tentacle is spent.
 
 ### The Maw
 
 **Today.** OP-06, the last of the six operations. A four-minute window and one rift at double size (the portal is 8 m across), which spawns every 1.75 s with up to four phantoms live, drawn from all four phantom rules, and takes 200 damage to seal, twice the others. Its only difference from other rifts is size and feed rate (Known Issues, item 2). Chen opens with "One mouth. Twice the teeth. Twice the hunger." and closes with "The Maw is shut. It will remember how long you made it chew."
 
-**As the first boss.** The Maw is that wide because something enormous is trying to come through it. Only its tentacles reach out; the body stays on the far side, because it cannot yet afford our world. That suits the tutorial: one thing to read, limbs to dodge and punish, and the full creature kept back for a later reveal. It also keeps the art cost to tentacles rather than a whole creature.
+**As the first boss.** The Maw is that wide because something enormous is trying to come through it. Only its tentacles reach out; the body stays on the far side, because it cannot yet afford our world. That gives the first boss one thing to read, limbs to dodge and punish, and keeps the full creature back for a later reveal. It also keeps the art cost to tentacles rather than a whole creature.
 
-At tutorial intensity: high sweeps at duck depth, slams to side-step, spent tentacles punched, and small escort volleys from the phantoms already circling the Maw. No jumps, no push-ups. The rift's health becomes the anchor; outlast it and the tentacles pull back and the Maw closes. Chen's current victory line already fits a retreat. The mission stays about four minutes.
+**Phase one: the flood** (decision 18). Today's Maw: the vast rift pours phantoms and the operator fights them, each resolve damaging the rift as it does now. Three to four minutes.
+
+**The turn.** When the rift's health reaches zero, it does not seal. The Maw convulses and tears wider. Chen: "It's not closing. Something's holding it open." The phantoms still out pull back and start to circle the rift: they become the escort. The rift's health bar refills, and from here on it is the boss's anchor. The turn is the existing seal moment repurposed, so a player already knows what the bar means.
+
+**Phase two: the tentacles.** High sweeps, low sweeps, slams, spent tentacles for push-ups, and escort volleys, on an authored pattern. The anchor drains; outlast it and the tentacles pull back, the Maw closes behind them, and the mission is won. Chen's current victory line ("It will remember how long you made it chew") already fits a retreat. Three to four minutes.
+
+**Length.** Six to eight minutes together, inside the five-to-ten-minute target (decision 20), with the mission window at ten minutes as a backstop.
+
+**The tutorial.** Decision 17 puts bosses only at the movement difficulties, but The Maw is currently the last tutorial operation. My recommendation (open question 2): the tutorial keeps The Maw as phase one only, and it ends with a glimpse: as the Maw closes, one tentacle reaches out, grips the edge of the rift, and is dragged back through. Chen: "Did you see that? Something bigger was holding it open." A story beat, no fight. The full two-phase Maw is the first boss mission on the war map, at the movement difficulty.
 
 ### Hand tracking
 
@@ -129,9 +144,9 @@ The fallback is `XR_META_simultaneous_hands_and_controllers`, which the bundled 
 
 ### Where bosses sit
 
-- **Tutorial.** The Maw, at tutorial intensity.
-- **Standard and Operator missions on the war map.** Duck-depth sweeps, side-stepped slams, spent tentacles punched, escort volleys.
-- **Full Resonance.** Squat-depth sweeps, low sweeps to jump, push-ups on spent tentacles with hand tracking, escort volleys, and a boss that feeds on its escort.
+- **Tutorial.** No boss fight. The Maw's phase one, ending with the tentacle glimpse.
+- **Assist, Standard, and Operator missions on the war map.** No bosses. Duck-depth sweeps from ordinary rifts at most (decision 2).
+- **Full Resonance (and any difficulty above it).** Bosses, starting with the two-phase Maw: squat-depth sweeps, low sweeps to jump, side-stepped slams, push-ups on spent tentacles with hand tracking, escort volleys, and a boss that feeds on its escort.
 
 ---
 
@@ -308,6 +323,7 @@ Meta's store comfort ratings (Comfortable, Moderate, Intense) describe **motion*
 - **Tracking:** the headset faces the floor from 30 to 50 cm. Inside-out tracking may struggle on a plain floor; the controllers are close and directly under the cameras. Unknown.
 - **Getting down and up:** a 500 g headset, eyes down, then standing quickly. Light-headedness is likely in a long session. Leave a long beat after a floor phase before any threat arrives.
 - **No threats** while the player is on the floor. Ever.
+- **Volume:** at most 10 push-ups per spent window (decision 19). Space the slams so one boss fight asks for no more than about 30 push-ups to start with, and tune from the fatigue test.
 - **Hygiene:** a face in a sweaty gasket, facing down, fogs lenses. Test it.
 
 ### Across a 20-minute session
@@ -343,7 +359,7 @@ const TIERS := {
 	"standard": {"speed": 1.00, "telegraph": 1.00, "health": 1.00, "contact": 1.0, "squat_depth": 0.12, "movement": []},
 	"operator": {"speed": 1.12, "telegraph": 0.85, "health": 1.15, "contact": 1.25, "squat_depth": 0.12, "movement": []},
 	"full_resonance": {"speed": 1.00, "telegraph": 1.00, "health": 1.10, "contact": 1.0, "squat_depth": 0.20,
-		"movement": ["sweep", "skitter"], "boss_attacks": ["low_sweep", "pin"]},
+		"movement": ["sweep", "skitter"], "bosses": true},
 }
 
 static func apply(wave: Dictionary, tier: String) -> Dictionary
@@ -361,14 +377,16 @@ static func apply(wave: Dictionary, tier: String) -> Dictionary
 
 The `contact` multiplier is a change to `Phantom.contact_damage` at spawn, alongside `apply_pressure`.
 
-A boss mission adds a `boss` entry that the difficulty also transforms:
+A boss mission adds a `boss` entry. Only the movement difficulties offer boss missions (decision 17):
 
 ```gdscript
 "boss": {
-	"anchor_seconds": 210.0,   # fight length with no hits taken and no damage dealt
+	"phases": ["flood", "tentacles"],   # The Maw: phase one is today's rift, phase two the boss
+	"anchor_seconds": 210.0,   # tentacle phase length with no hits taken and no work done
 	"possession_feed": 8.0,    # anchor seconds regained per possession
-	"attacks": ["high_sweep", "slam", "volley"],   # Full Resonance adds "low_sweep"
-	"spent_answer": "punch",   # Full Resonance: "pushup"
+	"attacks": ["high_sweep", "low_sweep", "slam", "volley"],
+	"spent_seconds": 20.0,     # a spent tentacle is down this long at most
+	"spent_max_reps": 10,      # or until this many push-ups, whichever comes first
 	"escort": 4,               # phantoms circling the boss; a volley sends them in
 	"phantom_waves": [],       # a stream from the rift, only at the very highest difficulty
 }
@@ -376,7 +394,7 @@ A boss mission adds a `boss` entry that the difficulty also transforms:
 
 ### The difficulties
 
-- **Assist, Standard, Operator** stay about speed, tell length, health, and damage, as the roadmap says. No detected movement is required. Sweeps appear at duck depth (12 %), which any duck or bend clears, the same as the pink lane today (decision 2). Boss slams are side-stepped and spent tentacles are punched.
+- **Assist, Standard, Operator** stay about speed, tell length, health, and damage, as the roadmap says. No detected movement is required. Sweeps appear at duck depth (12 %), which any duck or bend clears, the same as the pink lane today (decision 2). They never meet a boss (decision 17).
 - **Full Resonance** (new, top): the movement difficulty. It is an intensity, not a harder Operator: speed and tells stay at Standard so the extra work is the body, not reaction time. Squat-depth sweeps, low sweeps to jump, push-ups on spent tentacles. Available from the start of the world map (decision 8) and labelled with what it asks for, jumps included. Hand tracking required as the first try (decision 16), pending tests 7 and 8 in section 3.
 
 ### What Chen says
@@ -433,17 +451,18 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 
 **Step 5, if step 4 passes.** Run the jump signal test (section 3, test 3) and the hand tracking tests (7 and 8). They decide whether the low sweep and the push-ups on a spent tentacle can be built at all.
 
-**Step 6. The Maw as the first boss.** A boss node with an anchor that drains, gains on possessions, and loses on damage; retreat at zero; the high sweep (Step 3's hazard, now driven by a tentacle), the side-stepped slam with a spent tentacle to punch, and a small escort volley. Tutorial intensity: duck depth, no detected movement. This is the Phase 7 Maw finale.
+**Step 6. The Maw as the first boss.** A boss node with an anchor that drains, gains on possessions, and loses on work; retreat at zero. Phase one is the current Maw; at zero rift health it turns instead of sealing, the survivors become the escort, and the bar refills as the anchor. Phase two starts with the squat-depth high sweep (Step 3's hazard, now driven by a tentacle), the side-stepped slam, and escort volleys. The tutorial's phase-one-only Maw and its tentacle glimpse can be built alongside. This is the Phase 7 Maw finale.
 
-**Step 7. Full Resonance attacks.** Squat-depth sweeps, then the low sweep (if test 3 passed), then push-ups on the spent tentacle with hand tracking (if tests 4, 7, and 8 passed), then the feeding escort.
+**Step 7. The rest of the tentacle attacks.** The low sweep (if test 3 passed), then push-ups on the spent tentacle with hand tracking (if tests 4, 7, and 8 passed), then the feeding escort.
 
 ---
 
 ## 6. Open questions for David
 
-Two rounds are answered; see **Decisions** at the top. Still open, each with my recommended default:
+Three rounds are answered; see **Decisions** at the top. Still open, each with my recommended default:
 
 1. **What does a boss's retreat mean on the war map?** (Decision 11.) Recommended default until the map is designed: a retreat holds the line at that breach, and the boss can rise again at another one.
-2. **Does the boss feed on its escort at Full Resonance?** Recommended: yes. It is the lore taken literally and gives the escort volley a purpose beyond being more phantoms.
-3. **How long is a spent tentacle down?** Recommended: start at 8 seconds on Full Resonance, about six to eight push-ups at a steady pace, and tune from the headset test.
-4. **What happens to the mission window in a boss fight?** Recommended: the anchor runs about 3:30 with no hits taken, and the window is 5:00 as a backstop. A player who keeps getting possessed keeps feeding the boss and can still run out of time, which fails the mission as a timeout does today.
+2. **What happens to The Maw in the tutorial,** now that bosses are only at the movement difficulties? Recommended: the tutorial keeps phase one only and ends on the tentacle glimpse, a story beat with no fight. The two-phase Maw is the first boss mission on the war map.
+3. **Is there one movement difficulty or several?** "Higher difficulties" could mean Full Resonance alone, or Full Resonance and a harder step above it. Recommended: one for now. A step above it can come once there are enough bosses and attacks to make it different, not just faster.
+4. **Does the five-to-ten-minute length apply to the tutorial operations too?** Today OP-01 has a three-minute window and a clean run of all six takes about 20 minutes. Recommended: yes for OP-02 onward; OP-01 stays short so a first-time player reaches a win quickly. Note that the `duration` field is only the window; actual length comes from rift health, spawn interval, and `max_live`, so lengthening a mission means retuning those and timing real runs on the headset, not raising `duration`.
+5. **Does the boss feed on its escort?** Recommended: yes. It is the lore taken literally and gives the escort volley a purpose beyond being more phantoms.

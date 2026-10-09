@@ -67,7 +67,7 @@ Sealing a rift stops its spawning and dissolves the portal, but phantoms already
 ## Planned
 
 - Low approaches that ask for uppercuts and squats. Everything currently aims at head height.
-- The Maw as the first boss, and an Overseer presence. Bosses drain away on their own and retreat if the operator outlasts them; they never die. Their tentacle attacks (high sweep, low sweep, slam) are answered with a squat, a jump, and a side-step, and a slam leaves the tentacle spent on the floor for push-ups that drive resonance into it. Phantoms circle the boss as an escort it sends in as volleys. See [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
+- The Maw as the first boss, in two phases (today's flood, then the tentacles), at the movement difficulty only, and an Overseer presence. Bosses drain away on their own and retreat if the operator outlasts them; they never die. Their tentacle attacks (high sweep, low sweep, slam) are answered with a squat, a jump, and a side-step, and a slam leaves the tentacle spent on the floor for push-ups that drive resonance into it. Phantoms circle the boss as an escort it sends in as volleys. See [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 - Intelligence targets from the lore: relay phantoms, captures.
 - Further species ideas kept from the original design: a shield phantom needing a punch sequence, phantoms that drain from range, projectile phantoms to punch away.
 - The Drifter is built but unused. It could seed a mixed "any hand" wave for warmups or the endless hold.

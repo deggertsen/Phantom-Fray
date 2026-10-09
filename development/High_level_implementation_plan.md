@@ -45,7 +45,8 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - [ ] Shield phantom needing a punch sequence (see Ideas_Backlog.md)
 - [ ] Environmental hazards (see Ideas_Backlog.md)
 - [ ] Power-ups (see Ideas_Backlog.md)
-- [ ] Bosses: The Maw as the first boss, then bosses on the war map (see Exercise_Mechanics_Exploration.md)
+- [ ] Bosses at the movement difficulty: the two-phase Maw first, then more on the war map (see Exercise_Mechanics_Exploration.md)
+- [ ] Missions five to ten minutes of actual play
 - [ ] Hand tracking as an input option
 
 ## 5. Fitness (Phase 6)
