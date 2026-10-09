@@ -7,27 +7,23 @@ class_name ChenComms
 ## Assets/Audio/VO/chen/chen_lines.json. Each line plays from <event>_<n>.ogg beside it, so a
 ## new recording replaces a placeholder by name. A missing file is skipped and only captioned.
 ##
-## Priority: 3 is the end of a mission and critical life force, 2 navigation and danger,
-## 1 coaching and progress, 0 flavor. Chen never cuts herself off, and she leaves room: a
-## line starts only once she has been quiet long enough for its priority, most important
-## first. A line that cannot start within max_wait is dropped, because its moment has passed;
-## mission results are never dropped. Moments in the same group share a cooldown, so hits or
-## coaching never stack. Cooldowns count from when the last line ended. The numbers live in
-## the "pacing" block of chen_lines.json.
+## Pacing, as chen_lines.json sets it. Chen never cuts herself off.
+##   cooldown  seconds of silence a moment needs after her previous line (any line) finishes
+##             before it may start.
+##   priority  decides which waiting line gets the next slot. 3 skips the cooldown and plays
+##             the moment she finishes.
+##   max_wait  a line that cannot start within this many seconds of the moment that triggered
+##             it is dropped, because the moment has passed. Priority 3 is never dropped.
 
 signal line_started(speaker: String, text: String, seconds: float)
 
 const FOLDER := "res://Assets/Audio/VO/chen/"
 const SCRIPT := preload("res://Assets/Audio/VO/chen/chen_lines.json")
-## Seconds of silence a line needs after the last one ended, by priority.
-## Defaults when chen_lines.json has no "pacing" block.
-const DEFAULT_QUIET := {0: 10.0, 1: 5.0, 2: 2.0, 3: 0.3}
 const DEFAULT_MAX_WAIT := 3.0
 const MAX_QUEUE := 3
 ## Rifts this close to where the player is looking are "dead ahead"; wider ones get a clock bearing.
 const IN_VIEW_DEGREES := 50.0
 const LIFE_ORDER := {&"healthy": 0, &"caution": 1, &"danger": 2, &"critical": 3, &"depleted": 4}
-const RESULTS := ["victory", "victory_flawless", "victory_critical", "victory_record", "defeat"]
 
 var _speaker: String = "CHEN"
 var _events: Dictionary = {}
@@ -36,12 +32,10 @@ var _player: AudioStreamPlayer
 var _queue: Array[Dictionary] = []
 var _playing_event: String = ""
 var _clock: float = 0.0
+## When her last line finished, and when the one she is saying now will.
 var _ended_at: float = -INF
-var _last_ended: Dictionary = {}
-var _group_ended: Dictionary = {}
-var _quiet: Dictionary = DEFAULT_QUIET.duplicate()
+var _speaking_until: float = -INF
 var _max_wait: float = DEFAULT_MAX_WAIT
-var _group_cooldowns: Dictionary = {}
 var _last_take: Dictionary = {}
 
 var _round: RoundController
@@ -67,12 +61,7 @@ func _ready() -> void:
 	var data: Dictionary = (SCRIPT as JSON).data
 	_speaker = String(data.get("speaker", "CHEN"))
 	_events = data.get("events", {})
-	var pacing: Dictionary = data.get("pacing", {})
-	var quiet: Dictionary = pacing.get("quiet_after_line", {})
-	for priority in quiet:
-		_quiet[int(priority)] = float(quiet[priority])
-	_max_wait = float(pacing.get("max_wait", DEFAULT_MAX_WAIT))
-	_group_cooldowns = pacing.get("groups", {})
+	_max_wait = float(data.get("pacing", {}).get("max_wait", DEFAULT_MAX_WAIT))
 	_load_streams()
 	_player = AudioStreamPlayer.new()
 	_player.name = "Voice"
@@ -87,16 +76,15 @@ func say(event: String) -> void:
 	var info: Dictionary = _events.get(event, {})
 	if info.is_empty() or event == _playing_event:
 		return
-	var cooldown := float(info.get("cooldown", 0))
-	var group := String(info.get("group", ""))
-	if _group_cooling(group):
-		return
-	if cooldown > 0.0 and _clock - float(_last_ended.get(event, -INF)) < cooldown:
-		return
 	for queued in _queue:
 		if queued["event"] == event:
 			return
-	_queue.append({"event": event, "priority": int(info.get("priority", 1)), "at": _clock})
+	_queue.append({
+		"event": event,
+		"priority": int(info.get("priority", 1)),
+		"cooldown": float(info.get("cooldown", 0)),
+		"at": _clock,
+	})
 	_queue.sort_custom(_goes_first)
 	if _queue.size() > MAX_QUEUE:
 		_queue.resize(MAX_QUEUE)
@@ -104,24 +92,30 @@ func say(event: String) -> void:
 func _process(delta: float) -> void:
 	_clock += delta
 	_watch_round(delta)
-	_queue = _queue.filter(_still_relevant)
+	_queue = _queue.filter(_can_still_start)
 	# Speaking until her finished signal lands; the player reports not-playing a frame earlier.
 	if _playing_event != "" or _queue.is_empty():
 		return
+	# The most important waiting line holds the next slot until it can play or is dropped.
 	var next: Dictionary = _queue[0]
-	if _clock - _ended_at >= float(_quiet.get(next["priority"], 1.0)):
+	if _clock >= _earliest_start(next):
 		_queue.pop_front()
-		# Two moments from one group can queue together; only the first gets said.
-		if not _group_cooling(String(_events[next["event"]].get("group", ""))):
-			_play(next["event"])
+		_play(next["event"])
 
 ## Most important first; among equals, whatever has waited longest.
 func _goes_first(a: Dictionary, b: Dictionary) -> bool:
 	return a["priority"] > b["priority"] or (a["priority"] == b["priority"] and a["at"] < b["at"])
 
-## A waiting line's moment passes after max_wait. A mission result always gets said.
-func _still_relevant(entry: Dictionary) -> bool:
-	return entry["event"] in RESULTS or _clock - float(entry["at"]) <= _max_wait
+## Once she is free, plus the line's cooldown. Priority 3 goes the moment she is free.
+func _earliest_start(entry: Dictionary) -> float:
+	var free_at := _speaking_until if _playing_event != "" else _ended_at
+	if entry["priority"] < 3:
+		free_at += float(entry["cooldown"])
+	return maxf(free_at, _clock)
+
+## Dropped as soon as it can no longer start within max_wait of its trigger.
+func _can_still_start(entry: Dictionary) -> bool:
+	return entry["priority"] >= 3 or _earliest_start(entry) - float(entry["at"]) <= _max_wait
 
 func _play(event: String) -> void:
 	var lines: Array = _events[event].get("lines", [])
@@ -147,15 +141,11 @@ func _play(event: String) -> void:
 	else:
 		# No recording yet: caption it and hold the line's time as if it were spoken.
 		get_tree().create_timer(seconds).timeout.connect(_on_line_finished)
+	_speaking_until = _clock + seconds
 	line_started.emit(_speaker, String(lines[take]), seconds)
 
 func _on_line_finished() -> void:
 	_ended_at = _clock
-	if _playing_event != "":
-		_last_ended[_playing_event] = _clock
-		var group := _playing_group()
-		if group != "":
-			_group_ended[group] = _clock
 	_playing_event = ""
 
 ## Loaded up front: a few dozen short compressed clips, and no hitch on first use.
@@ -305,16 +295,3 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 				say("victory")
 		&"defeat":
 			say("defeat")
-
-func _playing_group() -> String:
-	if _playing_event == "":
-		return ""
-	return String(_events.get(_playing_event, {}).get("group", ""))
-
-## True while that group's shared cooldown is running, or one of its lines is playing.
-func _group_cooling(group: String) -> bool:
-	if group == "":
-		return false
-	if group == _playing_group():
-		return true
-	return _clock - float(_group_ended.get(group, -INF)) < float(_group_cooldowns.get(group, 0.0))
