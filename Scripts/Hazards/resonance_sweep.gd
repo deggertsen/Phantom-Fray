@@ -14,6 +14,8 @@ class_name ResonanceSweep
 
 signal resolved(result: Dictionary)
 signal player_contact(damage: float)
+## The blade reached the player: true if it passed over, false if it hit. Fires before resolved or player_contact.
+signal crossed(cleared: bool)
 
 const RIFT_VIOLET := Color(0.78, 0.32, 1.0)
 const BLADE_WIDTH := 4.2
@@ -38,6 +40,14 @@ const BLADE_GLOW := 0.55
 @export var contact_lead: float = 0.12
 ## Quiet time after another sweep before this one lights, so squats never come back to back.
 @export var rest_seconds: float = 1.5
+## Set before add_child to aim the sweep instead of running it from the spawn point toward the player.
+## side: +1 comes in from the player's right, -1 from the left. travel_direction: a world direction.
+## side wins when both are set; with neither, it comes from where it spawned (the rift).
+@export var side: float = 0.0
+@export var travel_direction: Vector3 = Vector3.ZERO
+## Off when something else carries the motion, such as a boss tentacle. Detection runs the same.
+@export var blade_visible: bool = true
+@export var rails_visible: bool = true
 
 var standing_height: float = FALLBACK_STANDING
 var sweep_height: float = FALLBACK_STANDING * (1.0 - 0.12)
@@ -105,6 +115,21 @@ func shows_approach_cue() -> bool:
 func is_in_flight() -> bool:
 	return not _finished
 
+## How far the blade is through its run: 0 until it sets out (rest and telegraph), 1 at the end.
+func progress() -> float:
+	return clampf(_blade_travel / (start_distance + overrun_distance), 0.0, 1.0)
+
+## 0 to 1 through the telegraph; 1 once the blade is out.
+func telegraph_progress() -> float:
+	if _rest_remaining != 0.0:
+		return 0.0
+	return 1.0 - clampf(_telegraph_remaining / maxf(telegraph_seconds, 0.01), 0.0, 1.0)
+
+## The middle of the blade in world space, at the line's height, for a tentacle tip to follow.
+func blade_position() -> Vector3:
+	var along := _blade_travel - start_distance
+	return Vector3(_center.x, sweep_height, _center.z) + _direction * along
+
 func force_cleanup() -> void:
 	_judged = true
 	_finished = true
@@ -155,6 +180,7 @@ func advance(delta: float) -> void:
 
 func _clear(under_blade: bool) -> void:
 	_judged = true
+	crossed.emit(true)
 	var bend := _bend_fault()
 	resolved.emit({
 		"variant_id": variant_id,
@@ -173,6 +199,7 @@ func _clear(under_blade: bool) -> void:
 
 func _hit() -> void:
 	_judged = true
+	crossed.emit(false)
 	_finished = true
 	# The blade goes out where it met the player instead of drawing on through the face.
 	_broken = true
@@ -215,13 +242,18 @@ func _lock_geometry() -> void:
 	var head := _head_position()
 	_center = Vector3(head.x, _floor_height(), head.z)
 	var toward := head - _source
+	if absf(side) > 0.01 and _camera:
+		var right := _camera.global_transform.basis.x
+		toward = -right * signf(side)
+	elif travel_direction.length_squared() > 0.0001:
+		toward = travel_direction
 	toward.y = 0.0
 	if toward.length_squared() < 0.04 and _camera:
 		toward = _camera.global_transform.basis.z
 		toward.y = 0.0
 	_direction = toward.normalized() if toward.length_squared() > 0.0001 else Vector3.BACK
 	_lock_height()
-	# The node stands on the player's feet with -Z the way the blade travels, so the rift side is +Z.
+	# The node stands on the player's feet with -Z the way the blade travels, so it comes in from +Z.
 	global_transform = Transform3D(Basis.looking_at(_direction, Vector3.UP), _center)
 	_previous_ahead = INF
 
@@ -257,13 +289,13 @@ func _build_visuals() -> void:
 	_rail_material = _energy_material()
 	var rail_mesh := BoxMesh.new()
 	rail_mesh.size = Vector3(0.03, 0.03, start_distance + overrun_distance)
-	for side in [-1.0, 1.0]:
+	for rail_side in [-1.0, 1.0]:
 		var rail := MeshInstance3D.new()
-		rail.name = "RailLeft" if side < 0.0 else "RailRight"
+		rail.name = "RailLeft" if rail_side < 0.0 else "RailRight"
 		rail.mesh = rail_mesh
 		rail.material_override = _rail_material
 		rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		rail.set_meta("side", side)
+		rail.set_meta("side", rail_side)
 		add_child(rail)
 		_rails.append(rail)
 	_blade = MeshInstance3D.new()
@@ -304,8 +336,8 @@ func _place_visuals() -> void:
 	var height := sweep_height - _center.y
 	var length := start_distance + overrun_distance
 	for rail in _rails:
-		var side: float = rail.get_meta("side")
-		rail.position = Vector3(side * RAIL_OFFSET, height, start_distance - length * 0.5)
+		var rail_side: float = rail.get_meta("side")
+		rail.position = Vector3(rail_side * RAIL_OFFSET, height, start_distance - length * 0.5)
 	_blade.position = Vector3(0.0, height, start_distance - _blade_travel)
 
 func _update_visuals() -> void:
@@ -317,8 +349,10 @@ func _update_visuals() -> void:
 		lit = 1.0 - clampf(_telegraph_remaining / maxf(telegraph_seconds, 0.01), 0.0, 1.0)
 	# The rails flicker as they light. Reduced Flashes keeps them a steady, dimmer ramp.
 	var flicker := 1.0 if calm else 0.75 + sin(_rail_time * 18.0) * 0.25
+	for rail in _rails:
+		rail.visible = rails_visible
 	_rail_material.albedo_color.a = lit * lit * flicker * (0.55 if calm else 0.9) * _fade
-	_blade.visible = not _broken and _rest_remaining == 0.0 and _telegraph_remaining <= 0.0 and _blade_travel > 0.0 and _fade > 0.0
+	_blade.visible = blade_visible and not _broken and _rest_remaining == 0.0 and _telegraph_remaining <= 0.0 and _blade_travel > 0.0 and _fade > 0.0
 	_blade.position.z = start_distance - _blade_travel
 	# Close to the eyes the glow would fill the view as it passes overhead, so it fades out there.
 	var gap := absf((start_distance - _blade_travel) + (_head_position() - _center).dot(_direction))

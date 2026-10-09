@@ -975,6 +975,30 @@ func _validate_resonance_sweep() -> void:
 			failures.append("Sweep blade glow ignores Reduced Flashes")
 		settings.reduced_flashes = was_reduced
 		glowing.free()
+	# A boss can aim it from one side and carry the motion with its own mesh.
+	camera.position = Vector3(0.0, 1.62, 0.0)
+	var flank := sweep_scene.instantiate() as ResonanceSweep
+	flank.side = 1.0
+	flank.blade_visible = false
+	flank.position = ahead
+	root.add_child(flank)
+	flank.set_physics_process(false)
+	flank.set_process(false)
+	var crossings: Array[bool] = []
+	flank.crossed.connect(func(cleared: bool) -> void: crossings.append(cleared))
+	camera.position = Vector3(0.0, 1.30, 0.0)
+	var halfway := false
+	for _index in int(3.0 / (1.0 / 72.0)):
+		flank.advance(1.0 / 72.0)
+		flank._update_visuals()
+		if flank._blade.visible:
+			failures.append("Hidden sweep blade still drew")
+			break
+		halfway = halfway or (flank.progress() > 0.3 and flank.progress() < 0.7)
+	if not flank._direction.is_equal_approx(Vector3.LEFT) or crossings != [true] or not halfway:
+		failures.append("Sweep from the right did not cross right to left and report it: %s %s" % [flank._direction, crossings])
+	flank.free()
+	camera.position = Vector3(0.0, 1.62, 0.0)
 	# Pressure shortens the tell, never below the floor.
 	var rushed := _spawn_sweep(sweep_scene, ahead)
 	rushed.apply_pressure(1.0, 0.1)
