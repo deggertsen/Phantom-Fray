@@ -234,7 +234,8 @@ func _play_open_sound(position: Vector3) -> void:
 	audio.bus = &"SFX"
 	audio.volume_db = -9.0
 	audio.max_distance = 35.0
-	audio.global_position = position
+	# In the tree first: a node outside it has no global position to set.
 	add_child(audio)
+	audio.global_position = position
 	audio.finished.connect(audio.queue_free)
 	audio.play()
