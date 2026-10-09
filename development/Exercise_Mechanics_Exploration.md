@@ -1,6 +1,6 @@
 # Exercise Mechanics Exploration: Squats, Jumps, Push-ups
 
-**Written:** 2026-10-09. **Updated** the same day with four rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit).
+**Written:** 2026-10-09. **Updated** the same day with five rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit).
 **Status:** Exploration. Nothing here is scheduled except where the roadmap links it. A squat detector prototype exists behind a debug flag (`Scripts/Player/squat_detector.gd`, off by default).
 **Question:** How could Phantom Fray require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
 
@@ -53,6 +53,12 @@ Fourth round:
 26. **One movement difficulty for now.**
 27. **The five-to-ten-minute length applies from OP-02 onward;** OP-01 stays short.
 28. **Feeding (the boss eating its escort) is not decided.** Talk it through before committing.
+
+Fifth round:
+
+29. **The Maw's break odds as recommended, as a first pass:** the first Maw at the movement difficulty always breaks, then about one in three, never three in a row without a boss, with a readings hint on the war map.
+30. **The tentacle glimpse appears rarely at Assist, Standard, and Operator** as foreshadowing.
+31. **The weaker silence beat with Play My Own Music is accepted.** It is a power-user feature; by the time a player reaches a boss they have heard the game's own music through many missions.
 
 ---
 
@@ -128,7 +134,7 @@ Recommended: A in every boss fight, since it is the boss's own attack, and D not
 
 ### The Maw
 
-**Today.** OP-06, the last of the six operations. One rift at double size (the portal is 8 m across) that pours a steady flood: a phantom every 0.875 s, up to eight live, drawn from all four phantom rules, and 800 health to seal. Missions have no time limit; the bracer counts the elapsed time up, and results record the fastest victory. Chen opens with "One mouth. Twice the teeth. Twice the hunger." and closes with "The Maw is shut. It will remember how long you made it chew."
+**Today.** OP-06, the last of the six operations. One rift at double size (the portal is 8 m across) that pours a steady flood: a phantom every 0.875 s, up to eight live, drawn from all four phantom rules, and 1600 health to seal. Its card estimates 4 to 6 minutes. (The other operations now open twice as many rifts; The Maw stays a single rift.) Missions have no time limit; the bracer counts the elapsed time up, and results record the fastest victory. Chen opens with "One mouth. Twice the teeth. Twice the hunger." and closes with "The Maw is shut. It will remember how long you made it chew."
 
 **As the first boss.** The Maw is that wide because something enormous is trying to come through it. Only its tentacles reach out; the body stays on the far side, because it cannot yet afford our world. That gives the first boss one thing to read, limbs to dodge and punish, and keeps the full creature back for a later reveal. It also keeps the art cost to tentacles rather than a whole creature.
 
@@ -183,7 +189,7 @@ No (decision 22). Not every Maw lets a boss through, so facing The Maw is never 
 
 ### Showing an expected mission time
 
-Missions have no time limit now, so players need a sense of how long a mission takes before they pick it (decision 23). Recommended:
+Missions have no time limit now, so players need a sense of how long a mission takes before they pick it (decision 23). **Built on `main`:** every Operations card shows an `expected_minutes` range and the best time once there is one; the ranges are estimates from the wave tables until timed headset runs replace them. What is left for bosses:
 
 - **A range on every mission card**, on the Operations list now and on the war map later: "6 to 8 MIN".
 - **Authored first, measured later.** Start with an `expected_minutes` pair in each mission's catalog entry, set from timed headset runs. Once players have cleared it, the player's own fastest victory (already stored as a best time) appears beside it: "6 to 8 MIN. YOUR BEST 5:42."
@@ -519,9 +525,7 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 
 ## 6. Open questions for David
 
-Four rounds are answered; see **Decisions** at the top. Still open, each with my recommended default:
+Five rounds are answered; see **Decisions** at the top. Still open:
 
-1. **Feeding** (decision 28). Does the boss eat its escort to buy time? Recommended: talk it through with the escort volley prototyped first; it is easier to judge once volleys exist.
-2. **How often does The Maw break at the movement difficulty?** Recommended: the first time always, then about one in three, never three misses in a row, with a readings hint on the war map.
-3. **Should the tutorial's tentacle glimpse also appear sometimes at Assist, Standard, and Operator?** Recommended: yes, rarely, as foreshadowing for players who never pick the movement difficulty. It costs nothing to fight and keeps the boss in the story for them.
-4. **Can the turn pause the player's own music?** Recommended: find out whether Horizon OS lets an app request it; if not, accept that the silence beat is weaker with Play My Own Music on.
+1. **Feeding** (decision 28). Does the boss eat its escort to buy time? Recommended: decide once the escort volley is prototyped and can be played.
+2. **What a retreat means on the war map** beyond holding the line (decision 24). Revisit when the map is designed.
