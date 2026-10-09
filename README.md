@@ -29,14 +29,14 @@ Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission
 
 | Op | Title | Rifts | Card estimate | What it introduces |
 |---|---|---|---|---|
-| OP-01 | First Light | 2 | 1 to 2 min | Yellow and blue |
-| OP-02 | Widen the Ring | 6 | 3 to 4 min | Green and pink in the mix |
-| OP-03 | Chen's Gambit | 6 | 3 to 4 min | Shorter tells, faster lunges |
-| OP-04 | Double Breach | 8 paired | 3 to 5 min | Two rifts open side by side |
-| OP-05 | Open Arc | 8 paired | 3 to 5 min | Paired rifts spread across the front arc |
-| OP-06 | The Maw | 1 | 2 to 3 min | One double-size rift that spawns fast |
+| OP-01 | First Light | 4 | 2 to 4 min | Yellow and blue |
+| OP-02 | Widen the Ring | 12 | 6 to 8 min | Green and pink in the mix |
+| OP-03 | Chen's Gambit | 12 | 6 to 8 min | Shorter tells, faster lunges |
+| OP-04 | Double Breach | 16 paired | 6 to 10 min | Two rifts open side by side |
+| OP-05 | Open Arc | 16 paired | 6 to 10 min | Paired rifts spread across the front arc |
+| OP-06 | The Maw | 2 in a row | 4 to 6 min | One double-size rift that spawns fast, opening twice |
 
-Each Operations card shows its expected time ("3 TO 4 MIN") and, once the player has won it, their best time beside it. The ranges are estimates from the wave tables until timed headset runs replace them. A clean run through all six takes roughly 20 minutes. The campaign currently works as an extended tutorial for the combat system. Replay value and narrative hooks are the next things to build; see the roadmap.
+Each Operations card shows its expected time ("6 TO 8 MIN") and, once the player has won it, their best time beside it. The ranges are estimates from the wave tables until timed headset runs replace them. A clean run through all six takes roughly 40 minutes. The campaign currently works as an extended tutorial for the combat system. Replay value and narrative hooks are the next things to build; see the roadmap.
 
 ## Controls
 

@@ -362,14 +362,17 @@ func _draw_life(c: Control, top: float) -> void:
 		c.draw_rect(rect, color if i < lit else DIM)
 
 ## One hexagon per rift. Sealed: solid cyan with a check. Open: a violet outline filling
-## from the center as the rift weakens. Not yet open: a dim outline.
+## from the center as the rift weakens. Not yet open: a dim outline. Past eight rifts the
+## row folds into two offset rows, like a honeycomb, so the hexes stay readable.
 func _draw_rifts(c: Control, top: float) -> void:
 	_text(c, "RIFTS", Vector2(24.0, top + 22.0), 22, MUTED)
-	var count := maxi(_rifts.size(), 1)
-	var radius := 22.0
-	var spacing := minf(60.0, (float(CANVAS.x) - 130.0) / count)
+	var rows := 2 if _rifts.size() > 8 else 1
+	var per_row := maxi(ceili(float(_rifts.size()) / rows), 1)
+	var spacing := minf(60.0, (float(CANVAS.x) - 140.0) / (per_row + (0.5 if rows > 1 else 0.0)))
+	var radius := minf(22.0, spacing * 0.56)
 	for i in _rifts.size():
-		var center := Vector2(128.0 + i * spacing, top + 14.0)
+		var row := i / per_row
+		var center := Vector2(128.0 + (i % per_row + row * 0.5) * spacing, top + 14.0 + row * radius * 1.55)
 		var rift: Dictionary = _rifts[i]
 		match rift["state"]:
 			&"sealed":

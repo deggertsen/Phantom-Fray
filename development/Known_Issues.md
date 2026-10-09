@@ -4,12 +4,12 @@ Updated 2026-10-09.
 
 ## Content and design gaps
 
-1. **Thin replay loop.** Best scores and fastest victory times are stored per operation. Results show the completion time and call a new best time, and the Operations list shows the best time beside each expected range. The best score is not shown anywhere yet. There are no medals, session stats, endless mode, or leaderboards. A full campaign run is about 20 minutes with little reason to return. Phase 6 in the roadmap.
+1. **Thin replay loop.** Best scores and fastest victory times are stored per operation. Results show the completion time and call a new best time, and the Operations list shows the best time beside each expected range. The best score is not shown anywhere yet. There are no medals, session stats, endless mode, or leaderboards. A full campaign run is about 40 minutes with little reason to return. Phase 6 in the roadmap.
 2. **No narrative hook.** Six operations with debrief lines, but nothing larger at stake and no payoff for the Overseer thread. The Maw differs from other rifts only in size and spawn rate. Phase 7.
 3. **One arena.** Every operation is the same dead-city breach site, and the briefing panel still reads "RSF // ERM TRAINING CHAMBER 07" (`Scripts/Presentation/arena_builder.gd`). Phase 8.
 4. **OP-04 and OP-05 share one wave table.** Only rift placement differs (`_paired_assault_waves` in `Scripts/Core/mission_catalog.gd`).
 5. **Every phantom aims at head height.** Targets land 18 to 30 cm below the eyes. No low approaches, so squats and uppercuts come only from the Angler's lure position.
-6. **Expected mission times are estimates.** Each operation's `expected_minutes` pair in `Scripts/Core/mission_catalog.gd` comes from the wave tables (rift health over roughly 13 rift damage per kill, times the spawn interval, plus misses and rift openings), not from timed play. Time real runs on the headset and replace them, and again after the five-to-ten-minute retune from OP-02 on.
+6. **Expected mission times are estimates.** Each operation's `expected_minutes` pair in `Scripts/Core/mission_catalog.gd` comes from the wave tables (rift health over roughly 13 rift damage per kill, times the spawn interval, plus misses and rift openings), not from timed play. The rift counts were doubled on 2026-10-09 and the ranges doubled with them. Time real runs on the headset and replace them.
 
 ## Audio
 

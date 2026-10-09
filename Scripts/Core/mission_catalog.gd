@@ -121,18 +121,18 @@ static func _first_light() -> Dictionary:
 		"codename": "OP-01",
 		"title": "FIRST LIGHT",
 		"summary": "Proving ground. Gold lunges left, blue lunges right. Read it, then answer.",
-		"expected_minutes": [1, 2],
-		"objective": "SEAL TWO RIFTS",
+		"expected_minutes": [2, 4],
+		"objective": "SEAL FOUR RIFTS",
 		"start_line": "CHEN: READ THE LUNGE. THEN ANSWER.",
-		"pressure_labels": ["CONTACT", "ADAPTING"],
-		"open_barks": ["", "THEY ADJUST — FASTER LUNGES"],
-		"seal_lines": ["FIRST SEAL. SCOUTS ARE CORRECTING."],
+		"pressure_labels": ["CONTACT", "ADAPTING", "SECOND PASS", "LAST DOOR"],
+		"open_barks": ["", "THEY ADJUST — FASTER LUNGES", "TWO MORE. SAME PATTERN.", "LAST ONE. READ IT, THEN ANSWER."],
+		"seal_lines": ["FIRST SEAL. SCOUTS ARE CORRECTING.", "HALF DONE. TWO MORE ARE OPENING.", "ONE LEFT. FINISH THE DRILL."],
 		"victory_line": "Chen: Clean seals. A civic rift just tore open. They are not wandering. Something is aiming them.",
 		"defeat_line": "Chen: The matrix drank you before the seal. Learn the pattern. Then go back in.",
-		"rifts": [
+		"rifts": _repeat([
 			_wave(70, 4.2, 2, 0.85, 1.28, ["yellow", "yellow", "blue"]),
 			_wave(90, 3.4, 3, 1.0, 1.05, ["yellow", "blue", "yellow", "blue"]),
-		],
+		], 2),
 	}
 
 static func _widen_the_ring() -> Dictionary:
@@ -141,22 +141,19 @@ static func _widen_the_ring() -> Dictionary:
 		"codename": "OP-02",
 		"title": "WIDEN THE RING",
 		"summary": "Civic ring. Greens crash the chest. Pinks paint a line and own it.",
-		"expected_minutes": [3, 4],
-		"objective": "SEAL SIX RIFTS",
+		"expected_minutes": [6, 8],
+		"objective": "SEAL TWELVE RIFTS",
 		"start_line": "CHEN: GREENS CRASH. PINKS OWN A LINE.",
-		"pressure_labels": ["CONTACT", "MIXED", "RING LOUD", "SECOND WAVE", "RING HOT", "LAST DOOR"],
-		"open_barks": ["", "PINKS IN THE MIX — LEAVE THE LINE", "THE RING IS LOUD. KEEP THE CHAIN.", "THEY OPENED AGAIN.", "SAME RING. KEEP THE CHAIN.", "LAST DOOR. SEAL IT."],
-		"seal_lines": ["RING STABILIZING.", "SECOND SEAL. SOMETHING ANSWERED.", "HALF THE RING IS DOWN.", "IT OPENED MORE.", "ONE LEFT IN THE RING."],
+		"pressure_labels": ["CONTACT", "MIXED", "RING LOUD", "SECOND WAVE", "RING HOT", "HALF RING", "THIRD WAVE", "STILL MIXED", "RING LOUDER", "FOURTH WAVE", "RING HOT", "LAST DOOR"],
+		"open_barks": ["", "PINKS IN THE MIX — LEAVE THE LINE", "THE RING IS LOUD. KEEP THE CHAIN.", "THEY OPENED AGAIN.", "SAME RING. KEEP THE CHAIN.", "HALFWAY ROUND. STAY ON IT.", "THIRD WAVE. GREENS FIRST.", "PINKS AGAIN — LEAVE THE LINE", "STILL LOUD. KEEP THE CHAIN.", "FOURTH WAVE. THEY WANT YOU TIRED.", "SAME RING. YOU ARE NOT TIRED.", "LAST DOOR. SEAL IT."],
+		"seal_lines": ["RING STABILIZING.", "SECOND SEAL. SOMETHING ANSWERED.", "THREE DOWN. THE RING IS STILL LOUD.", "IT OPENED MORE.", "FIVE DOWN. KEEP BREATHING.", "HALF THE RING IS DOWN.", "SEVEN. THE RING IS THINNING.", "IT KEEPS OPENING. KEEP SEALING.", "NINE DOWN. THREE LEFT.", "TWO LEFT IN THE RING.", "ONE LEFT IN THE RING."],
 		"victory_line": "Chen: A signal rode the last seal. Whatever is on the other side looked back.",
 		"defeat_line": "Chen: The ring is still open, and it felt you flinch. Reset and take the line again.",
-		"rifts": [
+		"rifts": _repeat([
 			_wave(90, 3.8, 3, 0.95, 1.12, ["yellow", "blue", "green"]),
 			_wave(110, 3.1, 3, 1.05, 0.95, ["yellow", "blue", "green", "pink"]),
 			_wave(120, 2.7, 4, 1.15, 0.85, ["blue", "green", "pink", "yellow"]),
-			_wave(90, 3.8, 3, 0.95, 1.12, ["yellow", "blue", "green"]),
-			_wave(110, 3.1, 3, 1.05, 0.95, ["yellow", "blue", "green", "pink"]),
-			_wave(120, 2.7, 4, 1.15, 0.85, ["blue", "green", "pink", "yellow"]),
-		],
+		], 4),
 	}
 
 static func _chens_gambit() -> Dictionary:
@@ -165,22 +162,19 @@ static func _chens_gambit() -> Dictionary:
 		"codename": "OP-03",
 		"title": "CHEN'S GAMBIT",
 		"summary": "Junction rift. The Overseer is aiming them. Shorter tells. No free swings.",
-		"expected_minutes": [3, 4],
+		"expected_minutes": [6, 8],
 		"objective": "SEAL THE JUNCTION",
 		"start_line": "CHEN: THE OVERSEER IS AIMING THEM.",
-		"pressure_labels": ["MARKED", "HUNTED", "JUNCTION", "IT ANSWERED", "NO MERCY", "LAST SEAL"],
-		"open_barks": ["", "THEY KNOW YOUR LEAD HAND.", "JUNCTION LIVE. DO NOT BLINK.", "IT OPENED ANOTHER.", "SHORTER TELLS. KEEP ANSWERING.", "ONE DOOR LEFT."],
-		"seal_lines": ["IT FELT THAT.", "TWO DOWN. THE JUNCTION IS ANGRY.", "HALF SEALED. IT IS STILL AIMING.", "AGAIN. DO NOT BLINK.", "LAST DOOR. FINISH THE JUNCTION."],
+		"pressure_labels": ["MARKED", "HUNTED", "JUNCTION", "IT ANSWERED", "NO MERCY", "HALFWAY", "STILL AIMING", "HUNTED AGAIN", "DEEP JUNCTION", "IT ANSWERED", "NO MERCY", "LAST SEAL"],
+		"open_barks": ["", "THEY KNOW YOUR LEAD HAND.", "JUNCTION LIVE. DO NOT BLINK.", "IT OPENED ANOTHER.", "SHORTER TELLS. KEEP ANSWERING.", "HALF THE JUNCTION. IT IS STILL AIMING.", "IT IS READING YOU. CHANGE HANDS.", "THEY KNOW YOUR LEAD HAND. AGAIN.", "DEEPER IN. DO NOT BLINK.", "IT OPENED ANOTHER. KEEP ANSWERING.", "SHORTER STILL. NO FREE SWINGS.", "ONE DOOR LEFT."],
+		"seal_lines": ["IT FELT THAT.", "TWO DOWN. THE JUNCTION IS ANGRY.", "THREE. IT IS STILL AIMING.", "AGAIN. DO NOT BLINK.", "FIVE DOWN.", "HALF SEALED. IT IS STILL AIMING.", "SEVEN. IT IS LEARNING YOU.", "EIGHT. TEACH IT SOMETHING ELSE.", "NINE DOWN. THREE LEFT.", "TWO LEFT. THE JUNCTION IS SHAKING.", "LAST DOOR. FINISH THE JUNCTION."],
 		"victory_line": "Chen: It knows your resonance now. This was the opening move. Not the end of the war.",
 		"defeat_line": "Chen: The Overseer learned more from your fall than from the seals. Get up.",
-		"rifts": [
+		"rifts": _repeat([
 			_wave(100, 3.2, 3, 1.05, 0.95, ["yellow", "blue", "green", "pink"]),
 			_wave(120, 2.6, 4, 1.16, 0.8, ["green", "pink", "blue", "yellow", "pink"]),
 			_wave(140, 2.2, 4, 1.28, 0.7, ["yellow", "blue", "green", "pink"]),
-			_wave(100, 3.2, 3, 1.05, 0.95, ["yellow", "blue", "green", "pink"]),
-			_wave(120, 2.6, 4, 1.16, 0.8, ["green", "pink", "blue", "yellow", "pink"]),
-			_wave(140, 2.2, 4, 1.28, 0.7, ["yellow", "blue", "green", "pink"]),
-		],
+		], 4),
 	}
 
 static func _double_breach() -> Dictionary:
@@ -189,14 +183,14 @@ static func _double_breach() -> Dictionary:
 		"codename": "OP-04",
 		"title": "DOUBLE BREACH",
 		"summary": "Two rifts open in the same view. Their scouts arrive out of step.",
-		"expected_minutes": [3, 5],
+		"expected_minutes": [6, 10],
 		"objective": "SEAL THE PAIRED RIFTS",
 		"max_concurrent": 2,
 		"cluster_rifts": true,
 		"start_line": "CHEN: TWO DOORS. SAME VIEW. THEY WILL NOT SYNC.",
-		"pressure_labels": ["PAIR LIVE", "PARTNER", "SECOND PAIR", "STILL FEEDING", "THIRD PAIR", "OFFSET", "FOURTH PAIR", "LAST DOOR"],
-		"open_barks": ["", "THE OTHER ONE IS ALREADY OPEN.", "NEW PAIR. KEEP THEM IN FRONT.", "ONE DOWN. MORE BEHIND IT.", "THEY OPENED AGAIN. SAME VIEW.", "OFFSET. DON'T CHASE BOTH.", "LAST PAIR. STAY IN FRONT.", "FINISH THE ONE THAT'S LEFT."],
-		"seal_lines": ["ONE DOWN. ITS PARTNER IS STILL FEEDING.", "PAIR SEALED. THE NEXT TWO ARE OPENING.", "HALF THE PAIRS ARE DOWN.", "KEEP THE LIVE ONE IN VIEW.", "ANOTHER PAIR. THEY STILL WON'T SYNC.", "ONE PARTNER LEFT IN THIS PAIR.", "LAST DOOR. FINISH IT."],
+		"pressure_labels": ["PAIR LIVE", "PARTNER", "SECOND PAIR", "STILL FEEDING", "THIRD PAIR", "OFFSET", "FOURTH PAIR", "HALFWAY", "FIFTH PAIR", "PARTNER", "SIXTH PAIR", "STILL FEEDING", "SEVENTH PAIR", "OFFSET", "LAST PAIR", "LAST DOOR"],
+		"open_barks": ["", "THE OTHER ONE IS ALREADY OPEN.", "NEW PAIR. KEEP THEM IN FRONT.", "ONE DOWN. MORE BEHIND IT.", "THEY OPENED AGAIN. SAME VIEW.", "OFFSET. DON'T CHASE BOTH.", "FOURTH PAIR. STAY IN FRONT.", "ITS PARTNER IS STILL OPEN.", "HALFWAY. THEY ARE STILL PAIRING.", "THE OTHER ONE IS ALREADY OPEN.", "SIXTH PAIR. KEEP THEM IN FRONT.", "ONE DOWN. MORE BEHIND IT.", "SEVENTH PAIR. SAME VIEW.", "OFFSET. DON'T CHASE BOTH.", "LAST PAIR. STAY IN FRONT.", "FINISH THE ONE THAT'S LEFT."],
+		"seal_lines": ["ONE DOWN. ITS PARTNER IS STILL FEEDING.", "PAIR SEALED. THE NEXT TWO ARE OPENING.", "THREE DOWN. KEEP THE LIVE ONE IN VIEW.", "TWO PAIRS SEALED.", "FIVE. THEY STILL WON'T SYNC.", "THREE PAIRS. KEEP THEM IN FRONT.", "SEVEN DOWN. ONE PARTNER LEFT.", "HALF THE PAIRS ARE DOWN.", "NINE. ITS PARTNER IS STILL FEEDING.", "FIVE PAIRS SEALED.", "ELEVEN DOWN. KEEP THE LIVE ONE IN VIEW.", "SIX PAIRS. THEY STILL WON'T SYNC.", "THIRTEEN. ONE PARTNER LEFT.", "SEVEN PAIRS. ONE PAIR LEFT.", "LAST DOOR. FINISH IT."],
 		"victory_line": "Chen: You sealed them as a pair. The Overseer will not make the next one this polite.",
 		"defeat_line": "Chen: The pair drank you. Take the left door before their scouts overlap.",
 		"rifts": _paired_assault_waves(),
@@ -208,14 +202,14 @@ static func _open_arc() -> Dictionary:
 		"codename": "OP-05",
 		"title": "OPEN ARC",
 		"summary": "The paired doors again, set wider across the arc in front of you.",
-		"expected_minutes": [3, 5],
+		"expected_minutes": [6, 10],
 		"objective": "SEAL THE OPEN ARC",
 		"max_concurrent": 2,
 		"arc_rifts": true,
 		"start_line": "CHEN: SAME PAIR. WIDER ARC. NOTHING BEHIND YOU.",
-		"pressure_labels": ["ARC LIVE", "PARTNER", "SECOND ARC", "STILL WIDE", "THIRD ARC", "HOLD THE FRONT", "FOURTH ARC", "LAST DOOR"],
-		"open_barks": ["", "THE OTHER DOOR IS WIDE, NOT BEHIND.", "NEW PAIR. BOTH STAY IN FRONT.", "ONE DOWN. THE ARC IS STILL OPEN.", "THEY OPENED WIDER. DON'T TURN AROUND.", "OFFSET. KEEP BOTH IN THE ARC.", "LAST PAIR. NINETY DEGREES, NO MORE.", "FINISH THE ONE STILL IN FRONT."],
-		"seal_lines": ["ONE DOWN. ITS PARTNER IS STILL IN THE ARC.", "PAIR SEALED. THE NEXT TWO OPEN WIDER.", "HALF THE ARC IS DOWN.", "STAY INSIDE THE FRONT.", "ANOTHER PAIR. STILL NOTHING BEHIND YOU.", "ONE PARTNER LEFT ON THIS ARC.", "LAST DOOR. FINISH THE ARC."],
+		"pressure_labels": ["ARC LIVE", "PARTNER", "SECOND ARC", "STILL WIDE", "THIRD ARC", "HOLD THE FRONT", "FOURTH ARC", "HALFWAY", "FIFTH ARC", "PARTNER", "SIXTH ARC", "STILL WIDE", "SEVENTH ARC", "HOLD THE FRONT", "LAST ARC", "LAST DOOR"],
+		"open_barks": ["", "THE OTHER DOOR IS WIDE, NOT BEHIND.", "NEW PAIR. BOTH STAY IN FRONT.", "ONE DOWN. THE ARC IS STILL OPEN.", "THEY OPENED WIDER. DON'T TURN AROUND.", "OFFSET. KEEP BOTH IN THE ARC.", "FOURTH PAIR. NINETY DEGREES, NO MORE.", "ITS PARTNER IS STILL IN THE ARC.", "HALFWAY. THE ARC IS STILL WIDE.", "THE OTHER DOOR IS WIDE, NOT BEHIND.", "SIXTH PAIR. BOTH STAY IN FRONT.", "ONE DOWN. THE ARC IS STILL OPEN.", "SEVENTH PAIR. DON'T TURN AROUND.", "OFFSET. KEEP BOTH IN THE ARC.", "LAST PAIR. NINETY DEGREES, NO MORE.", "FINISH THE ONE STILL IN FRONT."],
+		"seal_lines": ["ONE DOWN. ITS PARTNER IS STILL IN THE ARC.", "PAIR SEALED. THE NEXT TWO OPEN WIDER.", "THREE DOWN. STAY INSIDE THE FRONT.", "TWO PAIRS SEALED.", "FIVE. STILL NOTHING BEHIND YOU.", "THREE PAIRS. HOLD THE FRONT.", "SEVEN DOWN. ONE PARTNER LEFT.", "HALF THE ARC IS DOWN.", "NINE. ITS PARTNER IS STILL IN THE ARC.", "FIVE PAIRS SEALED.", "ELEVEN DOWN. STAY INSIDE THE FRONT.", "SIX PAIRS. STILL NOTHING BEHIND YOU.", "THIRTEEN. ONE PARTNER LEFT.", "SEVEN PAIRS. ONE PAIR LEFT.", "LAST DOOR. FINISH THE ARC."],
 		"victory_line": "Chen: You held a wider front. The Overseer is running out of polite geometry.",
 		"defeat_line": "Chen: The wide pair drank you. Face the arc. Do not spin around looking for the other door.",
 		"rifts": _paired_assault_waves(),
@@ -226,32 +220,36 @@ static func _the_maw() -> Dictionary:
 		"id": "the_maw",
 		"codename": "OP-06",
 		"title": "THE MAW",
-		"summary": "One vast rift. Phantoms pour out in a steady flood, and the mouth takes a long chew to shut.",
-		"expected_minutes": [2, 3],
+		"summary": "One vast rift that opens twice. Phantoms pour out in a steady flood, and the mouth takes a long chew to shut.",
+		"expected_minutes": [4, 6],
 		"objective": "SEAL THE MAW",
 		"arc_rifts": true,
 		"start_line": "CHEN: ONE MOUTH. IT DOES NOT STOP FEEDING.",
-		"pressure_labels": ["THE MAW"],
-		"open_barks": [""],
-		"seal_lines": [],
+		"pressure_labels": ["THE MAW", "IT OPENS AGAIN"],
+		"open_barks": ["", "IT OPENED AGAIN. SAME MOUTH."],
+		"seal_lines": ["IT SHUT. IT WILL NOT STAY SHUT."],
 		"victory_line": "Chen: The Maw is shut. It will remember how long you made it chew.",
 		"defeat_line": "Chen: The Maw outpaced you. Kill faster than it can replace them.",
-		"rifts": [
+		"rifts": _repeat([
 			_wave(800, 0.875, 8, 1.0, 1.0, ["yellow", "blue", "green", "pink"], 2.0),
-		],
+		], 2),
 	}
 
 static func _paired_assault_waves() -> Array:
-	return [
+	return _repeat([
 		_wave(120, 3.1, 2, 1.12, 0.88, ["yellow", "blue", "green", "pink"]),
 		_wave(120, 3.6, 2, 1.12, 0.88, ["blue", "green", "pink", "yellow"]),
 		_wave(140, 2.6, 2, 1.24, 0.74, ["green", "pink", "yellow", "blue"]),
 		_wave(140, 3.0, 2, 1.24, 0.74, ["pink", "yellow", "green", "blue"]),
-		_wave(120, 3.1, 2, 1.12, 0.88, ["yellow", "blue", "green", "pink"]),
-		_wave(120, 3.6, 2, 1.12, 0.88, ["blue", "green", "pink", "yellow"]),
-		_wave(140, 2.6, 2, 1.24, 0.74, ["green", "pink", "yellow", "blue"]),
-		_wave(140, 3.0, 2, 1.24, 0.74, ["pink", "yellow", "green", "blue"]),
-	]
+	], 4)
+
+## The waves in order, run `times` times over. Each copy is its own dictionary.
+static func _repeat(waves: Array, times: int) -> Array:
+	var run: Array = []
+	for _pass in times:
+		for wave in waves:
+			run.append((wave as Dictionary).duplicate(true))
+	return run
 
 static func _wave(
 	health: int,

@@ -17,7 +17,7 @@ Ideas that are not scheduled live in [Ideas_Backlog.md](Ideas_Backlog.md).
 - Stationary, physical play: punch, two-hand block, side-step or duck. No artificial locomotion.
 - Four phantom rules on three creature species with three body forms each: Angler (yellow left, blue right, lure is the crit), Carapace (green, two-hand block), Spearfin (pink, floor lane, dodge).
 - Phantoms arrive on one continuous accelerating arc and lunge for the head. A strike counts once the body is in reach.
-- Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift. A sealed rift's phantoms stay in play; the operation is won when the last one is dealt with.
+- Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift that opens twice. Every operation runs twice the rifts it did before 2026-10-09 (4, 12, 12, 16, 16, 2). A sealed rift's phantoms stay in play; the operation is won when the last one is dealt with.
 - Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the operator out. Operators never die.
 - Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score and fastest victory per operation are stored; results show the completion time and call a new best time. Each Operations card shows an expected time range and the best time beside it.
 - Dr. Chen on comms: 33 moments, 4 to 5 takes each, voiced with ElevenLabs. Cooldown and max-wait pacing so she never cuts herself off. Opening line knows if this is a first attempt, a retry after the failsafe, or a replay; victory line knows if it was flawless, at critical, or a new best.
@@ -37,7 +37,7 @@ See [Production_Status.md](Production_Status.md) for the implemented list and [K
 Headset sessions through 2026-10-08 were not written down. Record future ones in [Playtest_Log.md](Playtest_Log.md). The standing verdicts:
 
 - The combat feels good. Direction of the code is right.
-- A full run of all six operations takes about 20 minutes and there is no reason to return.
+- A full run of all six operations takes about 40 minutes and there is no reason to return.
 - The campaign reads as a tutorial for a game that does not exist yet.
 - There is no narrative hook. Chen's lines carry flavor, but nothing is at stake beyond the current rift.
 
@@ -70,7 +70,7 @@ Fitness is the product. The campaign is the on-ramp.
 - [ ] Show the best score on Operations and on results, so a player can see that lures and chains pay.
 - [ ] Medals per operation (bronze, silver, gold) from score thresholds that reward crits and unbroken chains.
 - [ ] Endless "Hold the Breach" mode: cycle the existing wave tables with rising speed and shrinking telegraph scale until the failsafe fires. Length options 10, 20, 30 minutes.
-- [x] Expected mission time on every mission card: an `expected_minutes` range per operation ("3 TO 4 MIN") with the player's best time beside it once they have one. The ranges are estimates from the wave tables; replace them from timed headset runs.
+- [x] Expected mission time on every mission card: an `expected_minutes` range per operation ("6 TO 8 MIN") with the player's best time beside it once they have one. The ranges are estimates from the wave tables; replace them from timed headset runs.
 - [ ] Workout-length framing in the menu: a quick 10-minute hold, a 20-minute operation set, a 30-minute campaign.
 - [ ] Meta fitness tracking tag for the store listing and Horizon OS Move integration if the SDK exposes it.
 - [ ] Difficulty tiers: Assist, Standard, Operator. Implemented as multipliers on the wave fields `speed_scale`, `telegraph_scale`, rift health, and contact damage.
