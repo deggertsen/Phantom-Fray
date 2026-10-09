@@ -1,6 +1,6 @@
 # Exercise Mechanics Exploration: Squats, Jumps, Push-ups
 
-**Written:** 2026-10-09. **Updated** the same day with two rounds of David's answers and his boss proposal.
+**Written:** 2026-10-09. **Updated** the same day with four rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit).
 **Status:** Exploration. Nothing here is scheduled except where the roadmap links it. A squat detector prototype exists behind a debug flag (`Scripts/Player/squat_detector.gd`, off by default).
 **Question:** How could Phantom Fray require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
 
@@ -41,7 +41,18 @@ Third round:
 17. **Bosses only at the higher difficulties.** They require much more physical exertion, so Assist, Standard, and Operator never meet one. Every boss attack is answered with a detected movement; there is no punch-only version.
 18. **The Maw has two phases, and only its tentacles come through.** Phase one is today's behaviour: phantoms pour through and the operator fights them. Phase two is the tentacles.
 19. **A spent tentacle is down for up to 20 seconds or 10 push-ups,** whichever comes first.
-20. **Missions run five to ten minutes each.**
+20. **Missions run five to ten minutes each.** Since `main` removed the time limit (missions now count elapsed time up and record the fastest victory), this is a target for actual play, set by rift health and spawns.
+
+Fourth round:
+
+21. **The start of phase two has to feel like the opening of a boss fight.** The player should feel the intensity of the moment. See "The turn".
+22. **The Maw does not always let a boss through,** so facing The Maw never guarantees a boss fight.
+23. **Show players an expected mission time range,** now that missions have no time limit.
+24. **A retreat holds the line at that breach for now,** and the boss can rise again at another one. Revisit with the war map.
+25. **The tutorial keeps The Maw's phase one and ends on the tentacle glimpse.** The two-phase Maw is a war-map mission.
+26. **One movement difficulty for now.**
+27. **The five-to-ten-minute length applies from OP-02 onward;** OP-01 stays short.
+28. **Feeding (the boss eating its escort) is not decided.** Talk it through before committing.
 
 ---
 
@@ -113,23 +124,70 @@ David's escort idea is the strongest of the options:
 - **C. Shield.** Escorts close around the spent tentacle and must be punched away before push-ups pay. **Reject:** it sends phantoms at a player on the floor.
 - **D. A stream from the rift,** as in an ordinary mission. The simplest, and the least boss-like.
 
-Recommended: A in every boss fight, since it is the boss's own attack; B as well, scaled up at the very top difficulty; D only at the very top, if ever. The escort holds still while a tentacle is spent.
+Recommended: A in every boss fight, since it is the boss's own attack, and D not at all for now. B is undecided (decision 28): it adds a reason to clear volleys fast, but it also makes a struggling player's fight longer, which may feel like a punishment stacked on a punishment. Talk it through before building it. The escort holds still while a tentacle is spent.
 
 ### The Maw
 
-**Today.** OP-06, the last of the six operations. A four-minute window and one rift at double size (the portal is 8 m across), which spawns every 1.75 s with up to four phantoms live, drawn from all four phantom rules, and takes 200 damage to seal, twice the others. Its only difference from other rifts is size and feed rate (Known Issues, item 2). Chen opens with "One mouth. Twice the teeth. Twice the hunger." and closes with "The Maw is shut. It will remember how long you made it chew."
+**Today.** OP-06, the last of the six operations. One rift at double size (the portal is 8 m across) that pours a steady flood: a phantom every 0.875 s, up to eight live, drawn from all four phantom rules, and 800 health to seal. Missions have no time limit; the bracer counts the elapsed time up, and results record the fastest victory. Chen opens with "One mouth. Twice the teeth. Twice the hunger." and closes with "The Maw is shut. It will remember how long you made it chew."
 
 **As the first boss.** The Maw is that wide because something enormous is trying to come through it. Only its tentacles reach out; the body stays on the far side, because it cannot yet afford our world. That gives the first boss one thing to read, limbs to dodge and punish, and keeps the full creature back for a later reveal. It also keeps the art cost to tentacles rather than a whole creature.
 
-**Phase one: the flood** (decision 18). Today's Maw: the vast rift pours phantoms and the operator fights them, each resolve damaging the rift as it does now. Three to four minutes.
-
-**The turn.** When the rift's health reaches zero, it does not seal. The Maw convulses and tears wider. Chen: "It's not closing. Something's holding it open." The phantoms still out pull back and start to circle the rift: they become the escort. The rift's health bar refills, and from here on it is the boss's anchor. The turn is the existing seal moment repurposed, so a player already knows what the bar means.
+**Phase one: the flood** (decision 18). Today's Maw: the vast rift pours phantoms and the operator fights them, each resolve damaging the rift as it does now.
 
 **Phase two: the tentacles.** High sweeps, low sweeps, slams, spent tentacles for push-ups, and escort volleys, on an authored pattern. The anchor drains; outlast it and the tentacles pull back, the Maw closes behind them, and the mission is won. Chen's current victory line ("It will remember how long you made it chew") already fits a retreat. Three to four minutes.
 
-**Length.** Six to eight minutes together, inside the five-to-ten-minute target (decision 20), with the mission window at ten minutes as a backstop.
+**Length.** With no time limit, length is set by rift health, the spawn rate, `max_live`, and the anchor. On a Maw that will break, phase one's health is scaled down (the player cannot tell from the bar) so the whole mission stays inside five to ten minutes (decision 20).
 
-**The tutorial.** Decision 17 puts bosses only at the movement difficulties, but The Maw is currently the last tutorial operation. My recommendation (open question 2): the tutorial keeps The Maw as phase one only, and it ends with a glimpse: as the Maw closes, one tentacle reaches out, grips the edge of the rift, and is dragged back through. Chen: "Did you see that? Something bigger was holding it open." A story beat, no fight. The full two-phase Maw is the first boss mission on the war map, at the movement difficulty.
+### The turn: opening phase two
+
+The turn has to land like the opening of a boss fight (decision 21). The trick is that the player thinks they have won. Phase one ends exactly the way every rift in the game has ended so far, and the boss takes that away from them. Beat by beat, about twelve seconds:
+
+1. **The false seal (0 s).** The last resolve takes the rift to zero. The seal starts as it always does: the portal begins to dissolve, the music resolves, Chen starts her seal line: "That's it, it's clos..."
+2. **Silence (0.5 s).** She cuts off. The music stops dead. Every sound in the arena ducks except a low rumble from the rift that the player feels more than hears. The dissolve freezes, then runs backwards.
+3. **They run (1 to 3 s).** The phantoms still out stop mid-lunge, turn, and flee back to the rift. The player sees the things they have been fighting for five minutes afraid of something. They settle into a slow ring around the Maw: the escort.
+4. **It tears (3 to 5 s).** The Maw rips wider than its 8 m. The sky crack spreads. The corruption veins in the floor race from the rift to the player and run under their feet. The pylons flicker and dim. The light shifts toward the boss's colour.
+5. **The first tentacle (5 to 8 s).** One tentacle slides out along the floor toward the player, slowly, and stops two or three metres away. Then it rises until the player has to tilt their head back to see the top of it. In VR, scale is the most powerful tool we have; this is the moment to use it.
+6. **Chen (8 to 10 s).** A breath, then quietly: "It's not closing. Something's holding it open." Then: "Operator. That is not a phantom."
+7. **The roar (10 to 11 s).** A sound from the rift, low and spatial. A shockwave ring rolls out across the arena, lifting dust and rubble. It is harmless, and it passes through the player.
+8. **The fight (12 s).** The boss music hits. The rift hex on the bracer refills and its label changes to the boss's name: the anchor. Chen: "Get ready to move." The first attack is always a slow high sweep with a long tell, so the first thing the boss asks is the easiest thing it asks.
+
+Why it works:
+
+- **The false seal.** Every operator has watched rifts seal dozens of times. Undoing that is the scare.
+- **The phantoms flee.** Fear is shown, not told: the enemy the player has been beating is afraid.
+- **Silence before sound.** A hard cut to near-silence is more intense than any loud sting.
+- **Scale.** Looking up at something is the moment VR does better than any other medium.
+- **A breather that does not feel like one.** Twelve seconds with no threat after a five-minute flood is exactly the rest a workout wants before its hardest block, and it plays as the most tense moment of the mission.
+
+Comfort rules for the turn:
+
+- **No camera shake and no forced motion.** The world shakes; the player's view never does.
+- **Nothing passes through the head.** The tentacle stops short of the player; the shockwave is a ground ring below eye level.
+- **Reduced Flashes caps the light shifts,** as it does the damage tint.
+- **No control taken away.** The player can look anywhere; nothing is a cutscene.
+
+What exists to build it with: the rift's dissolve and scale (`rift_manager.gd`), the corruption veins (`arena_builder.gd`) and sky crack, the music intensity controller (`music_intensity_controller.gd`) for the duck and the cut, Chen's comms, and a boss theme prompt already written in [Music_Prompts.md](Music_Prompts.md). New: the tentacle itself, the phantoms' flee-to-ring behaviour, the reversed dissolve, and the shockwave ring. With Play My Own Music on, the player's music keeps playing; the silence beat is then carried by the game's SFX ducking, which is weaker. Worth testing whether the turn should briefly ask the system to pause the other app's audio, if Horizon OS allows it (unknown).
+
+### Does The Maw always break?
+
+No (decision 22). Not every Maw lets a boss through, so facing The Maw is never a guarantee of a boss. That makes the false seal work every time: the player cannot know until the seal either holds or does not.
+
+- **Only at the movement difficulty.** At Assist, Standard, and Operator, The Maw always seals after phase one (decision 17). Sometimes it ends on the tentacle glimpse, as foreshadowing.
+- **At the movement difficulty, sometimes.** Recommended:
+  - **The first Maw a player takes on at the movement difficulty always breaks,** so everyone who chose it meets the boss.
+  - **After that, about one in three,** decided when the mission starts.
+  - **A pity rule:** never three Maws in a row without a boss.
+  - **A hint, not an answer:** the war map shows a reading for each Maw ("Readings behind the rift: elevated"). Elevated readings raise the odds; they never make it certain. That ties the boss to the lore (it comes through when it has gathered enough) without spoiling the turn.
+
+**The tutorial** (open question 2, agreed). The tutorial keeps The Maw as phase one only and ends with a glimpse: as the Maw closes, one tentacle reaches out, grips the edge of the rift, and is dragged back through. Chen: "Did you see that? Something bigger was holding it open." A story beat, no fight. The full two-phase Maw is the first boss mission on the war map, at the movement difficulty.
+
+### Showing an expected mission time
+
+Missions have no time limit now, so players need a sense of how long a mission takes before they pick it (decision 23). Recommended:
+
+- **A range on every mission card**, on the Operations list now and on the war map later: "6 to 8 MIN".
+- **Authored first, measured later.** Start with an `expected_minutes` pair in each mission's catalog entry, set from timed headset runs. Once players have cleared it, the player's own fastest victory (already stored as a best time) appears beside it: "6 to 8 MIN. YOUR BEST 5:42."
+- **For a Maw that might break,** the range covers both outcomes ("6 to 10 MIN") and does not say why. The readings hint carries that.
 
 ### Hand tracking
 
@@ -146,7 +204,7 @@ The fallback is `XR_META_simultaneous_hands_and_controllers`, which the bundled 
 
 - **Tutorial.** No boss fight. The Maw's phase one, ending with the tentacle glimpse.
 - **Assist, Standard, and Operator missions on the war map.** No bosses. Duck-depth sweeps from ordinary rifts at most (decision 2).
-- **Full Resonance (and any difficulty above it).** Bosses, starting with the two-phase Maw: squat-depth sweeps, low sweeps to jump, side-stepped slams, push-ups on spent tentacles with hand tracking, escort volleys, and a boss that feeds on its escort.
+- **Full Resonance (and any difficulty above it).** Bosses, starting with the two-phase Maw: squat-depth sweeps, low sweeps to jump, side-stepped slams, push-ups on spent tentacles with hand tracking, escort volleys.
 
 ---
 
@@ -382,6 +440,8 @@ A boss mission adds a `boss` entry. Only the movement difficulties offer boss mi
 ```gdscript
 "boss": {
 	"phases": ["flood", "tentacles"],   # The Maw: phase one is today's rift, phase two the boss
+	"break_chance": 0.33,      # chance the flood turns into the boss; first time and pity rule override
+	"expected_minutes": [6, 10],   # shown on the mission card
 	"anchor_seconds": 210.0,   # tentacle phase length with no hits taken and no work done
 	"possession_feed": 8.0,    # anchor seconds regained per possession
 	"attacks": ["high_sweep", "low_sweep", "slam", "volley"],
@@ -451,18 +511,17 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 
 **Step 5, if step 4 passes.** Run the jump signal test (section 3, test 3) and the hand tracking tests (7 and 8). They decide whether the low sweep and the push-ups on a spent tentacle can be built at all.
 
-**Step 6. The Maw as the first boss.** A boss node with an anchor that drains, gains on possessions, and loses on work; retreat at zero. Phase one is the current Maw; at zero rift health it turns instead of sealing, the survivors become the escort, and the bar refills as the anchor. Phase two starts with the squat-depth high sweep (Step 3's hazard, now driven by a tentacle), the side-stepped slam, and escort volleys. The tutorial's phase-one-only Maw and its tentacle glimpse can be built alongside. This is the Phase 7 Maw finale.
+**Step 6. The Maw as the first boss.** A boss node with an anchor that drains, gains on possessions, and loses on work; retreat at zero. Phase one is the current Maw; at zero rift health, on a Maw that breaks, the turn plays (the false seal, the silence, the tentacle rising) instead of the seal, the survivors become the escort, and the bar refills as the anchor. Phase two starts with the squat-depth high sweep (Step 3's hazard, now driven by a tentacle), the side-stepped slam, and escort volleys. The tutorial's phase-one-only Maw and its tentacle glimpse can be built alongside. This is the Phase 7 Maw finale.
 
-**Step 7. The rest of the tentacle attacks.** The low sweep (if test 3 passed), then push-ups on the spent tentacle with hand tracking (if tests 4, 7, and 8 passed), then the feeding escort.
+**Step 7. The rest of the tentacle attacks.** The low sweep (if test 3 passed), then push-ups on the spent tentacle with hand tracking (if tests 4, 7, and 8 passed), then the feeding escort if decision 28 lands that way.
 
 ---
 
 ## 6. Open questions for David
 
-Three rounds are answered; see **Decisions** at the top. Still open, each with my recommended default:
+Four rounds are answered; see **Decisions** at the top. Still open, each with my recommended default:
 
-1. **What does a boss's retreat mean on the war map?** (Decision 11.) Recommended default until the map is designed: a retreat holds the line at that breach, and the boss can rise again at another one.
-2. **What happens to The Maw in the tutorial,** now that bosses are only at the movement difficulties? Recommended: the tutorial keeps phase one only and ends on the tentacle glimpse, a story beat with no fight. The two-phase Maw is the first boss mission on the war map.
-3. **Is there one movement difficulty or several?** "Higher difficulties" could mean Full Resonance alone, or Full Resonance and a harder step above it. Recommended: one for now. A step above it can come once there are enough bosses and attacks to make it different, not just faster.
-4. **Does the five-to-ten-minute length apply to the tutorial operations too?** Today OP-01 has a three-minute window and a clean run of all six takes about 20 minutes. Recommended: yes for OP-02 onward; OP-01 stays short so a first-time player reaches a win quickly. Note that the `duration` field is only the window; actual length comes from rift health, spawn interval, and `max_live`, so lengthening a mission means retuning those and timing real runs on the headset, not raising `duration`.
-5. **Does the boss feed on its escort?** Recommended: yes. It is the lore taken literally and gives the escort volley a purpose beyond being more phantoms.
+1. **Feeding** (decision 28). Does the boss eat its escort to buy time? Recommended: talk it through with the escort volley prototyped first; it is easier to judge once volleys exist.
+2. **How often does The Maw break at the movement difficulty?** Recommended: the first time always, then about one in three, never three misses in a row, with a readings hint on the war map.
+3. **Should the tutorial's tentacle glimpse also appear sometimes at Assist, Standard, and Operator?** Recommended: yes, rarely, as foreshadowing for players who never pick the movement difficulty. It costs nothing to fight and keeps the boss in the story for them.
+4. **Can the turn pause the player's own music?** Recommended: find out whether Horizon OS lets an app request it; if not, accept that the silence beat is weaker with Play My Own Music on.
