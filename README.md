@@ -1,10 +1,10 @@
 # Phantom-Fray
 
-You are a soldier in a world that is being invaded by an alien phantom race that cannot be touched or killed through by flesh or normal weaponry. A breakthrough has been made and you have been recruited and equipped with new melee weapons that effectively destroy the phantoms instantly once they are touched. But if enough of them get inside your body, they will suck out your life force and you will die. It is your mission to drive the invaders from the world and restore peace.
+You are a soldier in a world that is being invaded by an alien phantom race that cannot be touched or killed through by flesh or normal weaponry. A breakthrough has been made and you have been recruited and equipped with new melee weapons that effectively destroy the phantoms instantly once they are touched. But the gauntlets run on your own life force, and every phantom that gets inside you drains it. Let it run dry and the gauntlets' failsafe fires, throwing the phantoms off but knocking you out, and the RSF recovery team has to drag you out with the breach still open. It is your mission to drive the invaders from the world and restore peace.
 
 ## Game Mechanics
 
-This is a Virtual Reality game that uses a VR controller that has a gripper and a button. The player can use the gripper to punch the phantoms. The player is stationary but can dodge the phantoms. The phantoms will try to touch the player and if they do, the player will lose life force and the game will end. The player can punch the phantoms to destroy them and if they destroy enough of them, they will win the game.
+This is a Virtual Reality game that uses a VR controller that has a gripper and a button. The player can use the gripper to punch the phantoms. The player is stationary but can dodge the phantoms. The phantoms will try to touch the player, and each touch drains life force. If life force runs out, the gauntlets' failsafe fires, the recovery team pulls the player out, and the mission is failed. The player can punch the phantoms to destroy them and if they destroy enough of them, they will win the game.
 
 1. Player Movement:
    - Stationary position with ability to dodge, duck, and possibly jump
@@ -112,3 +112,9 @@ Final confrontation: All of this could build up to a climactic mission where you
 8. The ERM Advantage:
    - The ERM gauntlets don't just destroy Phantoms; they can also temporarily reverse the life force drain in recently affected victims.
    - This makes RSF operators not just warriors, but potential saviors, adding an extra layer of urgency to their missions.
+
+9. The Failsafe and the Recovery Team:
+   - The gauntlets draw on the operator's own life force, so Dr. Chen reads the operator's vitals live through them. That is how she knows, over comms, the moment an operator starts to fade.
+   - If an operator's life force collapses, the gauntlets' failsafe inverts the ERM and dumps its whole charge at once. The burst throws every Phantom off the operator and stops the drain, but it knocks the operator out and leaves the gauntlets spent.
+   - An RSF recovery team waits at the pylon line on every deployment. When the failsafe fires, they go in and drag the operator clear. The operator survives, but the breach stays open, and the failsafe has to recharge before the next attempt.
+   - Operators are never consumed in the field. Failing a mission means being pulled out, not dying, which is why an operator can go back into the same breach and try again.

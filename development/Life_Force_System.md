@@ -15,6 +15,15 @@ The Life Force System represents the player's vital energy and their resistance 
   - Natural recovery: +1 unit/second when no phantom contact for 3 seconds
   - Future power-up potential: Temporary recovery boost items
 
+### Depletion: Failsafe and Recovery
+The operator never dies. Reaching 0 life force ends the mission as a failure, framed in the fiction like this:
+- The gauntlets run on the operator's life force, which is also why Dr. Chen can read the operator's vitals live over comms.
+- At 0, the gauntlets' failsafe inverts the ERM and dumps its whole charge. The burst throws the phantoms off and stops the drain, but it knocks the operator out.
+- The RSF recovery team waiting at the pylon line goes in and drags the operator clear. The breach stays open.
+- The next attempt starts with the failsafe recharged. Chen's retry lines acknowledge it ("Failsafe's recharged. Let's try that again.").
+
+A phantom getting into the operator ("possession" in code) is a hit that drains life force, not death. Chen's critical-life lines warn that the failsafe is about to fire, and her defeat lines are her calling in the recovery team. Results, debriefs and voice lines should all keep to this framing.
+
 ### Visual Representation
 
 #### Body Aura System

@@ -1,17 +1,32 @@
 {
   "speaker": "CHEN",
-  "voice": "Dr. Elara Chen, RSF science lead, on comms to the operator. Clipped and focused, quietly urgent, dry under pressure. Never shouts except at critical life force. Each line is short enough to say in under three seconds. The game adds a radio filter, so record clean.",
+  "voice": "Dr. Elara Chen, RSF science lead, on comms to the operator. She built the ERM gauntlets, and because they run on the wearer's life force she reads the operator's vitals live through them. If those vitals collapse, the gauntlets' failsafe dumps its charge to throw the phantoms off, and the recovery team waiting at the pylon line pulls the operator out. Clipped and focused, quietly urgent, dry under pressure. Never shouts except at critical life force. Each line is short enough to say in under three seconds. The game adds a radio filter, so record clean.",
   "files": "Each line is a file named <event>_<number>.ogg in this folder, numbered from 1 in the order listed. Drop in a new recording with the same name to replace a placeholder.",
   "events": {
     "mission_start": {
       "priority": 2, "cooldown": 0, "tag": "[focused]",
-      "note": "The countdown just ended. Calm, ready.",
-      "lines": ["Gauntlets are live. Here they come.", "Resonance is stable. Go to work, operator.", "Breach is open. Stay inside the ring.", "Readings are spiking. Get ready.", "They know you're here. Hands up."]
+      "note": "The countdown just ended, on a breach the operator has tried before but not yet sealed. Calm, ready.",
+      "lines": ["Gauntlets are live. Here they come.", "Resonance is stable. Go to work, operator.", "Breach is open. Stay inside the ring.", "Readings are spiking. Get ready.", "They know you're here. Hands up.", "Field's up. Recovery team's on the line. Go.", "I'm reading movement in the rift. Here they come.", "Your vitals look good. Let's close this."]
+    },
+    "mission_start_first": {
+      "priority": 2, "cooldown": 0, "tag": "[focused]",
+      "note": "The operator's first attempt at this breach. Watchful, a little protective.",
+      "lines": ["New ground, operator. Watch how they move here.", "First time at this breach. Read them before you chase them.", "We haven't seen this rift before. Eyes open.", "Fresh breach. I'll call what I can."]
+    },
+    "mission_start_retry": {
+      "priority": 2, "cooldown": 0, "tag": "[determined]",
+      "note": "Last attempt at this breach ended with the failsafe firing. Steady, no blame.",
+      "lines": ["Failsafe's recharged. Let's try that again.", "You're back on your feet. This time, keep them off you.", "Same rift. You know what's coming now.", "Recovery team cleared you. Back in."]
+    },
+    "mission_start_replay": {
+      "priority": 2, "cooldown": 0, "tag": "[dry]",
+      "note": "The operator has already sealed this breach. Dry, a little challenging.",
+      "lines": ["You've sealed this one before. Do it faster.", "Familiar ground. Show me a cleaner run.", "You know this breach. Let's beat your best.", "Back again? Good. Make it sharper."]
     },
     "rift_ahead": {
       "priority": 1, "cooldown": 6, "tag": "[alert]",
       "note": "A new rift opened in front of the operator.",
-      "lines": ["Another rift, dead ahead.", "New rift, right in front of you.", "Rift opening ahead of you.", "Fresh tear, straight ahead."]
+      "lines": ["Another rift, dead ahead.", "New rift, right in front of you.", "Rift opening ahead of you.", "Fresh rift, straight ahead."]
     },
     "rift_oclock_2": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "A rift opened out of view. Give the bearing crisply.", "lines": ["New rift, your two o'clock.", "Rift opening at two o'clock.", "Contact, two o'clock. New rift.", "Two o'clock. Another rift's open."]},
     "rift_oclock_3": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "As above.", "lines": ["New rift, your three o'clock.", "Rift on your right. Three o'clock.", "Contact, three o'clock. New rift.", "Your right side. Rift opening."]},
@@ -32,14 +47,14 @@
       "note": "A rift closed and more remain. Brief satisfaction.",
       "lines": ["Rift sealed.", "That one's closed. Good.", "Seal confirmed.", "It's shut. Next one.", "Clean seal. Keep moving."]
     },
-    "first_yellow": {"priority": 1, "cooldown": 0, "tag": "[instructive]", "note": "First yellow Angler of the session. Teaching, quick.", "lines": ["Yellow. Left hand. Go for the lure.", "That's a yellow. Hit the lure with your left.", "Yellow means left. Aim for the light.", "Left hand on the yellows. Strike the lure."]},
-    "first_blue": {"priority": 1, "cooldown": 0, "tag": "[instructive]", "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure.", "That's a blue. Hit the lure with your right.", "Blue means right. Aim for the light.", "Right hand on the blues. Strike the lure."]},
-    "first_green": {"priority": 1, "cooldown": 0, "tag": "[instructive]", "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands.", "Greens won't break to one hand. Use both.", "Green incoming. Both fists, block it.", "Catch the green on both hands."]},
-    "first_pink": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane.", "Pink charge. Sidestep it.", "Watch the pink. Get out of its line.", "Pink's lining up on you. Move."]},
+    "first_yellow": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First yellow Angler of the session. Teaching, quick.", "lines": ["Yellow. Left hand. Go for the lure.", "That's a yellow. Hit the lure with your left.", "Yellow means left. Aim for the light.", "Left hand on the yellows. Strike the lure."]},
+    "first_blue": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure.", "That's a blue. Hit the lure with your right.", "Blue means right. Aim for the light.", "Right hand on the blues. Strike the lure."]},
+    "first_green": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands.", "Greens won't break to one hand. Use both.", "Green incoming. Both fists, block it.", "Catch the green on both hands."]},
+    "first_pink": {"priority": 2, "cooldown": 5, "tag": "[urgent]", "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane.", "Pink charge. Step aside.", "Watch the pink. Get out of its line.", "Pink's lining up on you. Move."]},
     "wrong_hand": {
       "priority": 1, "cooldown": 20, "tag": "[firm]",
       "note": "The operator hit with the wrong hand. Corrective, not scolding.",
-      "lines": ["Wrong hand. Match the color.", "Other hand, operator.", "That one needs your other hand.", "Match the hand to the color.", "Switch hands."]
+      "lines": ["Wrong hand. Match the color.", "Other hand, operator.", "That one needs your other hand.", "Match the gauntlet to the color.", "Argh, other hand next time."]
     },
     "combo_rising": {
       "priority": 0, "cooldown": 25, "tag": "[approving]",
@@ -52,41 +67,49 @@
       "lines": ["Maximum resonance!", "Full resonance. Hold it there.", "You're peaking. Don't stop now.", "Resonance is maxed. Beautiful."]
     },
     "life_caution": {
-      "priority": 1, "cooldown": 20, "tag": "[concerned]",
+      "priority": 1, "cooldown": 10, "tag": "[concerned]",
       "note": "Life force is slipping. A heads-up.",
       "lines": ["You're taking drain. Watch your space.", "Life force dropping. Stay sharp.", "They're feeding on you. Tighten up.", "Your readings dipped. Keep them off you.", "Careful. You're losing life force."]
     },
     "life_danger": {
-      "priority": 2, "cooldown": 15, "tag": "[worried]",
+      "priority": 2, "cooldown": 5, "tag": "[worried]",
       "note": "Life force is low. Concerned.",
       "lines": ["Your readings are falling fast.", "You can't take many more of those.", "Life force is low. Defend yourself.", "You're fading, operator. Focus.", "That's too much drain. Keep them away."]
     },
     "life_critical": {
       "priority": 3, "cooldown": 12, "tag": "[shouting]",
       "note": "One more touch could end it. The only place she raises her voice.",
-      "lines": ["You're critical! Dodge, block, anything!", "Life force critical. Don't let them touch you.", "You're almost gone! Fight!", "Critical! One more and you're out!", "Stay alive, operator! Move!"]
+      "lines": ["You're critical! Dodge, block, anything!", "Life force critical. Don't let them touch you.", "You're almost gone! Fight!", "Critical! One more and the failsafe fires!", "Failsafe's primed! Don't make it fire!"]
     },
     "possessed": {
       "priority": 2, "cooldown": 9, "tag": "[urgent]",
       "note": "A phantom just got into the operator. Sharp.",
       "lines": ["It's in you. Shake it off!", "Contact! Push through it.", "Drain spike. Keep moving.", "It got through. Stay up.", "You're hit. Breathe, and keep fighting."]
     },
-    "time_60": {"priority": 2, "cooldown": 0, "tag": "[focused]", "note": "One minute left on the mission window.", "lines": ["Sixty seconds on the window.", "One minute left.", "Clock's running. Sixty seconds.", "A minute to close this."]},
-    "time_30": {"priority": 2, "cooldown": 0, "tag": "[urgent]", "note": "Thirty seconds left.", "lines": ["Thirty seconds. Close it now.", "Thirty seconds left. Finish it.", "We're nearly out of time.", "Thirty seconds, operator. Everything you've got."]},
     "victory": {
       "priority": 3, "cooldown": 0, "tag": "[relieved]",
-      "note": "Every rift sealed. Relief, quiet pride.",
-      "lines": ["Rifts sealed. That's a clean breach, operator.", "All seals holding. Good work.", "Breach closed. You did it.", "It's quiet. That's your work, operator.", "Every rift sealed. Come on home."]
+      "note": "Every rift sealed, after an ordinary fight. Relief, quiet pride.",
+      "lines": ["Rifts sealed. That's a clean breach, operator.", "All seals holding. Good work.", "Breach closed. You did it.", "It's quiet. That's solid work, operator.", "Every rift sealed. Come on home.", "Readings are flat. The breach is gone.", "That's the last of them. Stand down.", "Seals confirmed. Recovery team, bring the operator in."]
+    },
+    "victory_flawless": {
+      "priority": 3, "cooldown": 0, "tag": "[amazed]",
+      "note": "Every rift sealed and the operator never took a single drain. Genuinely impressed, a rare warmth.",
+      "lines": ["Not a scratch on you. Remarkable.", "Zero drain. I've never seen a reading like that.", "They never touched you. Perfect run.", "Flawless, operator. Absolutely flawless."]
+    },
+    "victory_critical": {
+      "priority": 3, "cooldown": 0, "tag": "[shaky]",
+      "note": "Every rift sealed with the operator at critical life force. Relief through adrenaline.",
+      "lines": ["That was far too close. But it's sealed.", "You're barely standing, and it's closed. Get out of there.", "Sealed, with nothing left in you. Don't do that to me again.", "The failsafe was a breath from firing. Good thing we didn't need it."]
+    },
+    "victory_record": {
+      "priority": 3, "cooldown": 0, "tag": "[proud]",
+      "note": "Every rift sealed with a new personal best score on this breach. Proud, a little competitive.",
+      "lines": ["That's your best score on this breach.", "New record, operator. Faster and harder.", "Best run yet. The numbers don't lie.", "You just beat your own record."]
     },
     "defeat": {
       "priority": 3, "cooldown": 0, "tag": "[urgent]",
-      "note": "The operator's life force collapsed. Urgent, then steady.",
-      "lines": ["Operator down. Pulling you out.", "We lost you. Pulling you back.", "Your signal's gone. Extracting now.", "Life force collapsed. Bringing you home."]
-    },
-    "timeout": {
-      "priority": 3, "cooldown": 0, "tag": "[disappointed]",
-      "note": "The mission window closed with rifts still open. Disappointed, practical.",
-      "lines": ["The window's closed. We'll go again.", "Out of time. The rifts are holding.", "The window's gone. Regroup.", "We missed the window. Next time."]
+      "note": "Life force collapsed. The gauntlets' failsafe has just dumped its charge, throwing the phantoms off and knocking the operator out, and Chen is sending in the recovery team from the pylon line. Urgent, then steady.",
+      "lines": ["Failsafe's firing! Recovery team, go!", "Gauntlets are dumping. Hold on, we're coming for you.", "Failsafe triggered. Get the operator out of there!", "You're down. Recovery team, move!", "Failsafe burst. They're off you. Pulling you clear."]
     }
   }
 }
