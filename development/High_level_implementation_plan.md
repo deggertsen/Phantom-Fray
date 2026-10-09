@@ -33,8 +33,8 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - [x] Two-hand block, lane dodge
 - [x] Chain multiplier and crit bonus
 - [x] Pressure scaling per wave
-- [ ] Difficulty tiers
-- [ ] Low approaches for squats and uppercuts
+- [ ] Difficulty per mission on the world map (Assist, Standard, Operator, Full Resonance)
+- [ ] Low approaches for squats and uppercuts (squat detector prototype built, off by default)
 - [ ] Validate the strike-window feel with untold testers
 
 ## 4. Additional features
@@ -45,7 +45,7 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - [ ] Shield phantom needing a punch sequence (see Ideas_Backlog.md)
 - [ ] Environmental hazards (see Ideas_Backlog.md)
 - [ ] Power-ups (see Ideas_Backlog.md)
-- [ ] Boss battles and The Maw finale
+- [ ] Bosses: The Maw as the first boss, then bosses on the war map (see Exercise_Mechanics_Exploration.md)
 - [ ] Hand tracking as an input option
 
 ## 5. Fitness (Phase 6)

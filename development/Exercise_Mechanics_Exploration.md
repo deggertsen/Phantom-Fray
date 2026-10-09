@@ -1,14 +1,110 @@
 # Exercise Mechanics Exploration: Squats, Jumps, Push-ups
 
-**Written:** 2026-10-09
+**Written:** 2026-10-09. **Updated** the same day with David's answers and his boss proposal.
 **Status:** Exploration. Nothing here is scheduled except where the roadmap links it. A squat detector prototype exists behind a debug flag (`Scripts/Player/squat_detector.gd`, off by default).
-**Question:** How could Phantom Fray require squats, jumps, and push-ups, with harder tiers that demand them, using only a Quest 3 headset and its controllers?
+**Question:** How could Phantom Fray require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
 
 ## The short answer
 
-Build squats first, as a detected movement with its own hazard: the Overseer's **resonance sweep**, a horizontal blade of rift energy that crosses the arena at head height and has to be squatted under. It needs no body tracking, it scales to every player's height on its own, it is the safest of the three, and it fits the existing rules (it resolves like the pink dodge, so it already scores, chains, and damages the rift). Jumps are a top-tier option at most, after headset testing, because landing blind in a 515 g headset is the riskiest thing in this document. Push-ups belong in a separate, phantom-free "ground the gauntlets" seal phase, and only after a tracking test proves Quest 3 can see the controllers and the floor with the headset 40 cm above it.
+Bosses carry the movements. A boss attacks with its limbs, and each attack has one physical answer: squat under a high sweep, brace overhead against a slam, jump a low sweep, and do push-ups to drive resonance through the floor into a limb the boss has pinned in the ground. A boss cannot stay in our world for long, so the fight is a survival interval with a known length, which is exactly the shape of a workout block. These encounters live in the harder missions on the world map; the current six operations become the tutorial that teaches every mechanic first.
+
+Build squats first: the detector exists, the high sweep is the safest and most readable attack, and it fits the existing rules (it resolves like the pink dodge, so it scores, chains, and damages). Jumps are in scope but wait for a headset test of whether head tracking can see them. Push-ups wait for hand tracking, which removes the worst problem (body weight on the controllers).
 
 The one design fact that shapes everything below: **a target's position cannot force a squat.** A phantom at knee height can be reached by bending at the waist, which is worse exercise and harder on the back. What we can measure is the head. So every mechanic here is a rule about where the head is, not where the fist lands, and the detector's job is to tell a squat from a bend.
+
+## Decisions (David, 2026-10-09)
+
+1. **Difficulty is chosen per mission on the world map.** The six current operations become the tutorial that introduces every mechanic. After that, the player picks missions from the war map by difficulty, not by number. Movement demands live only at the higher difficulties, which some players will never choose.
+2. **Standard missions include duck-depth sweeps.** Nothing deeper than the pink duck already asks.
+3. **Push-ups are done palms flat, never with weight on the controllers.** The goal is hand tracking instead of controllers, possibly as a requirement at the highest difficulties.
+4. **Jumps are in scope.**
+5. **A bend instead of a squat loses the bonus,** it does not fail the dodge. Chen corrects it.
+6. **Squats (and the other movements) count in the session stats.**
+7. **No heart-rate claim.** Chen reads resonance, computed from movement.
+8. **The movement difficulty is available from the start** of the world map.
+9. **Calibration happens in the three-second countdown** every mission, plus the rolling estimate. No calibration screen.
+
+---
+
+## Bosses carry the movements
+
+### The proposal
+
+A boss attacks with tentacles:
+
+- **High sweep** across the whole battlefield. Squat under it.
+- **Slam** from above. A shield that only works close to the ground; get into push-up position.
+- **Low sweep** along the ground. Jump it at the right moment.
+
+And the lore: a boss burns enormous energy just to stay in our plane. It can only come through at all by draining a city's worth of life force first, which is why bosses rise at dead cities. Its life drains on its own. Stay alive long enough and it has to retreat into its rift.
+
+### What I think
+
+The boss frame is better than my first pass, for three reasons:
+
+- **Readability.** A tentacle you watch rear back is a clearer tell than an abstract blade of energy. The body is the telegraph.
+- **The movements become answers, not exercises.** Nobody squats because the game asked for squats; they squat because a limb the size of a bus is coming through the space their head is in.
+- **Pacing is authored.** Pool spawns are random; a boss's attack pattern is scripted. That means we control exactly how many squats and jumps a minute asks for, and when the rests come. That is the safety budget from section 3, built into the encounter.
+
+**High sweep, squat: yes, as proposed.** The tentacle draws back on one side of the arc, the pylons on both sides light a line at the sweep height, Chen calls "Low!", and it crosses at `standing_height * (1 - squat_depth)`. A bend survives it but loses the bonus. This is the resonance sweep from section 2 with a body; the hazard code is the same.
+
+**Low sweep, jump: yes, with three conditions.**
+
+- **A generous, measured window.** The tentacle's speed is authored, so we know the moment `T` it crosses the player. A jump passes if the detected flight covers `T`, or takeoff happened in the 0.35 s before it. The exact numbers come from the jump signal test (section 3, test 3); a detector that misses a real jump punishes a player who did the right thing, which is the worst failure in this document.
+- **It should read like a skipping rope.** Sweeping from one side so the player watches it come is the most readable version. Two or three in a row is a skipping run, which is honest cardio. Never more than three without a rest.
+- **Chen gives the space check** before the first one in a mission: "It's going for your feet. Check your space."
+
+**Slam, push-up shield: I agree it is the weak one,** and not only for the lore:
+
+1. **Timing.** Getting from standing to chest-near-the-floor takes one to two seconds, and doing it fast is the uncontrolled drop that injures people in a headset (knees and wrists hitting the floor). A dodge demands speed; a push-up should be controlled.
+2. **Sight.** Face down, the player cannot see the tentacle above. The threat leaves the view at the moment it matters.
+3. **No reps.** One shield is one trip to the floor. The repeated push-ups you want do not come from it.
+
+### Two changes I would make to the slam
+
+**The slam is answered with an overhead brace.** Both gauntlets up over the head, close together, knees bent, and catch it. Fiction already supports it: the ERM field is strongest between the two gauntlets, which is why the green Carapace needs both hands. This is the Carapace rule at boss scale. Detection: both hands above head height and within 40 cm of each other at the moment of impact, head at least 10 % below standing. It keeps the player upright and looking at the threat, and it is a squat with a shoulder press, which works hard.
+
+**The push-ups move to offense.** A slam that is braced (or that misses) buries the tentacle in the breach floor in front of the player. While it is pinned, the boss is anchored and cannot attack with it, and its other limbs hold back while it struggles. The operator goes to the floor and drives resonance through the ground into the buried tentacle: every push-up sends a pulse along the floor to it. Enough pulses sever it, and the boss loses that attack for the rest of the fight (or a large chunk of its anchor, below).
+
+Why this is better:
+
+- **The lore holds.** Chen built the ERM to discharge through the ground, like a lightning rod. "Ground the gauntlets" stops being a ritual and becomes a weapon with a target.
+- **The floor phase is safe by construction.** The boss is pinned, so nothing can arrive while the player is down. That was the hard requirement from section 3.
+- **The player sets the pace.** Push-ups are controlled reps, not a race to the floor.
+- **The floor is the readout.** Face down, the player sees each pulse run across the floor to the tentacle and the tentacle crack. No need to look up.
+- **It is a reward, not a toll.** Since the boss drains on its own, push-ups are how a player drives it out faster. A player who cannot do push-ups can still survive the fight.
+
+Other push-up ideas I considered: push-ups to recharge life force between boss phases (the lore is shaky, since exertion should cost life force, not restore it), and push-ups to get back up after a slam knocks you down (a punishment, and it puts a player on the floor while the boss is free). I would not pursue either.
+
+### The drain-to-retreat lore
+
+It fits the existing lore exactly. Phantoms already "consume positive life energy to maintain their form in our dimension"; a boss is the extreme case, so large it can only hold its form for minutes. It also explains our arena: bosses rise at dead cities because that is where they fed to come through.
+
+Mechanically, the boss has an **anchor** that drains steadily. At zero it retreats. Surviving is success. Two refinements make it more than a timer:
+
+- **Possessions feed it.** Every time the boss or its phantoms drain the operator, its anchor refills a little. Mistakes keep it here longer. That is the lore taken literally, and it makes survival a skill test.
+- **Damage drains it faster.** Punches to exposed weak points and severed tentacles take anchor directly. Drive it out before a threshold and the rift collapses on it: **banished**, not just retreated. A retreated boss survives and can rise again elsewhere on the war map, which gives the map a recurring villain. A banished boss pushes the front line further.
+
+For fitness: with no hits taken and no damage dealt, the anchor sets a maximum fight length (three to four minutes is a good first number). That is a known interval a player can plan a session around, and the work they put in shortens it.
+
+### Hand tracking
+
+The goal of dropping controllers for hand tracking fits the floor work exactly. Palms go flat on the floor with nothing in them, and tracked hand joints on the floor give a precise local floor height. For push-ups, hand tracking is the right input.
+
+As the requirement for whole high-difficulty missions, it needs a headset test before it is decided:
+
+- **Punch speed.** Strikes need hand velocity up to 10 m/s (`hand_collision.gd`). Hand tracking is weakest on fast motion; a full-speed hook may lose the hand or arrive late. Test: 20 full-speed jabs, hooks, and uppercuts, counting dropped or late hand poses.
+- **Haptics.** Strike feedback tiers (normal, crit, half block, rejected) are controller haptics. With bare hands there is no touch feedback at all; audio and VFX would have to carry it.
+- **Field of view.** Hands are only tracked where the headset cameras see them. Wide hooks and blocks close to the face are at the edges.
+- **The strike rule.** "Grip held and moving fast" would become "fist closed and moving fast", read from finger curl.
+
+There is a middle path worth checking. The project ships `godotopenxrvendors` 5.1.0, whose changelog lists `XR_META_simultaneous_hands_and_controllers`. If that works on Quest 3 in Godot 4.7.1, a player could fight with controllers and let them hang on the straps for the floor phase with their hands tracked, no menu switch. I have not tested it. The export presets currently set `meta_xr_features/hand_tracking=0`.
+
+### Where bosses sit
+
+- **Tutorial (the current six operations).** The Maw becomes the first boss: a high sweep at duck depth and a braced slam, nothing else. It teaches the boss rules at an intensity everyone can do.
+- **Standard world-map missions.** Duck-depth sweeps, slams braced overhead.
+- **The movement difficulty (Full Resonance).** Squat-depth sweeps, low sweeps to jump, pinned tentacles for push-ups. Possibly hand tracking required, if the test above passes.
 
 ---
 
@@ -92,6 +188,8 @@ Recommended, and what the prototype does:
 
 **Unknowns (all need the headset):** whether Quest 3 holds 6DoF tracking with the headset pointed at a featureless floor from 30 to 50 cm, whether the controllers stay tracked on the floor directly under the headset, and whether Quest's automatic switch to hand tracking fires when the controllers are let go. The project does not enable the hand tracking extension (validation logs `Property not found: 'xr/openxr/extensions/hand_tracking'`), so I expect the app to keep seeing controllers, but that is a guess.
 
+**With hand tracking** (the direction since the update): the same head rule counts reps, and the plank test becomes "both palms within 8 cm of the floor and flat", read from the hand joints. The palm joints at rest give the local floor directly. Godot 4.7 exposes tracked hands through `XRHandTracker` (from `XRServer.get_tracker(&"/user/hand_tracker/left")` and `right`); confirm the tracker names and joint confidence values on 4.7.1 before building on them.
+
 ---
 
 ## 2. Mechanics
@@ -107,6 +205,8 @@ Each candidate is scored 1 (poor) to 5 (strong). **Cost** is reversed: 5 means c
 | **E. Breach wave** | Jump | 3 | 2 | 3 | 4 | 4 | Top tier only, if ever. |
 | **F. High lure** | Jump | 3 | 1 | 3 | 4 | 3 | Reject. Replace with a reach. |
 | **G. Push-up exorcism** | Push-ups | 2 | 1 | 4 | 3 | 4 | Reject. |
+
+Since the update, the boss attacks absorb the best of these: A becomes the tentacle's high sweep, B its roar, D its pinned tentacle, and E its low sweep. The candidate notes below still hold for the detection and code underneath.
 
 ### A. Resonance sweep (squat under it)
 
@@ -141,7 +241,7 @@ Cost 2: it is a new round phase (a rift that will not close until the ritual end
 
 ### E. Breach wave (jump over it)
 
-A ring of energy runs out from the rift along the floor; the player jumps it. We cannot see feet, so the rule is "the head rose and fell like a jump while the wave passed". Readable enough, but it asks for repeated blind landings, and a missed detection punishes a player who really jumped. Top tier only, never more than one every 20 seconds, never combined with a punch, and only if the headset test in section 3 says detection is reliable.
+A ring of energy runs out from the rift along the floor; the player jumps it. We cannot see feet, so the rule is "the head rose and fell like a jump while the wave passed". Readable enough, but it asks for repeated blind landings, and a missed detection punishes a player who really jumped. Top tier only, never more than one every 20 seconds, never combined with a punch, and only if the headset test in section 3 says detection is reliable. (Update: jumps are in scope, as the boss's low sweep. The tentacle reads better than a ring because its arrival is visible from the side; a run of up to three sweeps counts as one demand, followed by at least 20 seconds without one.)
 
 ### F. High lure (jump to punch)
 
@@ -188,24 +288,26 @@ Meta's store comfort ratings (Comfortable, Moderate, Intense) describe **motion*
 - Movement demands are opt-in (section 4), introduced in training before they appear in an operation.
 - A warm-up first operation on the movement tier: fewer squats, no jumps or push-ups.
 - Chen gives the boundary and space check before the first floor phase or jump, not buried in a menu.
-- A comfort setting separate from difficulty: **Movement intensity** (Off, Squats, Squats and floor, Everything). Off must exist and must leave every operation winnable.
+- The opt-in is the difficulty a player picks on the world map (decision 1). Every mission must have a difficulty with no detected movement, and the tutorial operations never ask for one. A separate **No jumps** switch inside Full Resonance is worth having for knees, pregnancy, and downstairs neighbours (open question 1).
 
 ### What needs the headset before anything ships
 
 1. **Calibration:** turn on `debug_enabled` on the Player's `SquatDetector` and stand still. Standing height on the overlay matches eye height (floor to eyes, measured) within 3 cm. Repeat after a recenter: it does not move.
 2. **Squat rules, five players if possible, at least two heights:** 20 squats, 20 waist bends, 20 pink-style side ducks, 20 shallow ducks. Squats count at least 19 of 20; bends, side ducks, and shallow ducks count at most 1 of 20 each. Note every false reason on the overlay.
 3. **Jump signal:** 10 small jumps and 10 calf raises. Write down the `peak up` reading for each. If the two sets do not separate by at least 0.3 m/s, jump detection is not viable with head tracking alone.
-4. **Push-up tracking:** plank with gauntlets in hand, then palms flat with gauntlets resting. Log `tracking_confidence` for head and both controllers through 10 reps, on carpet and on a plain floor. Any `NONE` or position jump over 5 cm kills that form.
+4. **Push-up tracking:** palms flat, first with the gauntlets resting on their straps, then with controllers put aside and hand tracking on. Log `tracking_confidence` for the head and both hands or controllers through 10 reps, on carpet and on a plain floor. Any `NONE` or position jump over 5 cm kills that form.
 5. **Landing comfort:** 10 jumps in the stock strap. Does the view blur, does the headset shift, does it hurt?
 6. **Fatigue:** one 20-minute run of the movement tier draft. Heart rate if a watch is handy, and a written note on what hurt.
+7. **Hand tracking at punch speed:** 20 full-speed jabs, hooks, and uppercuts with hand tracking. Count dropped or late hand poses, and log the hand velocity the tracker reports. If more than 2 in 20 drop, hand tracking cannot be required for combat.
+8. **Simultaneous hands and controllers:** enable `XR_META_simultaneous_hands_and_controllers` from `godotopenxrvendors` and check whether letting the controllers hang on their straps switches those hands to tracked hands without a menu, and back again on grip.
 
 ---
 
-## 4. Difficulty tiers
+## 4. Difficulty on the world map
 
 ### Shape
 
-Mission tables stay authored once, at Standard. A tier is a transform applied to each wave when the rift is configured, so OP-01 to OP-06 do not grow four copies each. Something like:
+Since decision 1, difficulty is not a campaign setting. The six current operations are the tutorial, run at Standard (Assist available) with no detected movement. After the tutorial, the war map offers missions, each with a difficulty the player picks. Mission tables stay authored once, at Standard, and a difficulty is a transform applied to each wave when the rift is configured, so a map mission does not need four copies. Something like:
 
 ```gdscript
 # Scripts/Core/difficulty_tier.gd (proposed)
@@ -214,7 +316,7 @@ const TIERS := {
 	"standard": {"speed": 1.00, "telegraph": 1.00, "health": 1.00, "contact": 1.0, "squat_depth": 0.12, "movement": []},
 	"operator": {"speed": 1.12, "telegraph": 0.85, "health": 1.15, "contact": 1.25, "squat_depth": 0.12, "movement": []},
 	"full_resonance": {"speed": 1.00, "telegraph": 1.00, "health": 1.10, "contact": 1.0, "squat_depth": 0.20,
-		"movement": ["sweep", "skitter", "brace", "ground_slam"]},
+		"movement": ["sweep", "skitter"], "boss_attacks": ["low_sweep", "pin"]},
 }
 
 static func apply(wave: Dictionary, tier: String) -> Dictionary
@@ -232,14 +334,22 @@ static func apply(wave: Dictionary, tier: String) -> Dictionary
 
 The `contact` multiplier is a change to `Phantom.contact_damage` at spawn, alongside `apply_pressure`.
 
-### The tiers
+A boss mission adds a `boss` entry that the difficulty also transforms:
 
-- **Assist, Standard, Operator** stay about speed, tell length, health, and damage, as the roadmap says. No detected movement is required. A Standard sweep can appear at duck depth (12 %), which any duck or bend clears, the same as the pink lane today.
-- **Full Resonance** (new, top): the movement tier. It is an intensity, not a harder Operator: speed and tells stay at Standard so the extra work is the body, not reaction time. It is unlocked from the start (it is a workout choice, not a reward) and labelled with what it asks for.
+```gdscript
+"boss": {
+	"anchor_seconds": 210.0,   # fight length with no hits taken and no damage dealt
+	"possession_feed": 8.0,    # anchor seconds regained per possession
+	"banish_before": 120.0,    # drive it out inside this and the rift collapses on it
+	"attacks": ["high_sweep", "slam"],   # the difficulty adds "low_sweep" and "pin"
+	"phantom_waves": [...],    # a light stream of regular phantoms, held back while it is pinned
+}
+```
 
-### Should Standard stay movement-free?
+### The difficulties
 
-Yes, with one exception I would argue for: the Phase 9 low approaches. A shallow sweep at duck depth asks nothing the pink lane does not already ask, and it makes the standard campaign move more without gating anyone. Real squats, floor touches, and anything that leaves the ground stay in Full Resonance and behind the Movement intensity setting.
+- **Assist, Standard, Operator** stay about speed, tell length, health, and damage, as the roadmap says. No detected movement is required. Sweeps appear at duck depth (12 %), which any duck or bend clears, the same as the pink lane today (decision 2). Boss slams are braced overhead.
+- **Full Resonance** (new, top): the movement difficulty. It is an intensity, not a harder Operator: speed and tells stay at Standard so the extra work is the body, not reaction time. Squat-depth sweeps, low sweeps to jump, pinned tentacles for push-ups. Available from the start of the world map (decision 8) and labelled with what it asks for. Possibly hand tracking only, pending tests 7 and 8 in section 3.
 
 ### What Chen says
 
@@ -251,6 +361,13 @@ Chen reads the operator's vitals through the gauntlets, so this tier is hers to 
 - **Brace:** "Brace. Get low and hold it."
 - **Seal ritual:** "It's fighting the seal. Ground the gauntlets." / "Three more. It's holding." / "Sealed. Up. Slowly."
 - **Space check before the first floor phase:** "Check your space. You're going to the floor."
+- **Boss rising:** "That's not a scout. It fed on this whole city to get through." / "It can't hold that shape for long. Outlast it."
+- **High sweep:** "Low!" / "Under it."
+- **Slam:** "Hands up, together. Catch it."
+- **Low sweep:** "It's going for your feet. Jump it."
+- **Pinned:** "It's stuck in the floor. Ground the gauntlets. Drive it in."
+- **Retreat:** "It's losing its grip on this side. Hold on." / "It ran. It'll be back somewhere else."
+- **Banished:** "The rift closed on it. It's not coming back."
 - **Debrief:** "Your resonance never dropped. Good." / "I logged forty squats. Your legs will tell you tomorrow."
 
 ---
@@ -277,7 +394,7 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 
 **Step 2. Headset tuning session (no gameplay).** Turn on `debug_enabled` in the Player scene, build debug to the Quest, and run tests 1 to 3 from section 3. Write the results into [Playtest_Log.md](Playtest_Log.md) and tune `squat_ratio`, `max_travel_per_drop`, and `min_pitch_degrees`.
 
-**Step 3. Resonance sweep, debug mission only.**
+**Step 3. Resonance sweep, debug mission only.** Built as a standalone hazard so the boss's tentacle can drive the same code in Step 6.
 - `Scripts/Hazards/resonance_sweep.gd` and `Scenes/Hazards/resonance_sweep.tscn`: telegraph lines on the pylons, a blade that crosses at `standing_height * (1 - squat_depth)`, `resolved` on a clear (score 150, rift damage 14, `on_beat` true), `player_contact` if the head is above the blade as it crosses.
 - `"sweep"` in `MissionCatalog.SCENE_BY_ID`. In the `phantom` group, with `set_interactions_enabled` and `apply_pressure`.
 - Read the detector from the Player (group or node path) for the standing height; if the detector is off, fall back to the camera height at spawn.
@@ -286,18 +403,22 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 
 **Step 4. Headset test of the sweep.** Success looks like: first-time players read the telegraph and get under it without being told, in at least 4 of 5 first encounters; nobody bends at the waist more than once after Chen's correction; a three-minute debug operation with a sweep every 10 to 15 seconds leaves the player breathing hard and wanting another go; nobody reports dizziness.
 
-**Step 5, if step 4 passes.** Brace for the Maw and the skitter, then the ground slam ritual. Push-ups and jumps only after section 3's tests 3 to 5.
+**Step 5, if step 4 passes.** Run the jump signal test (section 3, test 3) and the hand tracking tests (7 and 8). They decide whether the low sweep and the pinned push-ups can be built at all.
+
+**Step 6. The Maw as the first boss.** A boss node with an anchor that drains, gains on possessions, and loses on damage; retreat at zero; the high sweep (Step 3's hazard, now driven by a tentacle) and the overhead-braced slam. Tutorial intensity: duck depth, no detected movement. This is the Phase 7 Maw finale.
+
+**Step 7. Full Resonance attacks.** Squat-depth sweeps, then the low sweep (if test 3 passed), then the pinned tentacle with push-ups (if test 4 passed, with hand tracking if tests 7 and 8 passed).
 
 ---
 
 ## 6. Open questions for David
 
-1. **Is Full Resonance a tier or a separate setting?** Recommended: both. A tier in the operation picker, backed by a Movement intensity setting in Settings (Off, Squats, Squats and floor, Everything) that caps what the tier may ask for.
-2. **Should Standard include duck-depth sweeps?** Recommended: yes, as part of the Phase 9 low approaches. Nothing deeper than the pink duck already asks.
-3. **Push-ups with gauntlets in hand, or palms flat with them resting on the straps?** Recommended: palms flat, gauntlets resting, if the tracking test passes. Never weight through the controllers.
-4. **Are jumps in scope at all?** Recommended: not for 1.0. Revisit after the jump signal test and only for Full Resonance.
-5. **Should a bend instead of a squat fail the sweep, or just lose the bonus?** Recommended: lose the bonus. Never punish a player's body for the safer-looking choice it made in the moment; correct with Chen instead.
-6. **Should squats count in the Phase 6 session stats?** Recommended: yes. "Squats: 42" on the after-action report is the cheapest fitness payoff in this document.
-7. **Is Chen's "I can read your vitals" a heart rate claim?** Recommended: no real heart rate unless Horizon OS fitness integration exposes it. She reads "resonance", which the game computes from movement.
-8. **Full Resonance unlock:** from the start or after OP-02? Recommended: from the start, labelled clearly. It is a workout choice.
-9. **Where does calibration live in the shipped flow?** Recommended: the three-second countdown every mission, plus the rolling estimate. No separate calibration screen.
+The first round is answered; see **Decisions** at the top. New questions from the boss direction, each with my recommended default:
+
+1. **A No jumps switch inside Full Resonance?** Recommended: yes. Each low sweep becomes a high sweep at squat depth. Same score, so nobody is punished for their knees.
+2. **Does a retreated boss come back elsewhere on the war map?** Recommended: yes. A boss that retreated is still out there, and the map shows where it rose next. A banished one is gone.
+3. **One boss or several?** Recommended: one tentacled boss first, built so its attacks can be reused by later bosses with different bodies.
+4. **Is The Maw the tutorial's boss?** Recommended: yes, at tutorial intensity, as the last tutorial operation.
+5. **Do regular phantoms keep coming during a boss fight?** Recommended: yes, a light stream at Standard pressure, held back while the boss is pinned so the floor phase is always safe.
+6. **What does banishing give over a retreat?** Recommended: a retreat counts as holding the line; a banish pushes it forward and earns the mission's top medal.
+7. **Hand tracking required at Full Resonance, or optional?** Recommended: decide after tests 7 and 8. My default is optional, using simultaneous hands and controllers so the floor phases use hands and the fighting keeps controller haptics.

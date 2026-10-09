@@ -36,7 +36,7 @@ Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission
 | OP-05 | Open Arc | 8:40 | 8 paired | Paired rifts spread across the front arc |
 | OP-06 | The Maw | 4:00 | 1 | One double-size rift that spawns fast |
 
-A clean run through all six takes roughly 20 minutes. The campaign currently works as an extended tutorial for the combat system. Replay value and narrative hooks are the next things to build; see the roadmap.
+A clean run through all six takes roughly 20 minutes. They work as an extended tutorial for the combat system, and that is what they will become: the on-ramp that teaches every mechanic before the world map opens. Replay value and narrative hooks are the next things to build; see the roadmap.
 
 ## Controls
 
@@ -99,9 +99,9 @@ The design intent, in priority order. Details and status in the roadmap.
 
 1. **Fitness first.** Session stats, workout-length sessions, and a reason to sweat that is bigger than a score.
 2. **Replay value.** Best scores shown and medals per operation, an endless hold mode, and leaderboards.
-3. **Narrative hooks.** A shared war against the Overseer, with a world map in the spirit of Helldivers 2 where every operator's seals push the front line.
+3. **Narrative hooks.** A shared war against the Overseer, with a world map in the spirit of Helldivers 2 where every operator's seals push the front line. The six operations become the tutorial; after it, the player picks missions from the map by difficulty rather than working through a numbered list.
 4. **Location variety.** Different breach sites, skies, and lighting per operation.
-5. **Difficulty tiers.** Assist, Standard, and Operator.
+5. **Difficulty per mission.** Assist, Standard, and Operator, plus Full Resonance: an opt-in movement difficulty where bosses' attacks have to be answered with squats, jumps, and push-ups. See [development/Exercise_Mechanics_Exploration.md](development/Exercise_Mechanics_Exploration.md).
 
 ## Lore
 
@@ -161,6 +161,7 @@ Final confrontation: All of this could build up to a climactic mission where you
    - As Phantoms consume more life force, they grow larger and more powerful.
    - Some may evolve specialized abilities, like faster movement or the power to drain life force from a distance.
    - The most powerful Phantoms can drain entire crowds simultaneously.
+   - The largest cannot come through a rift at all until they have drained a city's worth of life force, which is why they rise at dead cities. Holding that shape in our world burns them out: such a Phantom drains away on its own, and an operator who outlasts it forces it back into its rift. Every operator it drains buys it more time.
 
 6. The Hive Mind Effect:
    - The Overseer uses the consumed life force to create more Phantoms and strengthen its control over Earth's dimension.
