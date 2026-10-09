@@ -83,7 +83,7 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 - [ ] Daily and weekly breach: a seeded operation on the map everyone fights that day.
 - [ ] Leaderboards per operation and for the endless hold.
 - [ ] A real finale for The Maw: the first boss, at tutorial intensity, rather than only faster spawns, and an Overseer presence.
-- [ ] Bosses on the war map. A boss burns so much energy holding its shape in our world that it drains on its own; outlast it and it retreats into its rift. Possessions feed it, damage drains it faster, and driving it out early banishes it. Its tentacle attacks each have one physical answer: squat under a high sweep, brace overhead against a slam, jump a low sweep, push-ups to drive resonance into a tentacle pinned in the floor. Movement answers only at Full Resonance. See [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
+- [ ] Bosses on the war map. Bosses never die: they are gathering enough energy to establish a permanent presence in our world, and holding their shape here burns so much that they drain on their own. Outlast one and it retreats through the rift it came from before the rift closes. In a boss mission the rift's health is the boss's anchor: it drains over time, possessions feed it, and resolved phantoms and work on a spent tentacle drain it faster. Tentacle attacks each have one physical answer: squat under a high sweep, jump a low sweep, side-step a slam, then push-ups on the spent tentacle to drive resonance through the ground into it. Phantoms circle the boss as an escort it sends in as volleys. Movement answers only at Full Resonance. See [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 - [ ] Intelligence operations from the lore: target a relay phantom, capture a signal, hold a position while Chen's team works.
 
 ## Phase 8 — Location variety
@@ -98,7 +98,7 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 - [ ] Cap the full-screen damage tint and distortion in headset, and make Reduced Flashes cap them harder.
 - [ ] Phantom approach heights: currently every phantom aims just below the eyes. Add lower approaches that ask for uppercuts and squats.
 - [ ] Squats, jumps, and push-ups: tune the squat detector prototype on headset, then prototype the resonance sweep (the boss's high sweep). Run the jump signal and hand tracking tests before building jumps or push-ups. Plan, thresholds, and safety tests in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
-- [ ] Hand tracking: test it at punch speed and with simultaneous hands and controllers (`godotopenxrvendors`). The direction is to move off controllers, possibly requiring hand tracking at Full Resonance.
+- [ ] Hand tracking: test it at punch speed and with simultaneous hands and controllers (`godotopenxrvendors`). The direction is to move off controllers: hand tracking is required at Full Resonance as the first try, haptics loss accepted, with simultaneous hands and controllers as the fallback.
 
 ## Phase 10 — Launch
 

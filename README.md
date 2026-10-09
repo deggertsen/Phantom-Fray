@@ -161,7 +161,7 @@ Final confrontation: All of this could build up to a climactic mission where you
    - As Phantoms consume more life force, they grow larger and more powerful.
    - Some may evolve specialized abilities, like faster movement or the power to drain life force from a distance.
    - The most powerful Phantoms can drain entire crowds simultaneously.
-   - The largest cannot come through a rift at all until they have drained a city's worth of life force, which is why they rise at dead cities. Holding that shape in our world burns them out: such a Phantom drains away on its own, and an operator who outlasts it forces it back into its rift. Every operator it drains buys it more time.
+   - The largest cannot come through a rift at all until they have drained a city's worth of life force, which is why they rise at dead cities. Holding that shape in our world burns them out: such a Phantom drains away on its own, and an operator who outlasts it forces it back through its rift before the rift closes. These Phantoms are not destroyed; each crossing is an attempt to gather enough energy to hold a permanent presence in our world, and every operator it drains buys it more time.
 
 6. The Hive Mind Effect:
    - The Overseer uses the consumed life force to create more Phantoms and strengthen its control over Earth's dimension.
