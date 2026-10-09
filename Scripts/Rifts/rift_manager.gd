@@ -8,6 +8,8 @@ signal phantom_resolved(result: Dictionary)
 signal player_damaged(amount: float)
 signal strike_rejected(reason: StringName)
 signal closed
+## Closed, and every phantom it released has been struck, reached the player, or left.
+signal drained
 
 @export var phantom_scenes: Array[PackedScene] = []
 @export var spawn_interval: float = 3.5
@@ -19,6 +21,7 @@ var rift_id: int = 0
 var rift_health: int
 var spawning_enabled: bool = false
 var _closing: bool = false
+var _drained: bool = false
 var _dissolve_amount: float = 0.0
 var _damage_flash: float = 0.0
 var _spawn_timer: Timer
@@ -86,6 +89,8 @@ func delay_first_spawn(delay: float) -> void:
 	_spawn_timer.start(maxf(delay, 0.4))
 
 func force_cleanup() -> void:
+	# Teardown is not a drain. Nothing should read it as the rift being cleared.
+	_drained = true
 	stop_spawning()
 	for phantom in _live_phantoms.values():
 		if is_instance_valid(phantom) and phantom.has_method("force_cleanup"):
@@ -95,6 +100,10 @@ func force_cleanup() -> void:
 
 func is_marked() -> bool:
 	return not _closing
+
+func has_live_phantoms() -> bool:
+	_prune_phantoms()
+	return not _live_phantoms.is_empty()
 
 func _process(delta: float) -> void:
 	_pulse_beacon(delta)
@@ -109,7 +118,9 @@ func _process(delta: float) -> void:
 	_dissolve_amount = minf(_dissolve_amount + delta * 0.75, 1.0)
 	if _portal_material:
 		_portal_material.set_shader_parameter("dissolve_amount", _dissolve_amount)
-	if _dissolve_amount >= 1.0:
+	# Phantoms already out keep their course after the seal. The rift outlives its
+	# portal so their hits still score and their contact still hurts.
+	if _dissolve_amount >= 1.0 and _drained:
 		queue_free()
 
 func _on_spawn_timer_timeout() -> void:
@@ -145,6 +156,8 @@ func _spawn_phantom() -> void:
 func _on_phantom_resolved(result: Dictionary, phantom: Node3D) -> void:
 	_unregister_phantom(phantom)
 	if _closing:
+		phantom_resolved.emit(result)
+		_check_drained()
 		return
 	var damage: int = result.get("rift_damage", 0)
 	rift_health = maxi(rift_health - damage, 0)
@@ -161,9 +174,11 @@ func _on_phantom_strike_rejected(reason: StringName) -> void:
 func _on_phantom_player_contact(amount: float, phantom: Node3D) -> void:
 	_unregister_phantom(phantom)
 	player_damaged.emit(amount)
+	_check_drained()
 
 func _on_phantom_tree_exiting(instance_id: int) -> void:
 	_live_phantoms.erase(instance_id)
+	_check_drained()
 
 func _unregister_phantom(phantom: Node3D) -> void:
 	if is_instance_valid(phantom):
@@ -182,10 +197,7 @@ func _close_rift() -> void:
 	if _beacon:
 		_beacon.visible = false
 	closed.emit()
-	for phantom in _live_phantoms.values():
-		if is_instance_valid(phantom) and phantom.has_method("force_cleanup"):
-			phantom.force_cleanup()
-	_live_phantoms.clear()
+	_check_drained()
 	var stream := SfxVariations.pick("rift_close_sound")
 	if stream == null:
 		return
@@ -195,6 +207,12 @@ func _close_rift() -> void:
 	audio.volume_db = -5.0
 	add_child(audio)
 	audio.play()
+
+func _check_drained() -> void:
+	if not _closing or _drained or has_live_phantoms():
+		return
+	_drained = true
+	drained.emit()
 
 func _initialize_rift_visuals() -> void:
 	var portal := MeshInstance3D.new()

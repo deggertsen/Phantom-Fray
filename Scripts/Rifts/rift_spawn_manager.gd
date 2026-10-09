@@ -8,7 +8,8 @@ signal rift_closed(rift_id: int, closed_count: int, total_count: int)
 signal phantom_resolved(result: Dictionary)
 signal player_damaged(amount: float)
 signal strike_rejected(reason: StringName)
-signal all_rifts_closed
+## Every rift is sealed and every phantom they released has been dealt with.
+signal all_clear
 
 @export var rift_manager_scene: PackedScene
 @export var total_rifts: int = 3
@@ -22,6 +23,8 @@ var spawning_enabled: bool = false
 var spawned_rifts: int = 0
 var closed_rifts: int = 0
 var rift_instances: Array[Node3D] = []
+## Sealed rifts whose phantoms are still out.
+var draining_rifts: Array[Node3D] = []
 var _next_rift_id: int = 1
 var _player: Node3D
 var _mission: Dictionary = {}
@@ -66,10 +69,11 @@ func resume_spawning() -> void:
 
 func cleanup_round() -> void:
 	spawning_enabled = false
-	for rift in rift_instances.duplicate():
+	for rift in rift_instances + draining_rifts:
 		if is_instance_valid(rift) and rift.has_method("force_cleanup"):
 			rift.force_cleanup()
 	rift_instances.clear()
+	draining_rifts.clear()
 	spawned_rifts = 0
 	closed_rifts = 0
 	_next_rift_id = 1
@@ -95,6 +99,7 @@ func _spawn_new_rift() -> void:
 		rift.configure_wave(waves[_wave_cursor])
 	_wave_cursor += 1
 	rift.closed.connect(_on_rift_closed.bind(id, rift))
+	rift.drained.connect(_on_rift_drained.bind(rift))
 	rift.phantom_resolved.connect(_on_phantom_resolved)
 	rift.player_damaged.connect(_on_player_damaged)
 	if rift.has_signal("strike_rejected"):
@@ -110,14 +115,26 @@ func _spawn_new_rift() -> void:
 
 func _on_rift_closed(rift_id: int, rift: Node3D) -> void:
 	rift_instances.erase(rift)
+	draining_rifts.append(rift)
 	closed_rifts += 1
-	rift_closed.emit(rift_id, closed_rifts, total_rifts)
 	if closed_rifts >= total_rifts:
 		spawning_enabled = false
-		all_rifts_closed.emit()
-	else:
+	rift_closed.emit(rift_id, closed_rifts, total_rifts)
+	if closed_rifts < total_rifts:
 		var replacement_delay := get_tree().create_timer(1.35)
 		replacement_delay.timeout.connect(_fill_rift_slots)
+
+func _on_rift_drained(rift: Node3D) -> void:
+	draining_rifts.erase(rift)
+	if closed_rifts >= total_rifts and draining_rifts.is_empty():
+		all_clear.emit()
+
+## True while a sealed rift still has phantoms out.
+func has_stragglers() -> bool:
+	for rift in draining_rifts:
+		if is_instance_valid(rift) and rift.has_live_phantoms():
+			return true
+	return false
 
 func _on_phantom_resolved(result: Dictionary) -> void:
 	phantom_resolved.emit(result)
