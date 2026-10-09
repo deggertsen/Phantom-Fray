@@ -191,9 +191,8 @@ No (decision 22). Not every Maw lets a boss through, so facing The Maw is never 
 
 Missions have no time limit now, so players need a sense of how long a mission takes before they pick it (decision 23). **Built on `main`:** every Operations card shows an `expected_minutes` range and the best time once there is one; the ranges are estimates from the wave tables until timed headset runs replace them. What is left for bosses:
 
-- **A range on every mission card**, on the Operations list now and on the war map later: "6 to 8 MIN".
-- **Authored first, measured later.** Start with an `expected_minutes` pair in each mission's catalog entry, set from timed headset runs. Once players have cleared it, the player's own fastest victory (already stored as a best time) appears beside it: "6 to 8 MIN. YOUR BEST 5:42."
-- **For a Maw that might break,** the range covers both outcomes ("6 to 10 MIN") and does not say why. The readings hint carries that.
+- **The war map** uses the same range on its mission cards.
+- **For a Maw that might break,** the range covers both outcomes and does not say why; the readings hint carries that. With phase one shortened on a breaking Maw, the card can keep one honest range.
 
 ### Hand tracking
 
