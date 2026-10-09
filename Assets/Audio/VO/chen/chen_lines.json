@@ -2,6 +2,12 @@
   "speaker": "CHEN",
   "voice": "Dr. Elara Chen, RSF science lead, on comms to the operator. She built the ERM gauntlets, and because they run on the wearer's life force she reads the operator's vitals live through them. If those vitals collapse, the gauntlets' failsafe dumps its charge to throw the phantoms off, and the recovery team waiting at the pylon line pulls the operator out. Clipped and focused, quietly urgent, dry under pressure. Never shouts except at critical life force. Each line is short enough to say in under three seconds. The game adds a radio filter, so record clean.",
   "files": "Each line is a file named <event>_<number>.ogg in this folder, numbered from 1 in the order listed. Drop in a new recording with the same name to replace a placeholder.",
+  "pacing": {
+    "note": "How much room Chen leaves. quiet_after_line: seconds of silence since her last line ended before a line of that priority may start (3 is critical, 0 is flavor). max_wait: a line that cannot start within this many seconds is dropped, except mission results. groups: moments in a group share one cooldown, counted from the end of the last line in that group.",
+    "quiet_after_line": {"0": 10.0, "1": 5.0, "2": 2.0, "3": 0.3},
+    "max_wait": 3.0,
+    "groups": {"coaching": 15.0, "damage": 12.0, "praise": 30.0}
+  },
   "events": {
     "mission_start": {
       "priority": 2, "cooldown": 0, "tag": "[focused]",
@@ -47,32 +53,32 @@
       "note": "A rift closed and more remain. Brief satisfaction.",
       "lines": ["Rift sealed.", "That one's closed. Good.", "Seal confirmed.", "It's shut. Next one.", "Clean seal. Keep moving."]
     },
-    "first_yellow": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First yellow Angler of the session. Teaching, quick.", "lines": ["Yellow. Left hand. Go for the lure.", "That's a yellow. Hit the lure with your left.", "Yellow means left. Aim for the light.", "Left hand on the yellows. Strike the lure."]},
-    "first_blue": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure.", "That's a blue. Hit the lure with your right.", "Blue means right. Aim for the light.", "Right hand on the blues. Strike the lure."]},
-    "first_green": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands.", "Greens won't break to one hand. Use both.", "Green incoming. Both fists, block it.", "Catch the green on both hands."]},
-    "first_pink": {"priority": 2, "cooldown": 5, "tag": "[urgent]", "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane.", "Pink charge. Step aside.", "Watch the pink. Get out of its line.", "Pink's lining up on you. Move."]},
+    "first_yellow": {"group": "coaching", "priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First yellow Angler of the session. Teaching, quick.", "lines": ["Yellow. Left hand. Go for the lure.", "That's a yellow. Hit the lure with your left.", "Yellow means left. Aim for the light.", "Left hand on the yellows. Strike the lure."]},
+    "first_blue": {"group": "coaching", "priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure.", "That's a blue. Hit the lure with your right.", "Blue means right. Aim for the light.", "Right hand on the blues. Strike the lure."]},
+    "first_green": {"group": "coaching", "priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands.", "Greens won't break to one hand. Use both.", "Green incoming. Both fists, block it.", "Catch the green on both hands."]},
+    "first_pink": {"group": "coaching", "priority": 2, "cooldown": 5, "tag": "[urgent]", "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane.", "Pink charge. Step aside.", "Watch the pink. Get out of its line.", "Pink's lining up on you. Move."]},
     "wrong_hand": {
-      "priority": 1, "cooldown": 20, "tag": "[firm]",
+      "group": "coaching", "priority": 1, "cooldown": 20, "tag": "[firm]",
       "note": "The operator hit with the wrong hand. Corrective, not scolding.",
       "lines": ["Wrong hand. Match the color.", "Other hand, operator.", "That one needs your other hand.", "Match the gauntlet to the color.", "Argh, other hand next time."]
     },
     "combo_rising": {
-      "priority": 0, "cooldown": 25, "tag": "[approving]",
+      "group": "praise", "priority": 0, "cooldown": 25, "tag": "[approving]",
       "note": "The chain multiplier passed 2x. Approving.",
       "lines": ["That's resonance. Keep the chain.", "Good rhythm. Don't break it.", "The field is resonating. Keep it up.", "Nice chain. Stay on it.", "That's the frequency. Hold it."]
     },
     "combo_max": {
-      "priority": 0, "cooldown": 30, "tag": "[excited]",
+      "group": "praise", "priority": 0, "cooldown": 30, "tag": "[excited]",
       "note": "The chain hit its maximum. A rare flash of excitement.",
       "lines": ["Maximum resonance!", "Full resonance. Hold it there.", "You're peaking. Don't stop now.", "Resonance is maxed. Beautiful."]
     },
     "life_caution": {
-      "priority": 1, "cooldown": 10, "tag": "[concerned]",
+      "group": "damage", "priority": 1, "cooldown": 10, "tag": "[concerned]",
       "note": "Life force is slipping. A heads-up.",
       "lines": ["You're taking drain. Watch your space.", "Life force dropping. Stay sharp.", "They're feeding on you. Tighten up.", "Your readings dipped. Keep them off you.", "Careful. You're losing life force."]
     },
     "life_danger": {
-      "priority": 2, "cooldown": 5, "tag": "[worried]",
+      "group": "damage", "priority": 2, "cooldown": 5, "tag": "[worried]",
       "note": "Life force is low. Concerned.",
       "lines": ["Your readings are falling fast.", "You can't take many more of those.", "Life force is low. Defend yourself.", "You're fading, operator. Focus.", "That's too much drain. Keep them away."]
     },
@@ -82,7 +88,7 @@
       "lines": ["You're critical! Dodge, block, anything!", "Life force critical. Don't let them touch you.", "You're almost gone! Fight!", "Critical! One more and the failsafe fires!", "Failsafe's primed! Don't make it fire!"]
     },
     "possessed": {
-      "priority": 2, "cooldown": 9, "tag": "[urgent]",
+      "group": "damage", "priority": 2, "cooldown": 9, "tag": "[urgent]",
       "note": "A phantom just got into the operator. Sharp.",
       "lines": ["It's in you. Shake it off!", "Contact! Push through it.", "Drain spike. Keep moving.", "It got through. Stay up.", "You're hit. Breathe, and keep fighting."]
     },

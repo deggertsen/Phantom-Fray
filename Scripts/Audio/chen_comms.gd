@@ -8,18 +8,21 @@ class_name ChenComms
 ## new recording replaces a placeholder by name. A missing file is skipped and only captioned.
 ##
 ## Priority: 3 is the end of a mission and critical life force, 2 navigation and danger,
-## 1 coaching and progress, 0 flavor. Chen never cuts herself off. A waiting line plays once
-## she has been quiet long enough for its priority; the most important goes first. A line that
-## waits longer than MAX_WAIT is dropped, because its moment has passed. Mission results are
-## never dropped. Cooldowns count from when that moment's last line ended.
+## 1 coaching and progress, 0 flavor. Chen never cuts herself off, and she leaves room: a
+## line starts only once she has been quiet long enough for its priority, most important
+## first. A line that cannot start within max_wait is dropped, because its moment has passed;
+## mission results are never dropped. Moments in the same group share a cooldown, so hits or
+## coaching never stack. Cooldowns count from when the last line ended. The numbers live in
+## the "pacing" block of chen_lines.json.
 
 signal line_started(speaker: String, text: String, seconds: float)
 
 const FOLDER := "res://Assets/Audio/VO/chen/"
 const SCRIPT := preload("res://Assets/Audio/VO/chen/chen_lines.json")
 ## Seconds of silence a line needs after the last one ended, by priority.
-const QUIET := {0: 1.0, 1: 0.8, 2: 0.5, 3: 0.3}
-const MAX_WAIT := 3.0
+## Defaults when chen_lines.json has no "pacing" block.
+const DEFAULT_QUIET := {0: 10.0, 1: 5.0, 2: 2.0, 3: 0.3}
+const DEFAULT_MAX_WAIT := 3.0
 const MAX_QUEUE := 3
 ## Rifts this close to where the player is looking are "dead ahead"; wider ones get a clock bearing.
 const IN_VIEW_DEGREES := 50.0
@@ -35,6 +38,10 @@ var _playing_event: String = ""
 var _clock: float = 0.0
 var _ended_at: float = -INF
 var _last_ended: Dictionary = {}
+var _group_ended: Dictionary = {}
+var _quiet: Dictionary = DEFAULT_QUIET.duplicate()
+var _max_wait: float = DEFAULT_MAX_WAIT
+var _group_cooldowns: Dictionary = {}
 var _last_take: Dictionary = {}
 
 var _round: RoundController
@@ -60,6 +67,12 @@ func _ready() -> void:
 	var data: Dictionary = (SCRIPT as JSON).data
 	_speaker = String(data.get("speaker", "CHEN"))
 	_events = data.get("events", {})
+	var pacing: Dictionary = data.get("pacing", {})
+	var quiet: Dictionary = pacing.get("quiet_after_line", {})
+	for priority in quiet:
+		_quiet[int(priority)] = float(quiet[priority])
+	_max_wait = float(pacing.get("max_wait", DEFAULT_MAX_WAIT))
+	_group_cooldowns = pacing.get("groups", {})
 	_load_streams()
 	_player = AudioStreamPlayer.new()
 	_player.name = "Voice"
@@ -75,6 +88,9 @@ func say(event: String) -> void:
 	if info.is_empty() or event == _playing_event:
 		return
 	var cooldown := float(info.get("cooldown", 0))
+	var group := String(info.get("group", ""))
+	if _group_cooling(group):
+		return
 	if cooldown > 0.0 and _clock - float(_last_ended.get(event, -INF)) < cooldown:
 		return
 	for queued in _queue:
@@ -89,20 +105,23 @@ func _process(delta: float) -> void:
 	_clock += delta
 	_watch_round(delta)
 	_queue = _queue.filter(_still_relevant)
-	if _player.playing or _queue.is_empty():
+	# Speaking until her finished signal lands; the player reports not-playing a frame earlier.
+	if _playing_event != "" or _queue.is_empty():
 		return
 	var next: Dictionary = _queue[0]
-	if _clock - _ended_at >= float(QUIET.get(next["priority"], 1.0)):
+	if _clock - _ended_at >= float(_quiet.get(next["priority"], 1.0)):
 		_queue.pop_front()
-		_play(next["event"])
+		# Two moments from one group can queue together; only the first gets said.
+		if not _group_cooling(String(_events[next["event"]].get("group", ""))):
+			_play(next["event"])
 
 ## Most important first; among equals, whatever has waited longest.
 func _goes_first(a: Dictionary, b: Dictionary) -> bool:
 	return a["priority"] > b["priority"] or (a["priority"] == b["priority"] and a["at"] < b["at"])
 
-## A waiting line's moment passes after MAX_WAIT. A mission result always gets said.
+## A waiting line's moment passes after max_wait. A mission result always gets said.
 func _still_relevant(entry: Dictionary) -> bool:
-	return entry["event"] in RESULTS or _clock - float(entry["at"]) <= MAX_WAIT
+	return entry["event"] in RESULTS or _clock - float(entry["at"]) <= _max_wait
 
 func _play(event: String) -> void:
 	var lines: Array = _events[event].get("lines", [])
@@ -115,6 +134,10 @@ func _play(event: String) -> void:
 			take += 1
 	_last_take[event] = take
 	_playing_event = event
+	if event.begins_with("first_"):
+		_introduced[event.trim_prefix("first_")] = true
+	# One line per callout in the log, so a headset session shows exactly how chatty she was.
+	print("CHEN %.1fs %s_%d" % [_clock, event, take + 1])
 	var stream: AudioStream = _streams.get("%s_%d" % [event, take + 1])
 	var seconds := 2.2
 	if stream:
@@ -130,6 +153,9 @@ func _on_line_finished() -> void:
 	_ended_at = _clock
 	if _playing_event != "":
 		_last_ended[_playing_event] = _clock
+		var group := _playing_group()
+		if group != "":
+			_group_ended[group] = _clock
 	_playing_event = ""
 
 ## Loaded up front: a few dozen short compressed clips, and no hitch on first use.
@@ -176,7 +202,6 @@ func _watch_round(delta: float) -> void:
 		for phantom in get_tree().get_nodes_in_group("phantom"):
 			var kind := String(phantom.get("variant_id"))
 			if kind != "" and not _introduced.has(kind) and _events.has("first_" + kind):
-				_introduced[kind] = true
 				say("first_" + kind)
 
 func _begin_mission() -> void:
@@ -280,3 +305,16 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 				say("victory")
 		&"defeat":
 			say("defeat")
+
+func _playing_group() -> String:
+	if _playing_event == "":
+		return ""
+	return String(_events.get(_playing_event, {}).get("group", ""))
+
+## True while that group's shared cooldown is running, or one of its lines is playing.
+func _group_cooling(group: String) -> bool:
+	if group == "":
+		return false
+	if group == _playing_group():
+		return true
+	return _clock - float(_group_ended.get(group, -INF)) < float(_group_cooldowns.get(group, 0.0))
