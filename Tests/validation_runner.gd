@@ -444,9 +444,23 @@ func _validate_results_menu() -> void:
 			await process_frame
 			if screen_shape.disabled:
 				failures.append("Results screen collider stayed disabled")
-	presenter.show_operations(MissionCatalog.operation_entries(null))
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.cleared_missions = PackedStringArray(["first_light"])
+	profile.best_times = {"first_light": 342.0}
+	var entries := MissionCatalog.operation_entries(profile)
+	profile.free()
+	presenter.show_operations(entries)
 	for _frame in 4:
 		await process_frame
+	for entry in entries:
+		var card := _find_button(presenter, "%s  %s" % [entry.get("codename", ""), entry.get("title", "")])
+		var expected := MissionCatalog.expected_minutes_text(entry)
+		if card == null or expected == "" or expected not in card.text:
+			failures.append("Operations card for %s does not show its expected time" % entry.get("id", ""))
+		elif entry.get("id", "") == "first_light" and "%s  •  YOUR BEST 5:42" % expected not in card.text:
+			failures.append("Operations card does not show the best time beside the range: %s" % card.text)
+		elif entry.get("id", "") != "first_light" and "YOUR BEST" in card.text:
+			failures.append("Operations card shows a best time it does not have: %s" % card.text)
 	var operation_buttons := 0
 	var operation_panel := Rect2(Vector2.ZERO, Vector2(1280, 780))
 	var stack := presenter.get_node("MenuScreen/Viewport").get_child(0)
@@ -457,6 +471,15 @@ func _validate_results_menu() -> void:
 			failures.append("Operations button sits outside the panel %s" % op_rect)
 	if operation_buttons < 7:
 		failures.append("Operations list is missing a contract or the back button")
+	var operations_footer := _find_label(stack, "LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
+	if operations_footer == null or operations_footer.get_global_rect().end.y > 750.0:
+		failures.append("Operations footer runs off the bottom of the panel")
+	presenter.show_main_menu(MissionCatalog.deploy_detail(null))
+	for _frame in 4:
+		await process_frame
+	var main_footer := _find_label(stack, "POINT AT A BUTTON  •  PULL TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
+	if main_footer == null or main_footer.get_global_rect().end.y > 750.0:
+		failures.append("Main menu footer runs off the bottom of the panel")
 	presenter.queue_free()
 	player.queue_free()
 	await process_frame
@@ -516,6 +539,19 @@ func _validate_possession(yellow_scene: PackedScene) -> void:
 func _validate_mission_catalog() -> void:
 	if MissionCatalog.all_missions().size() != 6:
 		failures.append("Mission catalog does not contain six operations")
+	for mission in MissionCatalog.all_missions():
+		var minutes: Variant = mission.get("expected_minutes")
+		if not minutes is Array or minutes.size() != 2 or typeof(minutes[0]) != TYPE_INT or typeof(minutes[1]) != TYPE_INT:
+			failures.append("%s has no expected_minutes pair" % mission.get("id", ""))
+		elif minutes[0] < 1 or minutes[1] < minutes[0] or minutes[1] > 30:
+			failures.append("%s has an invalid expected_minutes range %s" % [mission.get("id", ""), minutes])
+		var rift_count: int = mission.get("rifts", []).size()
+		if mission.get("pressure_labels", []).size() != rift_count or mission.get("open_barks", []).size() != rift_count or mission.get("seal_lines", []).size() != rift_count - 1:
+			failures.append("%s labels, barks, or seal lines do not match its %d rifts" % [mission.get("id", ""), rift_count])
+	if MissionCatalog.expected_minutes_text({"expected_minutes": [6, 8]}) != "6 TO 8 MIN":
+		failures.append("Expected time range does not read as 6 TO 8 MIN")
+	if MissionCatalog.deploy_detail(null) != "NEXT • OP-01 FIRST LIGHT • %s" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("first_light")):
+		failures.append("Deploy button does not show the next mission's expected time: %s" % MissionCatalog.deploy_detail(null))
 	var none := PackedStringArray()
 	if not MissionCatalog.is_unlocked_with_clears("first_light", none):
 		failures.append("First Light should be available immediately")
@@ -536,16 +572,16 @@ func _validate_mission_catalog() -> void:
 	if int(paired.get("max_concurrent", 1)) != 2 or not bool(paired.get("cluster_rifts", false)):
 		failures.append("Double Breach does not open a paired rift")
 	var paired_waves: Array = paired.get("rifts", [])
-	if paired_waves.size() != 8:
-		failures.append("Double Breach is missing its eight rifts")
+	if paired_waves.size() != 16:
+		failures.append("Double Breach is missing its sixteen rifts")
 	else:
 		_expect_staggered_pairs(paired_waves, "Double Breach")
 	var ring := MissionCatalog.get_mission("widen_the_ring")
-	if ring.get("rifts", []).size() != 6:
-		failures.append("Widen the Ring did not double its length")
+	if ring.get("rifts", []).size() != 12:
+		failures.append("Widen the Ring does not run twelve rifts")
 	var gambit := MissionCatalog.get_mission("chens_gambit")
-	if gambit.get("rifts", []).size() != 6:
-		failures.append("Chen's Gambit did not double its length")
+	if gambit.get("rifts", []).size() != 12:
+		failures.append("Chen's Gambit does not run twelve rifts")
 	if MissionCatalog.is_unlocked_with_clears("open_arc", through_gambit):
 		failures.append("Open Arc unlocked before Double Breach")
 	var through_breach := PackedStringArray(["first_light", "widen_the_ring", "chens_gambit", "double_breach"])
@@ -565,11 +601,11 @@ func _validate_mission_catalog() -> void:
 	var maw_waves: Array = maw.get("rifts", [])
 	if maw_waves.size() != 1 or int(maw.get("max_concurrent", 1)) != 1:
 		failures.append("The Maw is not a single rift")
-	elif int(maw_waves[0].get("health", 0)) != 800 or not is_equal_approx(float(maw_waves[0].get("interval", 0.0)), 0.875) or int(maw_waves[0].get("max_live", 0)) != 8 or not is_equal_approx(float(maw_waves[0].get("scale", 1.0)), 2.0):
+	elif int(maw_waves[0].get("health", 0)) != 1600 or not is_equal_approx(float(maw_waves[0].get("interval", 0.0)), 0.875) or int(maw_waves[0].get("max_live", 0)) != 8 or not is_equal_approx(float(maw_waves[0].get("scale", 1.0)), 2.0):
 		failures.append("The Maw is not a doubled mouth pouring a steady flood")
 	await _validate_maw_rift()
 	var first := MissionCatalog.get_mission("first_light")
-	if int(first.get("max_concurrent", 1)) != 1 or bool(first.get("cluster_rifts", false)) or first.get("rifts", []).size() != 2:
+	if int(first.get("max_concurrent", 1)) != 1 or bool(first.get("cluster_rifts", false)) or first.get("rifts", []).size() != 4:
 		failures.append("First Light opened more than one rift")
 	for mission in MissionCatalog.all_missions():
 		if mission.has("duration") or mission.has("timeout_line"):
@@ -730,7 +766,7 @@ func _validate_elapsed_timer() -> void:
 	round_controller.rift_progress_changed.connect(func(_closed: int, total: int) -> void: rift_row[0] = total)
 	round_controller.begin_round(MissionCatalog.get_mission("first_light"))
 	round_controller._process(0.0)
-	if rift_row[0] != 2:
+	if rift_row[0] != 4:
 		failures.append("Going live did not lay out the mission's rift row: %d" % rift_row[0])
 	for _step in 3:
 		round_controller._process(1.0)
@@ -775,12 +811,16 @@ func _validate_elapsed_timer() -> void:
 	await process_frame
 
 func _has_label(node: Node, text: String) -> bool:
+	return _find_label(node, text) != null
+
+func _find_label(node: Node, text: String) -> Label:
 	if node is Label and (node as Label).text == text:
-		return true
+		return node as Label
 	for child in node.get_children():
-		if _has_label(child, text):
-			return true
-	return false
+		var found := _find_label(child, text)
+		if found:
+			return found
+	return null
 
 func _validate_maw_rift() -> void:
 	var rift := RiftManager.new()
@@ -790,7 +830,7 @@ func _validate_maw_rift() -> void:
 	rift.configure_wave(wave)
 	var portal := rift.get_node_or_null("Portal") as MeshInstance3D
 	var quad := portal.mesh as QuadMesh if portal else null
-	if rift.maximum_health != 800 or not is_equal_approx(rift.spawn_interval, 0.875) or rift.max_live_phantoms != 8:
+	if rift.maximum_health != 1600 or not is_equal_approx(rift.spawn_interval, 0.875) or rift.max_live_phantoms != 8:
 		failures.append("The Maw rift did not take the doubled feed")
 	elif quad == null or not quad.size.is_equal_approx(Vector2(8.0, 8.0)) or rift.spawn_radius < 4.9:
 		failures.append("The Maw rift did not grow")

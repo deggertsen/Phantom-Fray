@@ -11,7 +11,7 @@ The goal of the project is a workout you want to come back to because the world 
 - **Four phantom rules, each a different movement.**
 
 | Color | Species | Rule | What the body does |
-|---|---|---|---|
+|---|---|---|---|---|
 | Yellow | Angler | Left hand only. Strike the lure for a resonance crit. | Left jabs, hooks, uppercuts |
 | Blue | Angler | Right hand only. Strike the lure for a resonance crit. | Right jabs, hooks, uppercuts |
 | Green | Carapace | Catch it with both hands inside a short window. | Two-hand block |
@@ -27,16 +27,16 @@ The goal of the project is a workout you want to come back to because the world 
 
 Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission_catalog.gd](Scripts/Core/mission_catalog.gd).
 
-| Op | Title | Rifts | What it introduces |
-|---|---|---|---|
-| OP-01 | First Light | 2 | Yellow and blue |
-| OP-02 | Widen the Ring | 6 | Green and pink in the mix |
-| OP-03 | Chen's Gambit | 6 | Shorter tells, faster lunges |
-| OP-04 | Double Breach | 8 paired | Two rifts open side by side |
-| OP-05 | Open Arc | 8 paired | Paired rifts spread across the front arc |
-| OP-06 | The Maw | 1 | One double-size rift that spawns fast |
+| Op | Title | Rifts | Card estimate | What it introduces |
+|---|---|---|---|---|
+| OP-01 | First Light | 4 | 2 to 4 min | Yellow and blue |
+| OP-02 | Widen the Ring | 12 | 6 to 8 min | Green and pink in the mix |
+| OP-03 | Chen's Gambit | 12 | 6 to 8 min | Shorter tells, faster lunges |
+| OP-04 | Double Breach | 16 paired | 6 to 10 min | Two rifts open side by side |
+| OP-05 | Open Arc | 16 paired | 6 to 10 min | Paired rifts spread across the front arc |
+| OP-06 | The Maw | 1 | 4 to 6 min | One double-size rift that spawns fast, with double health |
 
-A clean run through all six takes roughly 20 minutes. They work as an extended tutorial for the combat system, and that is what they will become: the on-ramp that teaches every mechanic before the world map opens. Replay value and narrative hooks are the next things to build; see the roadmap.
+Each Operations card shows its expected time ("6 TO 8 MIN") and, once the player has won it, their best time beside it. The ranges are estimates from the wave tables until timed headset runs replace them. A clean run through all six takes roughly 40 minutes. They work as an extended tutorial for the combat system, and that is what they will become: the on-ramp that teaches every mechanic before the world map opens. Replay value and narrative hooks are the next things to build; see the roadmap.
 
 ## Controls
 
@@ -59,7 +59,7 @@ Godot 4.7.1 exactly. The desktop fallback runs without a headset for menu, flow,
 godot --path .
 ```
 
-Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, rift stragglers, elapsed timer and best time, menu surfaces, own-music settings, pink dodge, squat detector prototype):
+Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, rift stragglers, elapsed timer and best time, expected mission times, menu surfaces and footers, own-music settings, pink dodge, squat detector prototype):
 
 ```bash
 tools/validate_project.sh

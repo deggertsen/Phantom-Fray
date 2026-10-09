@@ -55,14 +55,16 @@ func _update_thumbstick_scroll(delta: float) -> void:
 		return
 	_settings_scroll.scroll_vertical += int(-scroll_input * 620.0 * delta)
 
-func show_main_menu(deploy_detail: String = "Seal the next live rift before the window collapses") -> void:
+func show_main_menu(deploy_detail: String = "Seal the next live rift") -> void:
 	_begin_view(&"DEPLOYMENT", "RSF // OPERATOR INTERFACE", "PHANTOM FRAY", "RESONANCE RISING", COLOR_CYAN)
+	# The deploy, operations, and training rows plus the footer only fit the 780 px panel with tighter rows.
+	_content.add_theme_constant_override("separation", 8)
 	_add_copy("THE BREACH IS ACTIVE", "Deploy the next contract, or open Operations and choose.", COLOR_MUTED)
 	_content.add_child(_make_action_button(
 		&"deploy",
 		"⚡  DEPLOY MISSION\nLIVE COMBAT OPERATION\n%s" % deploy_detail,
 		COLOR_MAGENTA,
-		Vector2(0, 150),
+		Vector2(0, 128),
 		true
 	))
 	_content.add_child(_make_action_button(
@@ -91,15 +93,24 @@ func show_main_menu(deploy_detail: String = "Seal the next live rift before the 
 
 func show_operations(entries: Array[Dictionary]) -> void:
 	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "EACH SEAL TEACHES THE NEXT", COLOR_AMBER, 40)
+	# Six two-line cards, the back button, and the footer only fit the 780 px panel with tighter rows.
+	_content.add_theme_constant_override("separation", 8)
 	for entry in entries:
 		var unlocked: bool = entry.get("unlocked", false)
 		var cleared: bool = entry.get("cleared", false)
 		var accent := COLOR_GREEN if cleared else COLOR_MAGENTA if unlocked else COLOR_MUTED
 		var detail := String(entry.get("summary", "")) if unlocked else String(entry.get("lock_reason", "Locked"))
 		var state := "SEALED" if cleared else "OPEN" if unlocked else "LOCKED"
+		var heading := "%s  %s  •  %s" % [entry.get("codename", ""), entry.get("title", ""), state]
+		var expected := MissionCatalog.expected_minutes_text(entry)
+		if expected != "":
+			heading += "  •  %s" % expected
+		var best_seconds := float(entry.get("best_seconds", 0.0))
+		if best_seconds > 0.0:
+			heading += "  •  YOUR BEST %s" % _clock(best_seconds)
 		var button := _make_action_button(
 			StringName("mission_%s" % entry.get("id", "")),
-			"%s  %s  •  %s\n%s" % [entry.get("codename", ""), entry.get("title", ""), state, detail],
+			"%s\n%s" % [heading, detail],
 			accent,
 			Vector2(0, 56),
 			unlocked and not cleared
@@ -381,6 +392,7 @@ func _build_cyber_grid() -> void:
 
 func _begin_view(section: StringName, system_title: String, title: String, subtitle: String, accent: Color, title_size: int = 54) -> void:
 	_clear_content()
+	_content.add_theme_constant_override("separation", 14)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 16)
 	_content.add_child(top)

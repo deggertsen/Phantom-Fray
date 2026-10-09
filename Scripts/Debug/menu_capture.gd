@@ -4,9 +4,12 @@ var _menu: VRMenuPanel
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://reports/menu-states"))
+	# The panel is drawn at the headset viewport size; the default 1152x648 window cut off its bottom rows.
+	get_window().size = Vector2i(1280, 780)
 	_menu = preload("res://Scenes/UI/vr_menu_panel.tscn").instantiate() as VRMenuPanel
 	add_child(_menu)
 	await _capture_main()
+	await _capture_operations()
 	await _capture_tutorial()
 	await _capture_settings()
 	await _capture_pause()
@@ -17,6 +20,23 @@ func _ready() -> void:
 func _capture_main() -> void:
 	_menu.show_main_menu()
 	await _capture("main-menu.png")
+	var profile := _two_cleared_profile()
+	_menu.show_main_menu(MissionCatalog.deploy_detail(profile))
+	await _capture("main-menu-next.png")
+	profile.free()
+
+func _capture_operations() -> void:
+	var profile := _two_cleared_profile()
+	_menu.show_operations(MissionCatalog.operation_entries(profile))
+	await _capture("operations.png")
+	profile.free()
+
+## A settings object with the first two operations sealed and timed, never saved to disk.
+func _two_cleared_profile() -> Node:
+	var profile: Node = load("res://Scripts/Core/game_settings.gd").new()
+	profile.cleared_missions = PackedStringArray(["first_light", "widen_the_ring"])
+	profile.best_times = {"first_light": 94.0, "widen_the_ring": 342.0}
+	return profile
 
 func _capture_tutorial() -> void:
 	_menu.show_tutorial(0, [{
@@ -39,7 +59,7 @@ func _capture_pause() -> void:
 	await _capture("pause.png")
 
 func _capture_results() -> void:
-	_menu.show_results(&"victory", 12840, "Chen: It knows your resonance now. This was the opening move. Not the end of the war.", "DOUBLE BREACH", 252.0, 280.0)
+	_menu.show_results(&"victory", 12840, "Chen: It knows your resonance now. This was the opening move. Not the end of the war.", "DOUBLE BREACH  •  %s" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("double_breach")), 252.0, 280.0)
 	await _capture("results.png")
 
 func _capture(file_name: String) -> void:
