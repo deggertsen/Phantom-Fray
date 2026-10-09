@@ -522,9 +522,9 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 
 ---
 
-## 6. Open questions for David
+## 6. Deferred questions
 
-Five rounds are answered; see **Decisions** at the top. Still open:
+Everything else is answered; see **Decisions** at the top. Two questions are deliberately deferred (David, 2026-10-09):
 
-1. **Feeding** (decision 28). Does the boss eat its escort to buy time? Recommended: decide once the escort volley is prototyped and can be played.
-2. **What a retreat means on the war map** beyond holding the line (decision 24). Revisit when the map is designed.
+1. **Feeding** (decision 28). Whether the boss eats its escort to buy time. Not decided yet; revisit once escort volleys can be played.
+2. **What a retreat means on the war map** beyond holding the line (decision 24). Unknowable until discovery on the war map starts.
