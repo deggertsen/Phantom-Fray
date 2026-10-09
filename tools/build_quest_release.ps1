@@ -9,6 +9,9 @@ $credentialsPath = Join-Path $projectRoot 'export_credentials.cfg'
 if (-not (Test-Path $templateVersion)) {
     & (Join-Path $PSScriptRoot 'install_android_template.ps1')
 }
+if (Select-String -Path (Join-Path $projectRoot 'project.godot') -SimpleMatch 'debug/hand_tracking_probe=true' -Quiet) {
+    throw 'project.godot has the hand tracking test settings from an interrupted build_quest_debug.ps1 -HandTrackingTest. Restore it with: git checkout -- project.godot'
+}
 if (-not (Test-Path $credentialsPath)) {
     throw 'Missing ignored export_credentials.cfg with Quest Release keystore settings.'
 }

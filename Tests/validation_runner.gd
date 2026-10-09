@@ -20,6 +20,7 @@ func _run_validation() -> void:
 	await _validate_results_menu()
 	await _validate_pink_dodge()
 	_validate_squat_detector()
+	_validate_hand_tracking_probe()
 	await process_frame
 	if failures.is_empty():
 		print("PHANTOM FRAY VALIDATION PASSED")
@@ -902,3 +903,59 @@ func _drive_head(squat: SquatDetector, from: Vector3, to: Vector3, pitch_from: f
 	for index in steps:
 		var t := float(index + 1) / float(steps)
 		squat.sample(from.lerp(to, t), lerpf(pitch_from, pitch_to, t), step)
+
+## The hand tracking probe on synthetic palm paths: a clean punch counts once with its peak;
+## a punch that loses tracking counts as dropped; a teleport is a jump, not a speed;
+## a straight finger reads open and a curled one reads as a fist.
+func _validate_hand_tracking_probe() -> void:
+	var probe := HandTrackingProbe.new()
+	if probe.is_enabled():
+		failures.append("Hand tracking probe is on without debug_enabled or its project setting")
+	var hand := HandTrackingProbe.Hand.new(&"right")
+	var clock := [0.0]
+	var rest := Vector3(0.2, 1.2, -0.2)
+	var reach := Vector3(0.2, 1.3, -0.65)
+	_drive_palm(probe, hand, clock, rest, rest, 0.3, true)
+	_drive_palm(probe, hand, clock, rest, reach, 0.08, true)
+	_drive_palm(probe, hand, clock, reach, reach, 0.2, true)
+	_drive_palm(probe, hand, clock, reach, rest, 0.4, true)
+	_drive_palm(probe, hand, clock, rest, rest, 1.1, true)
+	if hand.punches != 1 or hand.dropped_punches != 0 or hand.drops != 0:
+		failures.append("Hand tracking probe miscounted a clean punch: %d punches, %d dropped" % [hand.punches, hand.dropped_punches])
+	if hand.peak_computed > 0.01:
+		failures.append("Hand tracking probe kept a peak speed older than its window")
+	_drive_palm(probe, hand, clock, rest, reach.lerp(rest, 0.5), 0.05, true)
+	_drive_palm(probe, hand, clock, reach, reach, 0.4, false)
+	_drive_palm(probe, hand, clock, reach, reach, 0.2, true)
+	_drive_palm(probe, hand, clock, reach, rest, 0.4, true)
+	_drive_palm(probe, hand, clock, rest, rest, 0.3, true)
+	if hand.punches != 2 or hand.dropped_punches != 1 or hand.drops != 1:
+		failures.append("Hand tracking probe did not count a punch that lost tracking as dropped")
+	_drive_palm(probe, hand, clock, rest, rest + Vector3(0.0, 0.0, -1.0), 1.0 / 72.0, true)
+	_drive_palm(probe, hand, clock, rest + Vector3(0.0, 0.0, -1.0), rest + Vector3(0.0, 0.0, -1.0), 0.3, true)
+	if hand.jumps != 1 or hand.punches != 2:
+		failures.append("Hand tracking probe counted a pose jump as hand speed")
+	var straight := PackedVector3Array()
+	var curled := PackedVector3Array()
+	for index in 5:
+		straight.append(Vector3(0.0, 0.0, -0.03 * index))
+	curled.append(Vector3.ZERO)
+	curled.append(Vector3(0.0, 0.0, -0.05))
+	curled.append(Vector3(0.0, -0.035, -0.06))
+	curled.append(Vector3(0.0, -0.045, -0.035))
+	curled.append(Vector3(0.0, -0.035, -0.015))
+	probe.set_curl(hand, PackedFloat32Array([probe.finger_curl(straight)]))
+	if hand.fist or hand.curl > 0.05:
+		failures.append("Hand tracking probe read a straight finger as curled")
+	probe.set_curl(hand, PackedFloat32Array([probe.finger_curl(curled)]))
+	if not hand.fist:
+		failures.append("Hand tracking probe missed a curled finger: %.2f" % hand.curl)
+	probe.free()
+
+func _drive_palm(probe: HandTrackingProbe, hand: HandTrackingProbe.Hand, clock: Array, from: Vector3, to: Vector3, seconds: float, tracked: bool) -> void:
+	var step := 1.0 / 72.0
+	var steps := maxi(int(round(seconds / step)), 1)
+	for index in steps:
+		clock[0] += step
+		var palm := from.lerp(to, float(index + 1) / float(steps))
+		probe.sample_hand(hand, clock[0], step, tracked, palm, Vector3.ZERO, false)

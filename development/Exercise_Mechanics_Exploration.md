@@ -203,7 +203,7 @@ Decision 16: required at Full Resonance as the first try. For push-ups it is pla
 - **The strike rule.** "Grip held and moving fast" becomes "fist closed and moving fast", read from finger curl.
 - **Haptics.** Lost, and that is accepted. Audio and VFX carry the strike feedback tiers.
 
-The fallback is `XR_META_simultaneous_hands_and_controllers`, which the bundled `godotopenxrvendors` 5.1.0 lists in its changelog: fight with controllers, let them hang on the straps for the floor, hands tracked, no menu switch. Untested. The export presets set `meta_xr_features/hand_tracking=0` today, so a test build has to turn it on.
+The fallback is `XR_META_simultaneous_hands_and_controllers`, which the bundled `godotopenxrvendors` 5.1.0 lists in its changelog: fight with controllers, let them hang on the straps for the floor, hands tracked, no menu switch. Untested. `tools/build_quest_debug.ps1 -HandTrackingTest` builds it in for tests 7 and 8 (section 3, "Running tests 7 and 8").
 
 ### Where bosses sit
 
@@ -293,7 +293,7 @@ Recommended, and what the prototype does:
 
 **Unknowns (all need the headset):** whether Quest 3 holds 6DoF tracking with the headset pointed at a featureless floor from 30 to 50 cm, whether the controllers stay tracked on the floor directly under the headset, and whether Quest's automatic switch to hand tracking fires when the controllers are let go. The project does not enable the hand tracking extension (validation logs `Property not found: 'xr/openxr/extensions/hand_tracking'`), so I expect the app to keep seeing controllers, but that is a guess.
 
-**With hand tracking** (the direction since the update): the same head rule counts reps, and the plank test becomes "both palms within 8 cm of the floor and flat", read from the hand joints. The palm joints at rest give the local floor directly. Godot 4.7 exposes tracked hands through `XRHandTracker` (from `XRServer.get_tracker(&"/user/hand_tracker/left")` and `right`); confirm the tracker names and joint confidence values on 4.7.1 before building on them.
+**With hand tracking** (the direction since the update): the same head rule counts reps, and the plank test becomes "both palms within 8 cm of the floor and flat", read from the hand joints. The palm joints at rest give the local floor directly. Godot 4.7 exposes tracked hands through `XRHandTracker` (from `XRServer.get_tracker(&"/user/hand_tracker/left")` and `right`, confirmed on 4.7.1). It gives per-joint flags (position tracked or only valid) and one tracking confidence for the hand, not a confidence per joint; `Scripts/Player/hand_tracking_probe.gd` reads both.
 
 ---
 
@@ -404,8 +404,74 @@ Meta's store comfort ratings (Comfortable, Moderate, Intense) describe **motion*
 4. **Push-up tracking:** palms flat, first with the gauntlets resting on their straps, then with controllers put aside and hand tracking on. Log `tracking_confidence` for the head and both hands or controllers through 10 reps, on carpet and on a plain floor. Any `NONE` or position jump over 5 cm kills that form.
 5. **Landing comfort:** 10 jumps in the stock strap. Does the view blur, does the headset shift, does it hurt?
 6. **Fatigue:** one 20-minute run of the movement tier draft. Heart rate if a watch is handy, and a written note on what hurt.
-7. **Hand tracking at punch speed:** 20 full-speed jabs, hooks, and uppercuts with hand tracking. Count dropped or late hand poses, and log the hand velocity the tracker reports. If more than 2 in 20 drop, hand tracking cannot be required for combat.
+7. **Hand tracking at punch speed:** 20 full-speed jabs, hooks, and uppercuts with hand tracking. Count dropped or late hand poses, and log the hand velocity the tracker reports. If more than 2 in 20 drop, hand tracking cannot be required for combat. Build and procedure: "Running tests 7 and 8" below.
 8. **Simultaneous hands and controllers:** enable `XR_META_simultaneous_hands_and_controllers` from `godotopenxrvendors` and check whether letting the controllers hang on their straps switches those hands to tracked hands without a menu, and back again on grip.
+
+### Running tests 7 and 8: the hand tracking build
+
+A debug-only build with hand tracking and a measurement overlay. Combat is unchanged: strikes still come from the controllers (`hand_collision.gd`), and nothing reads the tracked hands except the overlay.
+
+**Build and install**
+
+```
+powershell -File tools/build_quest_debug.ps1 -HandTrackingTest
+adb install -r builds/phantom-fray-handtest.apk
+adb logcat -c
+adb logcat -s godot
+```
+
+For that one export the switch appends these settings to `project.godot`, then puts the file back byte for byte: `xr/openxr/extensions/hand_tracking`, both hand tracking data sources (`..._unobstructed_data_source`, `..._controller_data_source`), `xr/openxr/extensions/meta/simultaneous_hands_and_controllers`, and `phantom_fray/debug/hand_tracking_probe` (the overlay). It cannot be a feature-tag override or an `override.cfg`: the vendors plugin's Meta exporter adds the `com.oculus.permission.HAND_TRACKING` permission and the frequency meta-data only when the setting is on in the exporting editor, and the editor reads neither. The `Quest Debug` preset now has `meta_xr_features/hand_tracking=1` (optional) and `hand_tracking_frequency=1` (high); they do nothing without the setting, so a plain debug build is unchanged. The `Quest Release` preset is untouched. If a hand tracking build is interrupted and leaves the settings in `project.godot`, both build scripts refuse to run until `git checkout -- project.godot`.
+
+Before the session: turn on hand tracking in the Quest settings (Movement tracking), and light the room well.
+
+**High frequency is Meta's Fast Motion Mode,** made for fitness and rhythm apps, and it needs good light. Meta says it cannot run alongside simultaneous hands and controllers: when both are on, simultaneous wins. So test 7 runs with simultaneous off. If test 7 fails, a second run with `hand_tracking_frequency=0` (low) in the `Quest Debug` preset tells whether Fast Motion Mode was helping.
+
+**The overlay** floats at waist height, 0.7 m ahead of the play-space centre, and works from the main menu, so no round is needed. A yellow sphere follows the left palm and a blue one the right, from the hand trackers rather than the controllers; watch them to judge lag. Left thumbstick click pauses or resumes simultaneous hands and controllers; right thumbstick click resets the counters. For each hand it shows:
+
+| Line | Meaning |
+|---|---|
+| `using HAND / CONTROLLER / BOTH / NONE` | `BOTH` = the controller is tracked (held or hanging on its strap) and the cameras see the hand. |
+| `TRACKED / LOST`, `optical / from-controller` | The hand tracker's data and its source. `from-controller` is a hand pose made up from a held controller. |
+| `conf HIGH / LOW / NONE`, `joints n/26` | Godot gives one confidence for the hand tracker, not one per joint; `joints` counts joints whose position is actually tracked rather than guessed. |
+| `palm x rep  y calc` | Palm speed in m/s: as the runtime reports it (`--` when it reports none), and calculated from frame-to-frame position. |
+| `curl n% FIST / open` | Mean bend of the four fingers. 65% or more reads as a closed fist. |
+| `peak 1s` | The highest of each speed in the last second. |
+| `punches  dropped` | A punch is a palm move that peaks at 2.5 m/s or more. `dropped` counts punches during which tracking was lost. |
+| `drops  jumps` | Times tracking was lost; times the palm moved over 25 m/s between two frames (a teleport, not a hand). |
+| `controller` | Whether the controller tracker has a pose, and its interaction profile. |
+
+Each punch, drop, jump, reset, and simultaneous toggle is also printed to logcat as a `HANDTEST` line with its time and speeds, so the numbers can be copied afterwards.
+
+**Test 7 procedure.** Simultaneous off. Put both controllers down on a surface (not on the straps) and check that both hands show `using HAND`, `optical`, `conf HIGH`. Reset. With one hand, throw 20 full-speed punches with a closed fist: 7 jabs, 7 hooks, 6 uppercuts, a second's pause between them so each counts on its own. Read that hand's `punches` and `dropped`, then reset and do the other hand. Missed punches count as dropped or late: a hand fails if `dropped` plus `20 − punches` is more than 2. Also note the typical `peak 1s` for each punch type, whether `FIST` held through the punch, and whether the palm sphere lagged behind the fist by eye. The overlay cannot time lag; that one is a judgement. For a baseline, five jabs holding the controllers (source `from-controller`) show the speed the controllers would have reported.
+
+**Test 8 procedure.** Hold both controllers (`using CONTROLLER`). Click the left stick: the header must read `simultaneous: ON`. If it reads `unsupported`, the runtime does not offer the extension in this build: write that down, and the fallback is out. Let the right controller hang on its strap and open the hand: it should reach `using BOTH` with an `optical` hand within about a second, with no system menu. Make a few slow punches and watch the sphere follow. Grip the controller again and note how long it takes to go back to `CONTROLLER` and whether it needs anything else. Then let both controllers hang, put both palms flat on the floor in a push-up position for 10 seconds, and note `drops` and `conf`. Last, click the left stick to turn simultaneous off and repeat the strap test, to see what the headset does without it.
+
+**What could not be checked without the headset.** The build, the settings, and the counting logic are checked on the desktop (`_validate_hand_tracking_probe` in `Tests/validation_runner.gd` drives a clean punch, a dropped punch, a pose jump, and finger curls through it). These are still unknown until the first session: whether the Quest runtime reports a palm velocity at all (`rep` stays `--` if not), whether it supports the hand tracking data source extension (the source then shows `source?`), whether `is_simultaneous_hands_and_controllers_supported()` is true on Quest 3 with this runtime, whether resuming it succeeds (a failure shows only in logcat as a Godot error), and whether the 65% fist threshold matches a real fist.
+
+**What to write in `development/Playtest_Log.md`.** One entry under Sessions:
+
+```
+### YYYY-MM-DD — self, Quest 3, handtest build <commit>
+Tests 7 and 8 (hand tracking build), room light:
+Test 7, simultaneous off, frequency high:
+  Right: jabs counted /7, hooks /7, uppercuts /6; dropped ; drops ; jumps
+  Left:  jabs counted /7, hooks /7, uppercuts /6; dropped ; drops ; jumps
+  Typical peak speed per punch type (rep / calc):
+  Controller baseline jab speed:
+  FIST held through punches (always / mostly / no):
+  Palm sphere lag by eye (none / visible / bad):
+  Verdict: dropped + missed per 20, right / left; 2 or fewer means hand tracking can be required for combat
+Test 8:
+  simultaneous: supported / unsupported
+  Controller on strap -> optical hand, no menu (yes / no, how long):
+  Grip again -> controller (yes / no, how long):
+  Palms on floor, controllers hanging, 10 s: drops, conf:
+  Without simultaneous, controller on strap:
+  Verdict:
+Odd readings or crashes:
+```
+
+Then record the outcome as a decision here: test 7 decides whether decision 16 holds for the fighting, and test 8 whether the fallback exists.
 
 ---
 
