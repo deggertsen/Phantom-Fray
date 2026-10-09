@@ -46,10 +46,24 @@ func _ready() -> void:
 	
 	# Load available tracks
 	_load_music_tracks()
-	
-	# Start playing if auto_play is enabled
-	if auto_play and available_tracks.size() > 0:
+
+	var settings := get_node_or_null("/root/GameSettings")
+	if settings:
+		settings.own_music_changed.connect(_on_own_music_changed)
+
+	# Start playing if auto_play is enabled and the player is not bringing their own music
+	if auto_play and available_tracks.size() > 0 and not _own_music():
 		_play_random_track()
+
+func _own_music() -> bool:
+	var settings := get_node_or_null("/root/GameSettings")
+	return settings != null and bool(settings.own_music)
+
+func _on_own_music_changed(enabled: bool) -> void:
+	if enabled:
+		stop_music()
+	elif auto_play:
+		play_music()
 
 func _load_music_tracks() -> void:
 	# Explicit preloads guarantee every launch track is included in Android exports.
@@ -94,6 +108,8 @@ func _on_music_finished() -> void:
 # Public methods for external control
 func play_music() -> void:
 	"""Start playing music"""
+	if _own_music():
+		return
 	if not is_playing and available_tracks.size() > 0:
 		_play_random_track()
 

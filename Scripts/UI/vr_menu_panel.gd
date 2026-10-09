@@ -149,7 +149,7 @@ func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
 	actions.add_child(_make_action_button(&"tutorial_continue", continue_text, COLOR_VIOLET, Vector2(270, 72), true))
 	_set_footer("THIS LESSON WILL WAIT  •  SELECT CONTINUE WHEN YOU ARE READY  •  HOLD META TO RECENTER")
 
-func show_settings(music_text: String, effects_text: String, haptics_text: String, reduced_flashes: bool, from_pause: bool) -> void:
+func show_settings(music_text: String, effects_text: String, haptics_text: String, reduced_flashes: bool, from_pause: bool, own_music: bool = false) -> void:
 	_begin_view(&"SETTINGS", "RSF // OPERATOR PROFILE", "SETTINGS", "", COLOR_BLUE)
 	var scroll_hint := _label("AIM AT PANEL • USE EITHER THUMBSTICK TO SCROLL", 16, COLOR_MUTED, true)
 	scroll_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -163,7 +163,15 @@ func show_settings(music_text: String, effects_text: String, haptics_text: Strin
 	settings_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	settings_stack.add_theme_constant_override("separation", 14)
 	_settings_scroll.add_child(settings_stack)
-	settings_stack.add_child(_make_stepper("MUSIC VOLUME", music_text, "Soundtrack and mission music", &"music_down", &"music_up", COLOR_CYAN))
+	settings_stack.add_child(_make_switch(
+		"PLAY MY OWN MUSIC",
+		"Silences the soundtrack. Start a playlist in any music app first.",
+		own_music,
+		&"own_music_off",
+		&"own_music_on"
+	))
+	if not own_music:
+		settings_stack.add_child(_make_stepper("MUSIC VOLUME", music_text, "Soundtrack and mission music", &"music_down", &"music_up", COLOR_CYAN))
 	settings_stack.add_child(_make_stepper("EFFECTS VOLUME", effects_text, "Impacts, UI, heartbeat, and warnings", &"effects_down", &"effects_up", COLOR_MAGENTA))
 	settings_stack.add_child(_make_stepper("HAPTIC STRENGTH", haptics_text, "Controller impact feedback", &"haptics_down", &"haptics_up", COLOR_VIOLET))
 	settings_stack.add_child(_make_switch(

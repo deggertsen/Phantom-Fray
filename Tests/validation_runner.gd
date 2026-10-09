@@ -188,6 +188,17 @@ func _validate_menu_surface() -> void:
 			failures.append("Reduced flashes on-state is unmarked")
 		if action == "settings_flashes_off" and button.text.begins_with("●"):
 			failures.append("Reduced flashes off-state stayed marked")
+	menu.show_settings("75%", "50%", "100%", false, false, true)
+	await process_frame
+	var own_music_marked := false
+	for button in _buttons_under(menu):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action == "own_music_on":
+			own_music_marked = button.text.begins_with("●")
+		elif action == "music_down" or action == "music_up":
+			failures.append("Soundtrack volume still shows while playing your own music")
+	if not own_music_marked:
+		failures.append("Play my own music on-state is unmarked")
 	menu.show_reset_confirmation()
 	await process_frame
 	var keep := _find_button(menu, "KEEP PROGRESS")

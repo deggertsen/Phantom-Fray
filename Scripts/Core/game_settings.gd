@@ -1,5 +1,7 @@
 extends Node
 
+signal own_music_changed(enabled: bool)
+
 const SETTINGS_PATH := "user://phantom_fray_settings.cfg"
 const VOLUME_DB: Array[float] = [-80.0, -20.0, -14.0, -8.0, -2.0]
 const VOLUME_LABELS: PackedStringArray = ["OFF", "25%", "50%", "75%", "100%"]
@@ -8,6 +10,7 @@ var master_db: float = 0.0
 var music_db: float = -8.0
 var sfx_db: float = -8.0
 var critical_db: float = -8.0
+var own_music: bool = false
 var haptic_scale: float = 1.0
 var reduced_flashes: bool = false
 var tutorial_completed: bool = false
@@ -28,6 +31,7 @@ func load_settings() -> void:
 	music_db = config.get_value("audio", "music_db", music_db)
 	sfx_db = config.get_value("audio", "sfx_db", sfx_db)
 	critical_db = config.get_value("audio", "critical_db", critical_db)
+	own_music = config.get_value("audio", "own_music", own_music)
 	haptic_scale = config.get_value("comfort", "haptic_scale", XRToolsUserSettings.haptics_scale)
 	XRToolsUserSettings.haptics_scale = haptic_scale
 	reduced_flashes = config.get_value("comfort", "reduced_flashes", reduced_flashes)
@@ -45,6 +49,7 @@ func save_settings() -> void:
 	config.set_value("audio", "music_db", music_db)
 	config.set_value("audio", "sfx_db", sfx_db)
 	config.set_value("audio", "critical_db", critical_db)
+	config.set_value("audio", "own_music", own_music)
 	config.set_value("comfort", "haptic_scale", haptic_scale)
 	config.set_value("comfort", "reduced_flashes", reduced_flashes)
 	config.set_value("progress", "tutorial_completed", tutorial_completed)
@@ -57,6 +62,9 @@ func apply_audio() -> void:
 	_set_bus_volume(&"Music", music_db)
 	_set_bus_volume(&"SFX", sfx_db)
 	_set_bus_volume(&"Critical", critical_db)
+	var music_bus := AudioServer.get_bus_index(&"Music")
+	if music_bus >= 0:
+		AudioServer.set_bus_mute(music_bus, own_music)
 
 func volume_label(db: float) -> String:
 	return VOLUME_LABELS[volume_index(db)]
@@ -75,6 +83,14 @@ func adjust_music(direction: int) -> void:
 	var index := volume_index(music_db)
 	music_db = VOLUME_DB[clampi(index + direction, 0, VOLUME_DB.size() - 1)]
 	save_settings()
+
+func set_own_music(enabled: bool) -> void:
+	# The player's own app (Spotify, YouTube Music, and so on) plays alongside the game while the score stays silent.
+	if own_music == enabled:
+		return
+	own_music = enabled
+	save_settings()
+	own_music_changed.emit(own_music)
 
 func adjust_effects(direction: int) -> void:
 	var index := volume_index(sfx_db)

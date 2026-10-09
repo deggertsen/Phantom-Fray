@@ -19,6 +19,7 @@
 - [ ] Upgrade install over the previous candidate.
 - [ ] Both controllers track and align with visible fists.
 - [ ] Haptic settings persist and all feedback remains comfortable.
+- [ ] Play My Own Music: a playlist started in Spotify (or another music app) keeps playing through launch, a mission, pause, and results, with the soundtrack silent and Dr. Chen still audible.
 - [ ] Wrist life/score/time HUD is readable without strain.
 - [ ] Standing and seated-height sanity checks.
 - [ ] Physical side-step and duck both work for Pink.
