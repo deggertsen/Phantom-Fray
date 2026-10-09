@@ -34,7 +34,7 @@ Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission
 | OP-03 | Chen's Gambit | 12 | 6 to 8 min | Shorter tells, faster lunges |
 | OP-04 | Double Breach | 16 paired | 6 to 10 min | Two rifts open side by side |
 | OP-05 | Open Arc | 16 paired | 6 to 10 min | Paired rifts spread across the front arc |
-| OP-06 | The Maw | 2 in a row | 4 to 6 min | One double-size rift that spawns fast, opening twice |
+| OP-06 | The Maw | 1 | 4 to 6 min | One double-size rift that spawns fast, with double health |
 
 Each Operations card shows its expected time ("6 TO 8 MIN") and, once the player has won it, their best time beside it. The ranges are estimates from the wave tables until timed headset runs replace them. A clean run through all six takes roughly 40 minutes. The campaign currently works as an extended tutorial for the combat system. Replay value and narrative hooks are the next things to build; see the roadmap.
 

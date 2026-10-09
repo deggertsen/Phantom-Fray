@@ -220,19 +220,20 @@ static func _the_maw() -> Dictionary:
 		"id": "the_maw",
 		"codename": "OP-06",
 		"title": "THE MAW",
-		"summary": "One vast rift that opens twice. Phantoms pour out in a steady flood, and the mouth takes a long chew to shut.",
+		"summary": "One vast rift. Phantoms pour out in a steady flood, and the mouth takes a long chew to shut.",
 		"expected_minutes": [4, 6],
 		"objective": "SEAL THE MAW",
 		"arc_rifts": true,
 		"start_line": "CHEN: ONE MOUTH. IT DOES NOT STOP FEEDING.",
-		"pressure_labels": ["THE MAW", "IT OPENS AGAIN"],
-		"open_barks": ["", "IT OPENED AGAIN. SAME MOUTH."],
-		"seal_lines": ["IT SHUT. IT WILL NOT STAY SHUT."],
+		"pressure_labels": ["THE MAW"],
+		"open_barks": [""],
+		"seal_lines": [],
 		"victory_line": "Chen: The Maw is shut. It will remember how long you made it chew.",
 		"defeat_line": "Chen: The Maw outpaced you. Kill faster than it can replace them.",
-		"rifts": _repeat([
-			_wave(800, 0.875, 8, 1.0, 1.0, ["yellow", "blue", "green", "pink"], 2.0),
-		], 2),
+		# One mouth, so its length comes from health rather than a second rift.
+		"rifts": [
+			_wave(1600, 0.875, 8, 1.0, 1.0, ["yellow", "blue", "green", "pink"], 2.0),
+		],
 	}
 
 static func _paired_assault_waves() -> Array:

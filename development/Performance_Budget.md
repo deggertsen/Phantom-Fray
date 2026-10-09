@@ -15,7 +15,7 @@ Updated 2026-10-08.
 | Simultaneous dissolve VFX | 4 | 4 |
 | Simultaneous strike VFX | 4 | 4 |
 
-Paired operations run two rifts at `max_live` 2 each. The Maw runs one rift at a time, twice in a row, at `max_live` 8 with a 0.875 s spawn interval and 800 health, so it is the phantom-count stress case and the only place eight phantoms are live at once. Double Breach is the rift and beacon stress case.
+Paired operations run two rifts at `max_live` 2 each. The Maw runs one rift at `max_live` 8 with a 0.875 s spawn interval and 1600 health, so it is the phantom-count stress case and the only place eight phantoms are live at once. Double Breach is the rift and beacon stress case.
 
 ## Content budgets
 

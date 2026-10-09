@@ -9,7 +9,7 @@ Updated 2026-10-09.
 3. **One arena.** Every operation is the same dead-city breach site, and the briefing panel still reads "RSF // ERM TRAINING CHAMBER 07" (`Scripts/Presentation/arena_builder.gd`). Phase 8.
 4. **OP-04 and OP-05 share one wave table.** Only rift placement differs (`_paired_assault_waves` in `Scripts/Core/mission_catalog.gd`).
 5. **Every phantom aims at head height.** Targets land 18 to 30 cm below the eyes. No low approaches, so squats and uppercuts come only from the Angler's lure position.
-6. **Expected mission times are estimates.** Each operation's `expected_minutes` pair in `Scripts/Core/mission_catalog.gd` comes from the wave tables (rift health over roughly 13 rift damage per kill, times the spawn interval, plus misses and rift openings), not from timed play. The rift counts were doubled on 2026-10-09 and the ranges doubled with them. Time real runs on the headset and replace them.
+6. **Expected mission times are estimates.** Each operation's `expected_minutes` pair in `Scripts/Core/mission_catalog.gd` comes from the wave tables (rift health over roughly 13 rift damage per kill, times the spawn interval, plus misses and rift openings), not from timed play. Mission lengths doubled on 2026-10-09 (twice the rifts, and twice the health on The Maw's single rift) and the ranges doubled with them. Time real runs on the headset and replace them.
 
 ## Audio
 
