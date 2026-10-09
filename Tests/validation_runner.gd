@@ -15,6 +15,7 @@ func _run_validation() -> void:
 	await _validate_attack_window()
 	await _validate_mission_catalog()
 	await _validate_rift_stragglers()
+	await _validate_elapsed_timer()
 	await _validate_menu_surface()
 	await _validate_results_menu()
 	await _validate_pink_dodge()
@@ -538,13 +539,11 @@ func _validate_mission_catalog() -> void:
 		failures.append("Double Breach is missing its eight rifts")
 	else:
 		_expect_staggered_pairs(paired_waves, "Double Breach")
-	if not is_equal_approx(float(paired.get("duration", 0.0)), 520.0):
-		failures.append("Double Breach did not double its window")
 	var ring := MissionCatalog.get_mission("widen_the_ring")
-	if ring.get("rifts", []).size() != 6 or not is_equal_approx(float(ring.get("duration", 0.0)), 420.0):
+	if ring.get("rifts", []).size() != 6:
 		failures.append("Widen the Ring did not double its length")
 	var gambit := MissionCatalog.get_mission("chens_gambit")
-	if gambit.get("rifts", []).size() != 6 or not is_equal_approx(float(gambit.get("duration", 0.0)), 480.0):
+	if gambit.get("rifts", []).size() != 6:
 		failures.append("Chen's Gambit did not double its length")
 	if MissionCatalog.is_unlocked_with_clears("open_arc", through_gambit):
 		failures.append("Open Arc unlocked before Double Breach")
@@ -571,8 +570,9 @@ func _validate_mission_catalog() -> void:
 	var first := MissionCatalog.get_mission("first_light")
 	if int(first.get("max_concurrent", 1)) != 1 or bool(first.get("cluster_rifts", false)) or first.get("rifts", []).size() != 2:
 		failures.append("First Light opened more than one rift")
-	if not is_equal_approx(float(first.get("duration", 0.0)), 180.0):
-		failures.append("First Light changed length")
+	for mission in MissionCatalog.all_missions():
+		if mission.has("duration") or mission.has("timeout_line"):
+			failures.append("%s still carries a countdown window" % mission.get("id", "?"))
 	await _validate_paired_rift_placement()
 	await _validate_arc_rift_placement()
 	for variant_id in ["yellow", "blue", "green", "pink"]:
@@ -704,6 +704,78 @@ func _validate_rift_stragglers() -> void:
 	director.queue_free()
 	container.queue_free()
 	await process_frame
+
+func _validate_elapsed_timer() -> void:
+	var container := Node3D.new()
+	container.add_to_group("PhantomContainer")
+	root.add_child(container)
+	var director := RiftDirector.new()
+	director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+	director.total_rifts = 1
+	root.add_child(director)
+	var life := LifeForceManager.new()
+	root.add_child(life)
+	var round_controller := RoundController.new()
+	round_controller.countdown_seconds = 0
+	root.add_child(round_controller)
+	await process_frame
+	await process_frame
+	round_controller.set_process(false)
+	var ticks: Array[float] = []
+	round_controller.time_changed.connect(func(seconds: float) -> void: ticks.append(seconds))
+	var outcome := [&""]
+	round_controller.round_finished.connect(func(result: StringName, _score: int) -> void: outcome[0] = result)
+	round_controller.begin_round(MissionCatalog.get_mission("first_light"))
+	round_controller._process(0.0)
+	for _step in 3:
+		round_controller._process(1.0)
+	if ticks.size() < 4 or not is_zero_approx(ticks[0]) or ticks[-1] <= ticks[0] or not is_equal_approx(round_controller.elapsed_seconds, 3.0):
+		failures.append("Mission clock did not count up from zero: %s" % [ticks])
+	round_controller.pause_round()
+	round_controller._process(5.0)
+	if not is_equal_approx(round_controller.elapsed_seconds, 3.0):
+		failures.append("Mission clock kept running while paused")
+	round_controller.resume_round()
+	round_controller._process(3600.0)
+	if outcome[0] != &"" or not round_controller.is_round_active():
+		failures.append("Mission ended on the clock: %s" % outcome[0])
+	round_controller._on_all_clear()
+	if outcome[0] != &"victory":
+		failures.append("Clearing the rifts did not end in victory")
+	var levels = load("res://Scripts/Core/game_settings.gd").new()
+	levels.settings_path = "user://validation_settings.cfg"
+	levels.record_time("first_light", round_controller.elapsed_seconds)
+	levels.record_time("first_light", round_controller.elapsed_seconds + 30.0)
+	if not is_equal_approx(levels.best_time("first_light"), round_controller.elapsed_seconds):
+		failures.append("Victory time did not record as the best time")
+	levels.record_time("first_light", 200.0)
+	if not is_equal_approx(levels.best_time("first_light"), 200.0):
+		failures.append("A faster victory did not replace the best time")
+	levels.clear_mission_progress()
+	if levels.best_time("first_light") != 0.0:
+		failures.append("Reset progress kept the best time")
+	levels.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://validation_settings.cfg"))
+	var menu := (load("res://Scenes/UI/vr_menu_panel.tscn") as PackedScene).instantiate() as VRMenuPanel
+	root.add_child(menu)
+	await process_frame
+	menu.show_results(&"victory", 12840, "", "", 252.4, 280.0)
+	await process_frame
+	if not _has_label(menu, "SEALED IN 4:12  •  NEW BEST TIME"):
+		failures.append("Victory results do not show the completion time")
+	menu.queue_free()
+	director.cleanup_round()
+	for node in [round_controller, life, director, container]:
+		node.queue_free()
+	await process_frame
+
+func _has_label(node: Node, text: String) -> bool:
+	if node is Label and (node as Label).text == text:
+		return true
+	for child in node.get_children():
+		if _has_label(child, text):
+			return true
+	return false
 
 func _validate_maw_rift() -> void:
 	var rift := RiftManager.new()

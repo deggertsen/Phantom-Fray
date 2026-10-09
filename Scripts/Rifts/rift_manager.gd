@@ -101,7 +101,7 @@ func force_cleanup() -> void:
 func is_marked() -> bool:
 	return not _closing
 
-## Phantoms still in play. One already dissolving from a timeout or stall no longer counts.
+## Phantoms still in play. One already dissolving from a stall or round cleanup no longer counts.
 func has_live_phantoms() -> bool:
 	_prune_phantoms()
 	for phantom in _live_phantoms.values():

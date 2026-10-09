@@ -18,6 +18,9 @@ var _tutorial_step: int = 0
 var _settings: Node
 var _last_outcome: StringName = &""
 var _last_score: int = 0
+var _last_seconds: float = 0.0
+## The mission's fastest stored victory before the round that just finished, so results can call a new best.
+var _previous_best_time: float = 0.0
 var _active_mission_id: String = ""
 var _last_debrief: String = ""
 var _next_mission_title: String = ""
@@ -395,10 +398,14 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 	_last_outcome = outcome
 	_last_score = score
 	_last_debrief = _round.get_debrief(outcome) if _round else ""
+	_last_seconds = _round.elapsed_seconds if _round else 0.0
+	_previous_best_time = 0.0
 	_next_mission_title = ""
 	if outcome == &"victory" and _settings:
+		_previous_best_time = _settings.best_time(_active_mission_id)
 		_settings.mark_mission_cleared(_active_mission_id)
 		_settings.record_score(_active_mission_id, score)
+		_settings.record_time(_active_mission_id, _last_seconds)
 		var follow_id := MissionCatalog.unlocked_followup(_active_mission_id, _settings)
 		if follow_id != "":
 			_next_mission_title = String(MissionCatalog.get_mission(follow_id).get("title", ""))
@@ -414,7 +421,7 @@ func _show_results() -> void:
 	_menu_input_armed = false
 	_results_pointer_warmup = 0.35
 	if _presenter:
-		_presenter.show_results(_last_outcome, _last_score, _last_debrief, _next_mission_title)
+		_presenter.show_results(_last_outcome, _last_score, _last_debrief, _next_mission_title, _last_seconds, _previous_best_time)
 	_refresh_menu_pointers()
 	call_deferred("_reset_results_pointers_after_render")
 

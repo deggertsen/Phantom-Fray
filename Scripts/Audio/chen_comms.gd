@@ -180,8 +180,8 @@ func _watch_round(delta: float) -> void:
 	if _round == null:
 		return
 	var active := _round.is_round_active()
-	# A round that just went live with its whole clock left is a new mission, not a resume.
-	if active and not _was_active and _round.seconds_remaining >= _round.round_duration - 1.0:
+	# A round that just went live with its clock near zero is a new mission, not a resume.
+	if active and not _was_active and _round.elapsed_seconds < 1.0:
 		_begin_mission()
 	_was_active = active
 	if not active:

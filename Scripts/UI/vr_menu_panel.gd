@@ -244,10 +244,11 @@ func _closest_button(node: Node, point: Vector2, best: Array) -> void:
 	for child in node.get_children():
 		_closest_button(child, point, best)
 
-func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "") -> void:
+## seconds is the live round time; previous_best is the stored fastest victory before this one (0 when none).
+func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0) -> void:
 	var victory := outcome == &"victory"
 	var title := "MISSION COMPLETE" if victory else "OPERATION ENDED"
-	var subtitle := "ALL RIFTS SEALED" if victory else "LIFE FORCE DEPLETED" if outcome == &"defeat" else "RIFT WINDOW LOST"
+	var subtitle := "ALL RIFTS SEALED" if victory else "LIFE FORCE DEPLETED"
 	var accent := COLOR_GREEN if victory else COLOR_RED
 	_begin_view(&"RESULTS", "RSF // AFTER-ACTION REPORT", title, subtitle, accent, 34)
 	var outcome_banner := ColorRect.new()
@@ -258,9 +259,19 @@ func show_results(outcome: StringName, score: int, debrief: String = "", next_ti
 	var score_panel := PanelContainer.new()
 	score_panel.add_theme_stylebox_override("panel", _style_box(COLOR_PANEL_SOFT, accent, 2, 18))
 	_content.add_child(score_panel)
+	var score_stack := VBoxContainer.new()
+	score_stack.add_theme_constant_override("separation", 2)
+	score_panel.add_child(score_stack)
 	var score_label := _label("FINAL SCORE  %06d" % score, 28, accent, true)
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	score_panel.add_child(score_label)
+	score_stack.add_child(score_label)
+	if victory and seconds > 0.0:
+		var time_text := "SEALED IN %s" % _clock(seconds)
+		if previous_best > 0.0 and seconds < previous_best:
+			time_text += "  •  NEW BEST TIME"
+		var time_label := _label(time_text, 20, COLOR_TEXT, true)
+		time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		score_stack.add_child(time_label)
 	if debrief != "":
 		var debrief_label := _label(debrief, 18, COLOR_TEXT)
 		debrief_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -277,6 +288,10 @@ func show_results(outcome: StringName, score: int, debrief: String = "", next_ti
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(spacer)
 	_set_footer("POINT + TRIGGER TO SELECT YOUR NEXT OPERATION")
+
+func _clock(seconds: float) -> String:
+	var whole := maxi(floori(seconds), 0)
+	return "%d:%02d" % [whole / 60, whole % 60]
 
 func _build_shell() -> void:
 	var backdrop := ColorRect.new()

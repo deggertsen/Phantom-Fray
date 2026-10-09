@@ -31,7 +31,7 @@ Paired operations run two rifts at `max_live` 2 each. The Maw runs one rift at `
 ## Test scenarios
 
 1. **OP-04 Double Breach**, two rifts open, both beacons, full color mix, maximum chain feedback, low-life frost and heartbeat, Chen talking. Five minutes.
-2. **OP-06 The Maw**, four live phantoms at double rift scale, repeated damage flashes. Full window.
+2. **OP-06 The Maw**, four live phantoms at double rift scale, repeated damage flashes. Play it to the seal.
 3. **Thirty-minute soak** across Next Operation and Retry transitions, standing in for the planned endless hold.
 
 Record for each:

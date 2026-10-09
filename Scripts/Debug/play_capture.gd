@@ -39,8 +39,10 @@ func _ready() -> void:
 	await _capture("03-countdown")
 	await _wait(7.0)
 	await _capture("04-combat")
+	_capture_bracer("04-bracer")
 	await _wait(5.0)
 	await _capture("05-combat")
+	_capture_bracer("05-bracer")
 	_press(KEY_ESCAPE)
 	await _wait(0.8)
 	await _capture("06-pause")
@@ -59,6 +61,12 @@ func _press(keycode: Key) -> void:
 
 func _wait(seconds: float) -> void:
 	await get_tree().create_timer(seconds).timeout
+
+## The wrist panel sits out of the desktop camera's view, so save what its own display last drew.
+func _capture_bracer(file_name: String) -> void:
+	var display := _main.get_node_or_null("Player/LeftHandController/RoundHUD/Display") as SubViewport
+	if display:
+		display.get_texture().get_image().save_png("%s/%s.png" % [_out_dir, file_name])
 
 func _capture(file_name: String) -> void:
 	await get_tree().process_frame

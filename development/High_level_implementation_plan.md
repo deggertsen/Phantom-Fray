@@ -22,7 +22,7 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - [x] Phantoms: base arc, four rules, three species with three forms each
 - [x] Rifts: director and manager, health, placement modes, concurrency, Maw scale
 - [x] Life force: drain, recovery, states, fail state
-- [x] Round: countdown, timer, score, chain, outcomes, pause
+- [x] Round: countdown, elapsed timer, score, chain, outcomes, pause
 - [x] Flow: menu, operations, training, settings, results, progress persistence
 - [x] Best score stored per operation
 - [ ] Progression beyond unlock order (medals, map)
