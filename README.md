@@ -59,7 +59,7 @@ Godot 4.7.1 exactly. The desktop fallback runs without a headset for menu, flow,
 godot --path .
 ```
 
-Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, menu surfaces, own-music settings, rift stragglers, pink dodge):
+Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, menu surfaces, own-music settings, rift stragglers, pink dodge, squat detector prototype):
 
 ```bash
 tools/validate_project.sh

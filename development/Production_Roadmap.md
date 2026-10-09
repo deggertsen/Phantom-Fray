@@ -96,6 +96,7 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 - [ ] Validate the strike-window rule with testers: punches only count once the phantom is within `strike_reach` or in its commit phase. The developer has not felt this as a problem. Confirm with players who have not been told the rule before changing anything.
 - [ ] Cap the full-screen damage tint and distortion in headset, and make Reduced Flashes cap them harder.
 - [ ] Phantom approach heights: currently every phantom aims just below the eyes. Add lower approaches that ask for uppercuts and squats.
+- [ ] Squats, jumps, and push-ups: tune the squat detector prototype on headset, then prototype the resonance sweep. Plan, thresholds, safety tests, and the Full Resonance tier in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 
 ## Phase 10 — Launch
 

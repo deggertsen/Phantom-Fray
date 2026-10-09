@@ -18,6 +18,7 @@ func _run_validation() -> void:
 	await _validate_menu_surface()
 	await _validate_results_menu()
 	await _validate_pink_dodge()
+	_validate_squat_detector()
 	await process_frame
 	if failures.is_empty():
 		print("PHANTOM FRAY VALIDATION PASSED")
@@ -730,3 +731,58 @@ func _validate_life_force() -> void:
 	if not life.is_depleted():
 		failures.append("Life force depletion failed")
 	life.queue_free()
+
+## Recorded-shape motions through the squat prototype: a squat counts; a duck, a waist bend,
+## a side-step duck, and a hop do not; a shorter player squats against their own height.
+func _validate_squat_detector() -> void:
+	var squat := SquatDetector.new()
+	var standing := Vector3(0.0, 1.62, 0.0)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 1.5)
+	if squat.state != SquatDetector.State.STANDING or absf(squat.standing_height - 1.62) > 0.01:
+		failures.append("Squat detector did not calibrate a still standing head")
+	var bottom := Vector3(0.0, 1.62 * 0.72, 0.08)
+	_drive_head(squat, standing, bottom, 0.0, -20.0, 0.6)
+	_drive_head(squat, bottom, bottom, -20.0, -20.0, 0.3)
+	_drive_head(squat, bottom, standing, -20.0, 0.0, 0.6)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
+	if squat.rep_count != 1:
+		failures.append("Squat detector missed a clean squat")
+	var duck := Vector3(0.0, 1.62 * 0.88, 0.0)
+	_drive_head(squat, standing, duck, 0.0, 0.0, 0.3)
+	_drive_head(squat, duck, standing, 0.0, 0.0, 0.3)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
+	var bend := Vector3(0.0, 1.2, 0.55)
+	_drive_head(squat, standing, bend, 0.0, -70.0, 0.7)
+	_drive_head(squat, bend, bend, -70.0, -70.0, 0.4)
+	_drive_head(squat, bend, standing, -70.0, 0.0, 0.7)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
+	var side := Vector3(0.55, 1.62 * 0.76, 0.0)
+	_drive_head(squat, standing, side, 0.0, 0.0, 0.4)
+	_drive_head(squat, side, side, 0.0, 0.0, 0.3)
+	_drive_head(squat, side, standing, 0.0, 0.0, 0.5)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
+	var hop := Vector3(0.0, 1.62 + 0.15, 0.0)
+	_drive_head(squat, standing, hop, 0.0, 0.0, 0.15)
+	_drive_head(squat, hop, standing, 0.0, 0.0, 0.15)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
+	if squat.rep_count != 1:
+		failures.append("Squat detector counted a duck, a bend, a side-step, or a hop as a squat")
+	squat.free()
+	var short := SquatDetector.new()
+	var short_standing := Vector3(0.0, 1.30, 0.0)
+	var short_bottom := Vector3(0.0, 1.30 * 0.75, 0.05)
+	_drive_head(short, short_standing, short_standing, 0.0, 0.0, 1.5)
+	_drive_head(short, short_standing, short_bottom, 0.0, -15.0, 0.5)
+	_drive_head(short, short_bottom, short_bottom, -15.0, -15.0, 0.3)
+	_drive_head(short, short_bottom, short_standing, -15.0, 0.0, 0.5)
+	_drive_head(short, short_standing, short_standing, 0.0, 0.0, 0.3)
+	if short.rep_count != 1:
+		failures.append("Squat detector missed a shorter player's squat")
+	short.free()
+
+func _drive_head(squat: SquatDetector, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float, seconds: float) -> void:
+	var step := 1.0 / 72.0
+	var steps := maxi(int(round(seconds / step)), 1)
+	for index in steps:
+		var t := float(index + 1) / float(steps)
+		squat.sample(from.lerp(to, t), lerpf(pitch_from, pitch_to, t), step)
