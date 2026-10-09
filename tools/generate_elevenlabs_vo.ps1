@@ -73,6 +73,8 @@ if ($FindVoices) {
 }
 
 if ($Audition) {
+    # Run with -File, a comma list arrives as one string.
+    $Audition = $Audition | ForEach-Object { $_ -split ',' } | Where-Object { $_ }
     $out = Join-Path $projectRoot 'reports\vo-audition'
     New-Item $out -ItemType Directory -Force | Out-Null
     $samples = @('mission_start', 'rift_oclock_6', 'life_critical', 'rift_sealed', 'victory')
@@ -86,10 +88,14 @@ if ($Audition) {
             $clips += $clip
         }
         # One file per voice, the lines back to back with a beat between them.
+        $beat = Join-Path $out 'beat.ogg'
+        if (-not (Test-Path $beat)) {
+            & ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'anullsrc=r=22050:cl=mono' -t 0.8 -c:a libvorbis -q:a 5 $beat
+        }
         $list = Join-Path $out "$voice.txt"
-        Set-Content $list ($clips | ForEach-Object { "file '$($_ -replace '\\', '/')'" })
+        Set-Content $list ($clips | ForEach-Object { "file '$($_ -replace '\\', '/')'"; "file '$($beat -replace '\\', '/')'" })
         $reel = Join-Path $out "$voice.ogg"
-        & ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i $list -af 'apad=pad_dur=0.6' -c:a libvorbis -q:a 5 $reel
+        & ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i $list -c:a libvorbis -q:a 5 $reel
         Write-Host "Audition reel: $reel"
     }
     return
