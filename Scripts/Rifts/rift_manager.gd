@@ -41,6 +41,7 @@ var _phantom_container: Node3D
 var _live_phantoms: Dictionary = {}
 var _portal_material: ShaderMaterial
 var _wave_scenes: Array[PackedScene] = []
+var _wave: Dictionary = {}
 var _speed_scale: float = 1.0
 var _telegraph_scale: float = 1.0
 var _rift_scale: float = 1.0
@@ -62,6 +63,7 @@ func _ready() -> void:
 		_phantom_container = self
 
 func configure_wave(wave: Dictionary) -> void:
+	_wave = wave
 	maximum_health = int(wave.get("health", maximum_health))
 	rift_health = maximum_health
 	spawn_interval = float(wave.get("interval", spawn_interval))
@@ -166,6 +168,9 @@ func _spawn_phantom() -> Node3D:
 	_phantom_container.add_child(phantom)
 	if phantom.has_method("apply_pressure"):
 		phantom.apply_pressure(_speed_scale, _telegraph_scale)
+	# Hazards such as the resonance sweep read their own settings (squat_depth) from the wave.
+	if phantom.has_method("apply_wave"):
+		phantom.apply_wave(_wave)
 	_register(phantom)
 	return phantom
 

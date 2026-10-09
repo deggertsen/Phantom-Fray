@@ -104,7 +104,8 @@ func set_boss_mood(amount: float, rift_position: Vector3, head: Vector3) -> void
 	var sky := _sky_material()
 	if sky and changed:
 		var stepped := snappedf(_boss_mood, 0.1)
-		if not is_equal_approx(float(sky.get_shader_parameter("crack_spread")), stepped):
+		var current: Variant = sky.get_shader_parameter("crack_spread")
+		if current == null or not is_equal_approx(float(current), stepped):
 			sky.set_shader_parameter("crack_spread", stepped)
 	var flicker := 1.0
 	if not calm and _boss_mood > 0.0 and _boss_mood < 1.0:

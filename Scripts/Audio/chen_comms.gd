@@ -42,6 +42,8 @@ var _max_wait: float = DEFAULT_MAX_WAIT
 var _last_take: Dictionary = {}
 ## Counts finished lines, so a caption timer from a line that was cut off cannot end the next one.
 var _line_serial: int = 0
+## While a boss scene plays out (the turn), only its own lines get through.
+var scripted: bool = false
 
 var _round: RoundController
 var _director: Node
@@ -79,7 +81,7 @@ func _ready() -> void:
 ## Queue a line for one of the events in chen_lines.json.
 func say(event: String) -> void:
 	var info: Dictionary = _events.get(event, {})
-	if info.is_empty() or event == _playing_event:
+	if info.is_empty() or event == _playing_event or (scripted and not event.begins_with("boss_")):
 		return
 	for queued in _queue:
 		if queued["event"] == event:

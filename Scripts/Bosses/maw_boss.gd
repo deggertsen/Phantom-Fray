@@ -27,7 +27,7 @@ const BOSS_LIGHT := Color(0.85, 0.12, 0.3)
 ## The turn, start to the first second of the fight.
 const TURN_SECONDS := 12.0
 ## The Maw tears this much wider than its phase-one size during the turn.
-const TORN_SCALE_GAIN := 1.3
+const TORN_SCALE_GAIN := 1.6
 const ESCORT_ORBIT := 0.16
 ## Anchor a possession feeds back to the boss, and anchor each push-up pulse drains.
 const POSSESSION_FEED := 20
@@ -68,6 +68,8 @@ const CYCLE := [
 
 ## Set by a debug key: the next boss Maw breaks whatever the odds say.
 static var force_next_break: bool = false
+## Set by --maw-breaks on the command line (debug builds): every boss Maw breaks, for headset tests.
+static var always_break: bool = false
 
 var stage: Stage = Stage.IDLE
 var boss_config: Dictionary = {}
@@ -145,7 +147,7 @@ func prepare(mission: Dictionary) -> void:
 	if not boss_config.is_empty():
 		var faced: int = int(settings.get("boss_maws_faced")) if settings else 0
 		var dry: int = int(settings.get("maws_without_boss")) if settings else 0
-		breaks = force_next_break or decide_break(faced, dry, randf())
+		breaks = force_next_break or always_break or decide_break(faced, dry, randf())
 		force_next_break = false
 		if settings and settings.has_method("record_maw"):
 			settings.record_maw(breaks)
@@ -205,6 +207,9 @@ func cleanup() -> void:
 	var music := _music()
 	if music and music.has_method("end_boss"):
 		music.end_boss()
+	var comms := _comms()
+	if comms and "scripted" in comms:
+		comms.scripted = false
 
 ## Pause holds the turn and the fight exactly where they are. RoundController calls this.
 func set_round_paused(paused: bool) -> void:
@@ -242,7 +247,7 @@ func register_push_up() -> void:
 		"on_beat": true,
 	})
 	if _tentacle:
-		_tentacle.dim = 0.2
+		_tentacle.pulse = 1.0
 
 # --- Wiring ------------------------------------------------------------------------
 
@@ -320,6 +325,8 @@ func _tick_turn() -> void:
 			music.false_seal()
 		if comms:
 			comms.cut_off()
+			# Nothing but the turn's own lines until the fight starts.
+			comms.scripted = true
 			comms.say("boss_false_seal")
 	# 2. Silence (0.5 s): she cuts off, the music stops dead, everything ducks but a low rumble.
 	if _beat("silence", 0.5):
@@ -421,6 +428,7 @@ func _begin_fight() -> void:
 	var comms := _comms()
 	if comms:
 		comms.say("boss_get_ready")
+		comms.scripted = false
 	phase_two_started.emit(String(boss_config.get("name", "THE MAW")), _rift.rift_id)
 	_steps = OPENER.duplicate(true)
 	_from_pose = _tentacle.path().duplicate() if _tentacle else []
@@ -507,10 +515,11 @@ func _start_sweep() -> void:
 	sweep.set("squat_depth", float(boss_config.get("squat_depth", 0.20)))
 	sweep.set("telegraph_seconds", float(_step.get("tell", 1.5)))
 	sweep.set("blade_speed", float(_step.get("speed", 5.0)))
-	# The sweep runs from its source toward the player. From the side, it crosses them.
-	_rift.add_attacker(sweep, frame["p"] + frame["r"] * side * 8.0)
+	# In from one side, across the player. The rails still light the line; the limb is the blade.
+	sweep.set("side", side)
+	sweep.set("blade_visible", false)
+	_rift.add_attacker(sweep, frame["p"] + frame["r"] * side * 6.0)
 	_sweep = sweep
-	_step["side"] = side
 	var comms := _comms()
 	if comms:
 		comms.say("boss_sweep")
@@ -523,23 +532,21 @@ func _run_sweep() -> bool:
 		return _step_time >= 1.2
 	if _tentacle == null:
 		return not _sweep.call("is_in_flight")
-	var side := float(_step.get("side", 1.0))
 	var frame := _player_frame()
-	var sweep_height := float(_sweep.get("sweep_height"))
-	var start := float(_sweep.get("start_distance"))
-	var travel := float(_sweep.get("_blade_travel"))
-	var told := float(_sweep.get("_telegraph_remaining")) <= 0.0 and float(_sweep.get("_rest_remaining")) == 0.0
-	var center: Vector3 = _sweep.get("_center")
-	if not told:
-		# Drawn back to one side, a little above the line, coiling.
+	var blade: Vector3 = _sweep.call("blade_position")
+	if float(_sweep.call("telegraph_progress")) < 1.0:
+		# Drawn back past where the blade starts, a little above the line, coiling.
 		_tentacle.writhe = 0.7
-		var back := _sweep_pose(frame, side * (start + 0.8), sweep_height + 0.9, center)
+		var p: Vector3 = frame["p"]
+		var flat := Vector3(blade.x - p.x, 0.0, blade.z - p.z)
+		var drawn := p + flat * 1.2 + Vector3.UP * (blade.y + 0.9)
+		var back := _sweep_pose(frame, drawn)
 		_tentacle.set_path(_blend(_from_pose, back, smoothstep(0.0, 0.8, _step_time)) if _from_pose.size() == back.size() else back)
 		return false
 	# Crossing: the limb lies along the line to the rift and runs sideways with the blade.
 	# Its underside sits on the blade's line, so a head under the blade is under the limb too.
 	_tentacle.writhe = 0.08
-	_tentacle.set_path(_sweep_pose(frame, side * (start - travel), sweep_height + 0.22, center))
+	_tentacle.set_path(_sweep_pose(frame, blade + Vector3.UP * 0.22))
 	if not _sweep.call("is_in_flight"):
 		_sweep = null
 		_step_time = 0.0
@@ -835,16 +842,15 @@ func _hover_pose(frame: Dictionary) -> Array[Vector3]:
 		p + f * 4.8 + Vector3.UP * 4.6 + r * sway * 1.2,
 	]
 
-## The limb lies along the line from the rift past the player, `lateral` metres to the side.
-func _sweep_pose(frame: Dictionary, lateral: float, height: float, center: Vector3) -> Array[Vector3]:
+## The limb lies along the line from the rift past the player, through `line` (a point at its height).
+func _sweep_pose(frame: Dictionary, line: Vector3) -> Array[Vector3]:
 	var root: Vector3 = frame["root"]
 	var f: Vector3 = frame["f"]
-	var r: Vector3 = frame["r"]
-	var p := Vector3(center.x, 0.0, center.z)
-	var line := p + r * lateral + Vector3.UP * height
+	var p: Vector3 = frame["p"]
+	var drift := Vector3(line.x - p.x, 0.0, line.z - p.z)
 	return [
 		root,
-		root.lerp(line + f * 6.0, 0.4) + Vector3.UP * 1.0 + r * lateral * 0.2,
+		root.lerp(line + f * 6.0, 0.4) + Vector3.UP * 1.0 + drift * 0.2,
 		line + f * 5.5 + Vector3.UP * 0.5,
 		line + f * 2.5,
 		line,

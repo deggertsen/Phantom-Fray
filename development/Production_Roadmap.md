@@ -99,7 +99,7 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 - [ ] Validate the strike-window rule with testers: punches only count once the phantom is within `strike_reach` or in its commit phase. The developer has not felt this as a problem. Confirm with players who have not been told the rule before changing anything.
 - [ ] Cap the full-screen damage tint and distortion in headset, and make Reduced Flashes cap them harder.
 - [ ] Phantom approach heights: currently every phantom aims just below the eyes. Add lower approaches that ask for uppercuts and squats.
-- [ ] Squats, jumps, and push-ups: tune the squat detector prototype on headset, then prototype the resonance sweep (the boss's high sweep). Run the jump signal and hand tracking tests before building jumps or push-ups. Plan, thresholds, and safety tests in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
+- [ ] Squats, jumps, and push-ups: tune the squat detector prototype on headset, then headset-test the resonance sweep (the boss's high sweep, built as the debug-only Sweep Drill). Run the jump signal and hand tracking tests before building jumps or push-ups. Plan, thresholds, and safety tests in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 - [ ] Hand tracking: test it at punch speed and with simultaneous hands and controllers (`godotopenxrvendors`). The direction is to move off controllers: hand tracking is required at Full Resonance as the first try, haptics loss accepted, with simultaneous hands and controllers as the fallback.
 
 ## Phase 10 — Launch

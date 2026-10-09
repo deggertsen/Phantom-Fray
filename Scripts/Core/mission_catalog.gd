@@ -6,6 +6,8 @@ const SCENE_BY_ID := {
 	"blue": "res://Scenes/Phantoms/blue_phantom.tscn",
 	"green": "res://Scenes/Phantoms/green_phantom.tscn",
 	"pink": "res://Scenes/Phantoms/pink_phantom.tscn",
+	# Not a phantom: a rift hazard the player squats under. It speaks the same spawn interface.
+	"sweep": "res://Scenes/Hazards/resonance_sweep.tscn",
 }
 
 static func scene_path(variant_id: String) -> String:
@@ -23,10 +25,14 @@ static func expected_minutes_text(mission: Dictionary) -> String:
 static func all_missions() -> Array[Dictionary]:
 	return [_first_light(), _widen_the_ring(), _chens_gambit(), _double_breach(), _open_arc(), _the_maw()]
 
-## Missions outside the campaign and the Operations menu, playable only in debug builds.
-## The boss Maw lives here until the war map and its difficulties exist.
+## Operations for testing mechanics that are not in the campaign yet. Debug builds only, and never
+## part of all_missions, so they stay out of the unlock chain and the Operations list. Start one
+## with the --mission=<id> command line argument (see GameFlowController). The boss Maw lives
+## here until the war map and its difficulties exist; B starts it from the main menu too.
 static func debug_missions() -> Array[Dictionary]:
-	return [_the_maw_boss()]
+	if not OS.is_debug_build():
+		return []
+	return [_sweep_drill(), _the_maw_boss()]
 
 static func is_debug_mission(mission_id: String) -> bool:
 	for mission in debug_missions():
@@ -42,7 +48,7 @@ static func get_mission(mission_id: String) -> Dictionary:
 
 static func is_unlocked_with_clears(mission_id: String, cleared: PackedStringArray) -> bool:
 	if is_debug_mission(mission_id):
-		return OS.is_debug_build()
+		return true
 	var missions := all_missions()
 	for index in range(missions.size()):
 		if missions[index].get("id", "") != mission_id:
@@ -273,6 +279,27 @@ static func _the_maw_boss() -> Dictionary:
 		"squat_depth": 0.20,
 	}
 	return mission
+## Step 3 of the prototype plan in Exercise_Mechanics_Exploration.md: gold and blue lunges with a
+## resonance sweep in the pool. One spawn in three is a sweep, every 4 s, so about one sweep every
+## 12 s over roughly three minutes, which is what the Step 4 headset test asks for.
+static func _sweep_drill() -> Dictionary:
+	var drill := _wave(450, 4.0, 3, 1.0, 1.0, ["yellow", "blue", "sweep"])
+	drill["squat_depth"] = 0.12
+	return {
+		"id": "sweep_drill",
+		"codename": "DBG-S",
+		"title": "SWEEP DRILL",
+		"summary": "Debug only. Lunges, and a blade of rift energy to get under.",
+		"expected_minutes": [3, 3],
+		"objective": "SEAL THE DRILL RIFT",
+		"start_line": "CHEN: WHEN THE RAILS LIGHT, GET UNDER THE LINE.",
+		"pressure_labels": ["SWEEP DRILL"],
+		"open_barks": [""],
+		"seal_lines": [],
+		"victory_line": "Chen: Drill sealed. Note how your legs feel, then go again.",
+		"defeat_line": "Chen: The blade caught you. Watch the rails, then drop.",
+		"rifts": [drill],
+	}
 
 static func _paired_assault_waves() -> Array:
 	return _repeat([
