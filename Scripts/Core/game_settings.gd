@@ -1,5 +1,7 @@
 extends Node
 
+signal own_music_changed(enabled: bool)
+
 const SETTINGS_PATH := "user://phantom_fray_settings.cfg"
 const VOLUME_DB: Array[float] = [-80.0, -20.0, -14.0, -8.0, -2.0]
 const VOLUME_LABELS: PackedStringArray = ["OFF", "25%", "50%", "75%", "100%"]
@@ -8,10 +10,13 @@ var master_db: float = 0.0
 var music_db: float = -8.0
 var sfx_db: float = -8.0
 var critical_db: float = -8.0
+var own_music: bool = false
 var haptic_scale: float = 1.0
 var reduced_flashes: bool = false
 var tutorial_completed: bool = false
 var cleared_missions: PackedStringArray = PackedStringArray()
+## Mission id -> the best score a victory has earned there.
+var best_scores: Dictionary = {}
 var pending_mission_id: String = ""
 
 func _ready() -> void:
@@ -28,6 +33,7 @@ func load_settings() -> void:
 	music_db = config.get_value("audio", "music_db", music_db)
 	sfx_db = config.get_value("audio", "sfx_db", sfx_db)
 	critical_db = config.get_value("audio", "critical_db", critical_db)
+	own_music = config.get_value("audio", "own_music", own_music)
 	haptic_scale = config.get_value("comfort", "haptic_scale", XRToolsUserSettings.haptics_scale)
 	XRToolsUserSettings.haptics_scale = haptic_scale
 	reduced_flashes = config.get_value("comfort", "reduced_flashes", reduced_flashes)
@@ -37,6 +43,9 @@ func load_settings() -> void:
 		cleared_missions = saved_clears
 	elif saved_clears is Array:
 		cleared_missions = PackedStringArray(saved_clears)
+	var saved_bests: Variant = config.get_value("progress", "best_scores", {})
+	if saved_bests is Dictionary:
+		best_scores = saved_bests
 	_snap_volumes(true)
 
 func save_settings() -> void:
@@ -45,10 +54,12 @@ func save_settings() -> void:
 	config.set_value("audio", "music_db", music_db)
 	config.set_value("audio", "sfx_db", sfx_db)
 	config.set_value("audio", "critical_db", critical_db)
+	config.set_value("audio", "own_music", own_music)
 	config.set_value("comfort", "haptic_scale", haptic_scale)
 	config.set_value("comfort", "reduced_flashes", reduced_flashes)
 	config.set_value("progress", "tutorial_completed", tutorial_completed)
 	config.set_value("progress", "cleared_missions", cleared_missions)
+	config.set_value("progress", "best_scores", best_scores)
 	config.save(SETTINGS_PATH)
 	apply_audio()
 
@@ -57,6 +68,9 @@ func apply_audio() -> void:
 	_set_bus_volume(&"Music", music_db)
 	_set_bus_volume(&"SFX", sfx_db)
 	_set_bus_volume(&"Critical", critical_db)
+	var music_bus := AudioServer.get_bus_index(&"Music")
+	if music_bus >= 0:
+		AudioServer.set_bus_mute(music_bus, own_music)
 
 func volume_label(db: float) -> String:
 	return VOLUME_LABELS[volume_index(db)]
@@ -75,6 +89,14 @@ func adjust_music(direction: int) -> void:
 	var index := volume_index(music_db)
 	music_db = VOLUME_DB[clampi(index + direction, 0, VOLUME_DB.size() - 1)]
 	save_settings()
+
+func set_own_music(enabled: bool) -> void:
+	# The player's own app (Spotify, YouTube Music, and so on) plays alongside the game while the score stays silent.
+	if own_music == enabled:
+		return
+	own_music = enabled
+	save_settings()
+	own_music_changed.emit(own_music)
 
 func adjust_effects(direction: int) -> void:
 	var index := volume_index(sfx_db)
@@ -101,8 +123,19 @@ func mark_mission_cleared(mission_id: String) -> void:
 	cleared_missions.append(mission_id)
 	save_settings()
 
+func best_score(mission_id: String) -> int:
+	return int(best_scores.get(mission_id, 0))
+
+## Keeps the higher of the stored best and this victory's score.
+func record_score(mission_id: String, score: int) -> void:
+	if mission_id == "" or score <= best_score(mission_id):
+		return
+	best_scores[mission_id] = score
+	save_settings()
+
 func clear_mission_progress() -> void:
 	cleared_missions = PackedStringArray()
+	best_scores = {}
 	pending_mission_id = ""
 
 func reset_mission_progress() -> void:

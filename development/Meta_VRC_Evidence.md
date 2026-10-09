@@ -52,7 +52,7 @@ These cannot be honestly marked complete without a connected headset:
 - Headset-removal/system-menu suspend and explicit resume
 - Sustained frame pacing, thermal behavior, and reprojection metrics
 - Three retries and ten-minute soak without resource growth
-- Guardian/boundary and seated/standing comfort checks
+- Guardian/boundary and standing comfort checks
 - Audio loudness and critical-cue audibility on headset speakers
 - Upgrade install over the previous candidate
 

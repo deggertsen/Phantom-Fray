@@ -14,6 +14,7 @@ func _run_validation() -> void:
 	_validate_life_force()
 	await _validate_attack_window()
 	await _validate_mission_catalog()
+	await _validate_rift_stragglers()
 	await _validate_menu_surface()
 	await _validate_results_menu()
 	await _validate_pink_dodge()
@@ -188,6 +189,17 @@ func _validate_menu_surface() -> void:
 			failures.append("Reduced flashes on-state is unmarked")
 		if action == "settings_flashes_off" and button.text.begins_with("●"):
 			failures.append("Reduced flashes off-state stayed marked")
+	menu.show_settings("75%", "50%", "100%", false, false, true)
+	await process_frame
+	var own_music_marked := false
+	for button in _buttons_under(menu):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action == "own_music_on":
+			own_music_marked = button.text.begins_with("●")
+		elif action == "music_down" or action == "music_up":
+			failures.append("Soundtrack volume still shows while playing your own music")
+	if not own_music_marked:
+		failures.append("Play my own music on-state is unmarked")
 	menu.show_reset_confirmation()
 	await process_frame
 	var keep := _find_button(menu, "KEEP PROGRESS")
@@ -657,6 +669,40 @@ func _validate_arc_rift_placement() -> void:
 			break
 	director.queue_free()
 	player.queue_free()
+	await process_frame
+
+func _validate_rift_stragglers() -> void:
+	var container := Node3D.new()
+	container.add_to_group("PhantomContainer")
+	root.add_child(container)
+	var director := RiftDirector.new()
+	director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+	director.total_rifts = 1
+	root.add_child(director)
+	await process_frame
+	var cleared := [false]
+	var scored := [0]
+	director.all_clear.connect(func() -> void: cleared[0] = true)
+	director.phantom_resolved.connect(func(_result: Dictionary) -> void: scored[0] += 1)
+	director.start_round()
+	await process_frame
+	var rift: RiftManager = director.rift_instances[0]
+	var phantom: Phantom = rift._live_phantoms.values()[0]
+	rift._close_rift()
+	await process_frame
+	if not is_instance_valid(phantom) or phantom._terminal:
+		failures.append("Sealing a rift took its phantoms with it")
+	elif cleared[0] or not director.has_stragglers():
+		failures.append("Mission cleared with a phantom still out")
+	else:
+		phantom.resolve_without_strike({"base_score": 10, "rift_damage": 5})
+		if scored[0] != 1:
+			failures.append("Phantom from a sealed rift did not score")
+		if not cleared[0]:
+			failures.append("Clearing the last phantom did not end the mission")
+	director.cleanup_round()
+	director.queue_free()
+	container.queue_free()
 	await process_frame
 
 func _validate_maw_rift() -> void:

@@ -10,7 +10,7 @@ Operations played:
 Felt good:
 Felt wrong:
 Confusions (things the tester asked or got wrong without being told):
-Comfort (nausea, strain, boundary, seated/standing):
+Comfort (nausea, strain, boundary):
 Numbers to try:
 ```
 

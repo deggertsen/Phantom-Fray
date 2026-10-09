@@ -55,6 +55,8 @@ Does not use the arc. It telegraphs for `telegraph_seconds` (1.15 s) while a che
 
 `Scripts/Rifts/rift_manager.gd` spawns on a timer from its wave's `pool`, up to `max_live` live phantoms, offset in front of the portal. `Scripts/Rifts/rift_spawn_manager.gd` (the RiftDirector) decides how many rifts are open, where they sit, and when the next one replaces a sealed one. Wave fields: `health`, `interval`, `max_live`, `speed_scale`, `telegraph_scale`, `pool`, `scale`.
 
+Sealing a rift stops its spawning and dissolves the portal, but phantoms already out keep their course and still score or possess. The rift emits `drained` once they are gone, the director emits `all_clear` once every rift is sealed and drained, and only then does the round end in victory. Phantoms dissolving from a stall or timeout no longer count as live.
+
 ## Feedback
 
 - `feedback_requested(kind, position, intensity)` drives `Scripts/Presentation/combat_vfx.gd`: hit, sweet, guard, rejected.

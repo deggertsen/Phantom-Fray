@@ -45,7 +45,8 @@ Pass condition: all four identified within 10 seconds.
 
 ## Settings
 
-- Music, Effects, Haptics steppers show their current value and explain what they affect.
+- Play My Own Music switch shows its state; when on, the Music Volume stepper is hidden and the soundtrack is silent.
+- Music (when shown), Effects, and Haptics steppers show their current value and explain what they affect.
 - Reduced Flashes shows its state.
 - Reset Progress asks for confirmation and explains that audio and training are kept.
 - Back returns to the correct origin: main menu or pause.

@@ -31,6 +31,8 @@ func _capture_tutorial() -> void:
 func _capture_settings() -> void:
 	_menu.show_settings("75%", "50%", "100%", false, false)
 	await _capture("settings.png")
+	_menu.show_settings("75%", "50%", "100%", false, false, true)
+	await _capture("settings-own-music.png")
 
 func _capture_pause() -> void:
 	_menu.show_pause()

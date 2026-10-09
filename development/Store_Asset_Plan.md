@@ -20,6 +20,7 @@ Every Phantom is a different movement. Yellow and blue Anglers take a left or ri
 - Life force that drains on possession and recovers when you clear the air
 - Chain multiplier and resonance crits
 - Six-operation campaign with Dr. Chen on comms
+- Play your own music from any app while Chen stays on comms
 - Replayable hold mode, best scores, and medals (Phase 6)
 - A war map where every seal pushes the front line (Phase 7)
 
@@ -50,7 +51,7 @@ Every Phantom is a different movement. Yellow and blue Anglers take a left or ri
 
 - Final logo and title treatment
 - Key art and icon that are not screenshots
-- Chen voice takes that are not text-to-speech
+- One listen-through of Chen in headset after the final mix
 - Captured headset footage from a release build
 - Final mastered impact, UI, and comms audio
 - Legal review of store copy, privacy declaration, and age rating

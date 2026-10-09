@@ -7,7 +7,7 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - Combat mechanics: complete, low approaches and boss planned
 - Campaign content: six operations, replay layer not started
 - User interface: complete for the current flow
-- Audio: integrated, Chen takes are placeholders, final mix pending
+- Audio: integrated, Chen voiced with ElevenLabs, final mix pending
 - Testing and optimization: validation and CI in place, soak and perf on headset pending
 - Deployment: build path complete, store work not started
 - Fitness, narrative, and location features: planned (Phases 6 to 8)
@@ -24,7 +24,8 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - [x] Life force: drain, recovery, states, fail state
 - [x] Round: countdown, timer, score, chain, outcomes, pause
 - [x] Flow: menu, operations, training, settings, results, progress persistence
-- [ ] Progression beyond unlock order (best scores, medals, map)
+- [x] Best score stored per operation
+- [ ] Progression beyond unlock order (medals, map)
 
 ## 3. Game mechanics
 - [x] Stationary play with physical duck and side-step
@@ -41,15 +42,16 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - [x] Combo system (chain multiplier)
 - [x] Training: six-module guided orientation on the menu panel
 - [ ] Training room with damage off and species selection
-- [ ] Shield phantom needing a punch sequence
-- [ ] Environmental hazards (beams to duck, projectiles to punch away)
-- [ ] Power-ups (slow time, punch power, life force restore)
+- [ ] Shield phantom needing a punch sequence (see Ideas_Backlog.md)
+- [ ] Environmental hazards (see Ideas_Backlog.md)
+- [ ] Power-ups (see Ideas_Backlog.md)
 - [ ] Boss battles and The Maw finale
 - [ ] Hand tracking as an input option
 
 ## 5. Fitness (Phase 6)
 - [ ] Session stats on results
-- [ ] Best score and medals per operation
+- [x] Best score stored per operation
+- [ ] Best score shown on Operations and results, medals
 - [ ] Endless hold with 10, 20, 30 minute lengths
 - [ ] Workout-length framing in the menu
 - [ ] Fitness tagging and platform integration
@@ -78,7 +80,8 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - [x] Death, siphon, rift open and close takes
 - [x] Procedural heartbeat, drain blip, depletion stinger
 - [x] Chen comms system with 29 moments
-- [ ] Chen takes that are not text-to-speech
+- [x] Chen takes voiced with ElevenLabs and checked by transcription
+- [x] Play My Own Music switch (soundtrack silent, any music app plays through)
 - [ ] Species movement and attack sounds
 - [ ] Final mix on headset
 

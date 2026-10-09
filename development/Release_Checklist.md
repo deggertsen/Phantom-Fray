@@ -7,13 +7,15 @@
 - [ ] Main scene starts in desktop fallback without project script or resource errors.
 - [ ] Menu, Operations, six Training modules, Settings, Deploy, pause, abort confirm, results, Next Operation, and Retry work.
 - [ ] Every operation seals its listed rift count and spawns no extra rift. Paired operations keep at most two rifts open.
+- [ ] Sealing a rift leaves its phantoms in play; the mission ends in victory only after the last straggler is resolved or reaches the player.
 - [ ] Victory, defeat, and timeout each emit once and show the operation's debrief line.
-- [ ] Clearing an operation unlocks the next; Reset Progress relocks them and leaves audio and training settings alone.
+- [ ] Clearing an operation unlocks the next and records a best score; Reset Progress relocks them, clears best scores, and leaves audio and training settings alone.
 - [ ] Yellow rejects the right hand; blue rejects the left. The lure grants the crit score and rift damage.
 - [ ] Green needs both hands inside its block window; the first hand reads as a catch.
 - [ ] Pink cannot be punched and resolves on a successful dodge.
 - [ ] Rift shader health, damage flash, beacon, and dissolve visibly change.
-- [ ] Chen captions appear on the wrist panel for mission start, rift bearings, first contact per species, wrong hand, chain, life force, time, and outcome.
+- [ ] Chen captions appear on the wrist panel for mission start (first, retry, replay), rift bearings, first contact per species, wrong hand, chain, life force, possession, and outcome.
+- [ ] `tools/check_vo.ps1` reports no clips needing a listen.
 - [ ] `art_capture.tscn` and `play_capture.tscn` produce stills without errors.
 
 ## Quest hardware matrix
@@ -22,9 +24,10 @@
 - [ ] Upgrade install over the previous candidate.
 - [ ] Both controllers track and align with the gauntlets.
 - [ ] Haptic settings persist and all feedback remains comfortable.
+- [ ] Play My Own Music: a playlist started in Spotify (or another music app) keeps playing through launch, a mission, pause, and results, with the soundtrack silent and Dr. Chen still audible.
 - [ ] Bracer panel is readable without strain; Chen captions are legible mid-fight.
 - [ ] Chen's voice is audible over music at default settings and ducks the music while speaking.
-- [ ] Standing-height sanity check. (Seated mode is deferred; note seated behavior if observed.)
+- [ ] Standing-height sanity check.
 - [ ] Physical side-step and duck both resolve pink.
 - [ ] Possession tint and distortion are strong but comfortable; Reduced Flashes visibly reduces them.
 - [ ] Headset removal pauses timers, spawning, damage, and haptics.
@@ -37,8 +40,8 @@
 
 ## Content gates
 
-- [ ] Chen's text-to-speech placeholders replaced by generated or recorded takes.
-- [ ] Best score per operation persists and shows on Operations and results.
+- [ ] Chen's generated takes have been listened to once end to end in headset.
+- [ ] Best score per operation shows on Operations and results.
 - [ ] At least one replayable mode beyond the campaign (endless hold or difficulty tiers) ships in 1.0.
 - [ ] Training-chamber text removed from the breach-site arena or made true by the scene.
 

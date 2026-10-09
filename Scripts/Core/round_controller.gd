@@ -47,7 +47,7 @@ func _ready() -> void:
 	_director.strike_rejected.connect(_on_strike_rejected)
 	_director.rift_closed.connect(_on_rift_closed)
 	_director.rift_spawned.connect(_on_rift_spawned)
-	_director.all_rifts_closed.connect(_on_all_rifts_closed)
+	_director.all_clear.connect(_on_all_clear)
 	_life_force.life_force_depleted.connect(_on_life_force_depleted)
 	# GameFlowController starts the round after the player selects Deploy.
 
@@ -207,6 +207,8 @@ func _on_rift_closed(_rift_id: int, closed: int, total: int) -> void:
 	rift_progress_changed.emit(closed, total)
 	_emit_status()
 	if closed >= total:
+		if _director.has_stragglers():
+			_show_message(String(_mission.get("mop_up_line", "CLEAR THE LAST PHANTOMS")), Color(0.3, 1.0, 0.8), 1.8)
 		return
 	var lines: Array = _mission.get("seal_lines", [])
 	var text := "RIFT %d OF %d SEALED" % [closed, total]
@@ -214,7 +216,10 @@ func _on_rift_closed(_rift_id: int, closed: int, total: int) -> void:
 		text = String(lines[closed - 1])
 	_show_message(text, Color(0.3, 1.0, 0.8), 1.5)
 
-func _on_all_rifts_closed() -> void:
+func _on_all_clear() -> void:
+	# Stragglers leaving because the scene is torn down (abort from pause) are not a clear.
+	if not _round_active:
+		return
 	_finish_round(&"victory")
 
 func _on_life_force_depleted() -> void:
@@ -272,6 +277,8 @@ func _status_text() -> String:
 	var closed := _director.closed_rifts if _director else 0
 	var codename := String(_mission.get("codename", "RIFTS"))
 	if closed >= total and total > 0:
+		if _director and _director.has_stragglers():
+			return "%s  SEALED  •  CLEAR PHANTOMS" % codename
 		return "%s  SEALED" % codename
 	var current := mini(closed + 1, total)
 	var labels: Array = _mission.get("pressure_labels", [])
@@ -320,3 +327,7 @@ func _clear_message(label: Label3D) -> void:
 	if is_instance_valid(label):
 		label.queue_free()
 
+
+## The mission this round is playing, as MissionCatalog describes it.
+func current_mission() -> Dictionary:
+	return _mission

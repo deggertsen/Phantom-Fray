@@ -1,8 +1,8 @@
 # Phantom Fray: Resonance Rising
 
-A stationary VR fitness-combat game for Meta Quest, built in Godot 4.7.1 with OpenXR and godot-xr-tools. You stand at a breach site in a dead city, wearing Dr. Chen's Ethereal Resonance Matrix (ERM) gauntlets, and physically punch, block, and dodge phantoms pouring out of dimensional rifts until every rift is sealed.
+A stationary VR fitness-combat game for Meta Quest, built in Godot 4.7.1 with OpenXR and godot-xr-tools. You stand at a breach site in a dead city, wearing Dr. Chen's Ethereal Resonance Matrix (ERM) gauntlets, and physically punch, block, and dodge phantoms pouring out of dimensional rifts until every rift is sealed and every phantom is gone.
 
-The goal of the project is a workout you want to come back to because the world needs saving, not because a timer told you to. Everything below describes the game as it exists in this repository today. Plans live in [development/Production_Roadmap.md](development/Production_Roadmap.md).
+The goal of the project is a workout you want to come back to because the world needs saving, not because a timer told you to. Everything below describes the game as it exists in this repository today. Plans live in [development/Production_Roadmap.md](development/Production_Roadmap.md); ideas not yet scheduled live in [development/Ideas_Backlog.md](development/Ideas_Backlog.md).
 
 ## How it plays
 
@@ -17,10 +17,11 @@ The goal of the project is a workout you want to come back to because the world 
 | Green | Carapace | Catch it with both hands inside a short window. | Two-hand block |
 | Pink | Spearfin | Cannot be punched. Paints a lane on the floor, then charges it. | Side-step or duck out of the lane |
 
-- **Rifts are the objective.** Each phantom you resolve damages the rift it came from. Seal every rift in the operation before the window closes.
-- **Life force is the stakes.** A phantom that reaches your head possesses you: it vanishes, drains 20 of 100 life force, and your vision frosts and distorts. Life force recovers after three clear seconds. At zero the operation ends.
-- **Score and chain.** Every resolve adds to a chain multiplier up to 3x. Resonance crits and on-arrival hits grow it faster. A wrong hand or a possession resets it.
-- **Dr. Chen on comms.** Spoken callouts for rift bearings, first contact with each species, wrong-hand corrections, chain milestones, life force warnings, time, and debriefs. Captioned on the wrist panel.
+- **Rifts are the objective.** Each phantom you resolve damages the rift it came from. Sealing a rift stops its spawning, but the phantoms it already released keep coming. The operation is won when every rift is sealed and the last straggler is dealt with, inside the window.
+- **Life force is the stakes.** The gauntlets run on your own life force. A phantom that reaches your head possesses you: it vanishes, drains 20 of 100, and your vision frosts and distorts. Life force recovers after three clear seconds. At zero the gauntlets' failsafe fires, the recovery team pulls you out, and the operation is failed. Operators are never consumed; you go back in and try again.
+- **Score and chain.** Every resolve adds to a chain multiplier up to 3x. Resonance crits and on-arrival hits grow it faster. A wrong hand or a possession resets it. Your best score per operation is kept.
+- **Dr. Chen on comms.** Fully voiced callouts for rift bearings, first contact with each species, wrong-hand corrections, chain milestones, life force warnings, possession, and debriefs that know whether this is your first attempt, a retry after the failsafe, a replay, a flawless seal, or a new best. Captioned on the wrist panel.
+- **Your own music.** A settings switch silences the soundtrack so a playlist from any music app plays through the mission while Chen stays audible.
 
 ## The campaign today
 
@@ -58,7 +59,7 @@ Godot 4.7.1 exactly. The desktop fallback runs without a headset for menu, flow,
 godot --path .
 ```
 
-Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, menu surfaces, pink dodge):
+Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, menu surfaces, own-music settings, rift stragglers, pink dodge):
 
 ```bash
 tools/validate_project.sh
@@ -74,28 +75,30 @@ godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/art_captur
 godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn
 ```
 
+Chen's lines are generated from `Assets/Audio/VO/chen/chen_lines.json` with `tools/generate_elevenlabs_vo.ps1` and checked against the script with `tools/check_vo.ps1`.
+
 Quest builds: [development/Quest_Export_Guide.md](development/Quest_Export_Guide.md).
 
 ## Project layout
 
 - `Scripts/Core/` mission catalog, round controller, game flow, settings
 - `Scripts/Phantoms/` phantom base arc, Angler (yellow, blue), Carapace (green), Spearfin (pink)
-- `Scripts/Rifts/` rift director (which rifts open where) and rift manager (spawning, health, closure)
+- `Scripts/Rifts/` rift director (which rifts open where) and rift manager (spawning, health, closure, stragglers)
 - `Scripts/Player/` XR origin, hands and strike detection, life force and its feedback
 - `Scripts/Presentation/` creature meshes, breach city, arena, gauntlets, VFX, compass and bearings
 - `Scripts/Audio/` Chen comms, music intensity, SFX takes
 - `Scripts/UI/` world-space menu panel and presenter, wrist HUD
 - `Scripts/Debug/` performance monitor and capture scenes
-- `Assets/Audio/VO/chen/` Chen's script (`chen_lines.json`) and takes
+- `Assets/Audio/VO/chen/` Chen's script (`chen_lines.json`), takes, and the ElevenLabs manifest
 - `development/` design, production, and release documents
-- `tools/` Quest build scripts, validation, VO generation
+- `tools/` Quest build scripts, validation, VO generation and checking
 
 ## Where this is going
 
 The design intent, in priority order. Details and status in the roadmap.
 
 1. **Fitness first.** Session stats, workout-length sessions, and a reason to sweat that is bigger than a score.
-2. **Replay value.** Best scores and medals per operation, an endless hold mode, and leaderboards.
+2. **Replay value.** Best scores shown and medals per operation, an endless hold mode, and leaderboards.
 3. **Narrative hooks.** A shared war against the Overseer, with a world map in the spirit of Helldivers 2 where every operator's seals push the front line.
 4. **Location variety.** Different breach sites, skies, and lighting per operation.
 5. **Difficulty tiers.** Assist, Standard, and Operator.
@@ -171,3 +174,9 @@ Final confrontation: All of this could build up to a climactic mission where you
 8. The ERM Advantage:
    - The ERM gauntlets don't just destroy Phantoms; they can also temporarily reverse the life force drain in recently affected victims.
    - This makes RSF operators not just warriors, but potential saviors, adding an extra layer of urgency to their missions.
+
+9. The Failsafe and the Recovery Team:
+   - The gauntlets draw on the operator's own life force, so Dr. Chen reads the operator's vitals live through them. That is how she knows, over comms, the moment an operator starts to fade.
+   - If an operator's life force collapses, the gauntlets' failsafe inverts the ERM and dumps its whole charge at once. The burst throws every Phantom off the operator and stops the drain, but it knocks the operator out and leaves the gauntlets spent.
+   - An RSF recovery team waits at the pylon line on every deployment. When the failsafe fires, they go in and drag the operator clear. The operator survives, but the breach stays open, and the failsafe has to recharge before the next attempt.
+   - Operators are never consumed in the field. Failing a mission means being pulled out, not dying, which is why an operator can go back into the same breach and try again.

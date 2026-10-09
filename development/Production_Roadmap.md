@@ -1,10 +1,12 @@
 # Phantom Fray — Production Roadmap
 
-**Last updated:** 2026-10-08
-**Current stage:** Combat system complete and fun in headset. Six-operation campaign plays as an extended tutorial. Replay value and narrative hooks are the gap before launch.
+**Last updated:** 2026-10-09
+**Current stage:** Combat system complete and fun in headset. Chen fully voiced. Six-operation campaign plays as an extended tutorial. Replay value and narrative hooks are the gap before launch.
 **Engine:** Godot 4.7.1 + OpenXR / godot-xr-tools 4.5.1
 **Target:** Meta Quest-class standalone headset
-**Positioning:** Gamified fitness. Supernatural-class workout intensity with a save-the-world story that gives the sweat a purpose.
+**Positioning:** Gamified fitness. Supernatural-class workout intensity with a save-the-world story that gives the sweat a purpose. Standing play only.
+
+Ideas that are not scheduled live in [Ideas_Backlog.md](Ideas_Backlog.md).
 
 ---
 
@@ -15,15 +17,16 @@
 - Stationary, physical play: punch, two-hand block, side-step or duck. No artificial locomotion.
 - Four phantom rules on three creature species with three body forms each: Angler (yellow left, blue right, lure is the crit), Carapace (green, two-hand block), Spearfin (pink, floor lane, dodge).
 - Phantoms arrive on one continuous accelerating arc and lunge for the head. A strike counts once the body is in reach.
-- Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift.
-- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state.
-- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses.
-- Dr. Chen on comms: 29 moments, 4 to 5 takes each, priority queue, radio filter, wrist captions. Current takes are text-to-speech placeholders.
+- Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift. A sealed rift's phantoms stay in play; the operation is won when the last one is dealt with.
+- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the operator out. Operators never die.
+- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score per operation is stored.
+- Dr. Chen on comms: 33 moments, 4 to 5 takes each, voiced with ElevenLabs. Cooldown and max-wait pacing so she never cuts herself off. Opening line knows if this is a first attempt, a retry after the failsafe, or a replay; victory line knows if it was flawless, at critical, or a new best.
+- Play My Own Music: a settings switch silences the soundtrack so any music app plays through.
 - Breach-site arena: hex floor with corruption veins that follow open rifts, RSF pylons, dead-city skyline, rubble, sky crack.
 - Bracer wrist panel: operation, timer, life force, rift hexes, score, multiplier, Chen caption.
-- World-space menu with dual lasers: main, Operations (six contracts with lock state), six-page Training, Settings (music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation.
-- Mission progress and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, and the pink dodge.
-- Quest debug and release build scripts, signed-package evidence, export guide.
+- World-space menu with dual lasers: main, Operations (six contracts with lock state), six-page Training, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation.
+- Mission progress, best scores, and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, own-music settings, rift stragglers, and the pink dodge.
+- Quest debug and release build scripts, signed-package evidence, export guide, ElevenLabs generation and transcription check for Chen's lines.
 
 See [Production_Status.md](Production_Status.md) for the implemented list and [Known_Issues.md](Known_Issues.md) for what is open.
 
@@ -48,13 +51,12 @@ Everything the earlier roadmap called the launch candidate is implemented and ha
 - Phase 1 Vertical slice: life force, fail state, finite round, HUD, yellow rule, rift honesty.
 - Phase 2 Combat depth: blue, green, pink, haptic tiers, chain multiplier, wave pools, pressure scaling.
 - Phase 3 Presentation: creature species and forms, ERM gauntlet armor, breach city, strike VFX, frost and veins, audio buses and pressure.
-- Phase 4 Meta and UX: menu, operations, training, pause, settings, results, Chen comms.
+- Phase 4 Meta and UX: menu, operations, training, pause, settings, results, Chen comms voiced with ElevenLabs, own-music switch.
 - Phase 5 Platform: compatibility renderer, buses, XR suspend, performance monitor, validation, CI, Quest export, signed package.
 
 Still open from those phases:
 
-- [ ] Replace Chen's text-to-speech takes with ElevenLabs or recorded takes (`tools/generate_elevenlabs_vo.ps1`).
-- [ ] Final impact, UI, and proximity mix on headset speakers.
+- [ ] Final impact, UI, and proximity mix on headset speakers, with Chen in the mix.
 - [ ] Rebuild and re-sign the release APK from current `main`; the recorded artifact predates the October content.
 
 ---
@@ -64,9 +66,10 @@ Still open from those phases:
 Fitness is the product. The campaign is the on-ramp.
 
 - [ ] Session stats on the after-action report: punches thrown, resolves by type, crits, longest chain, active minutes, calorie estimate.
-- [ ] Persist a best score per operation and show it on Operations and on results, so a player can see that lures and chains pay.
+- [x] Persist a best score per operation (`GameSettings.record_score`; Chen's "new record" victory line uses it).
+- [ ] Show the best score on Operations and on results, so a player can see that lures and chains pay.
 - [ ] Medals per operation (bronze, silver, gold) from score thresholds that reward crits and unbroken chains.
-- [ ] Endless "Hold the Breach" mode: cycle the existing wave tables with rising speed and shrinking telegraph scale until life force fails. Length options 10, 20, 30 minutes.
+- [ ] Endless "Hold the Breach" mode: cycle the existing wave tables with rising speed and shrinking telegraph scale until the failsafe fires. Length options 10, 20, 30 minutes.
 - [ ] Workout-length framing in the menu: a quick 10-minute hold, a 20-minute operation set, a 30-minute campaign.
 - [ ] Meta fitness tracking tag for the store listing and Horizon OS Move integration if the SDK exposes it.
 - [ ] Difficulty tiers: Assist, Standard, Operator. Implemented as multipliers on the wave fields `speed_scale`, `telegraph_scale`, rift health, and contact damage.
@@ -93,7 +96,6 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 - [ ] Validate the strike-window rule with testers: punches only count once the phantom is within `strike_reach` or in its commit phase. The developer has not felt this as a problem. Confirm with players who have not been told the rule before changing anything.
 - [ ] Cap the full-screen damage tint and distortion in headset, and make Reduced Flashes cap them harder.
 - [ ] Phantom approach heights: currently every phantom aims just below the eyes. Add lower approaches that ask for uppercuts and squats.
-- [ ] Seated mode (lower pink dodge threshold, height calibration). Deferred by decision on 2026-10-08.
 
 ## Phase 10 — Launch
 
@@ -125,6 +127,7 @@ A release build is ready when:
 
 - [Production status](Production_Status.md)
 - [Known issues](Known_Issues.md)
+- [Ideas backlog](Ideas_Backlog.md)
 - [Playtest log](Playtest_Log.md)
 - [Quest export guide](Quest_Export_Guide.md)
 - [Performance budget](Performance_Budget.md)

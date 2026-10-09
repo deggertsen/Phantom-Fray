@@ -126,6 +126,10 @@ func _on_menu_action(action: StringName) -> void:
 			if _settings:
 				_settings.adjust_haptics(1)
 			_render_settings()
+		&"own_music_off", &"own_music_on":
+			if _settings:
+				_settings.set_own_music(action == &"own_music_on")
+			_render_settings()
 		&"settings_flashes_off":
 			if _settings:
 				_settings.reduced_flashes = false
@@ -350,13 +354,15 @@ func _render_settings() -> void:
 	var effects := "--"
 	var haptics := "--"
 	var reduced_flashes := false
+	var own_music := false
 	if _settings:
 		music = _settings.volume_label(_settings.music_db)
 		effects = _settings.volume_label(_settings.sfx_db)
 		haptics = "%d%%" % int(_settings.haptic_scale * 100.0)
 		reduced_flashes = _settings.reduced_flashes
+		own_music = _settings.own_music
 	if _presenter:
-		_presenter.show_settings(music, effects, haptics, reduced_flashes, _previous_state == STATE_PAUSED)
+		_presenter.show_settings(music, effects, haptics, reduced_flashes, _previous_state == STATE_PAUSED, own_music)
 
 func restore_current_menu() -> void:
 	match _state:
@@ -392,6 +398,7 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 	_next_mission_title = ""
 	if outcome == &"victory" and _settings:
 		_settings.mark_mission_cleared(_active_mission_id)
+		_settings.record_score(_active_mission_id, score)
 		var follow_id := MissionCatalog.unlocked_followup(_active_mission_id, _settings)
 		if follow_id != "":
 			_next_mission_title = String(MissionCatalog.get_mission(follow_id).get("title", ""))
@@ -435,7 +442,7 @@ func _action_belongs_to_state(action: StringName) -> bool:
 		STATE_RESULTS:
 			return action in [&"retry", &"next_mission", &"results_menu"]
 		STATE_SETTINGS:
-			return action in [&"music_down", &"music_up", &"effects_down", &"effects_up", &"haptics_down", &"haptics_up", &"settings_flashes_off", &"settings_flashes_on", &"reset_progress", &"settings_back"]
+			return action in [&"music_down", &"music_up", &"effects_down", &"effects_up", &"haptics_down", &"haptics_up", &"own_music_off", &"own_music_on", &"settings_flashes_off", &"settings_flashes_on", &"reset_progress", &"settings_back"]
 		STATE_RESET_CONFIRM:
 			return action in [&"reset_cancel", &"reset_confirm"]
 		STATE_MENU:
