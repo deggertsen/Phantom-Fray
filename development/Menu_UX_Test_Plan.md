@@ -1,56 +1,72 @@
-# Quest 3 Menu UX Test Plan
+# Quest Menu UX Test Plan
 
-Use `builds/phantom-fray-menu-debug.apk` for the first headset pass.
+Updated 2026-10-08 for the current panel (`Scripts/UI/vr_menu_panel.gd`). Use a debug build from current `main`.
 
 ## Entry and recentering
 
 - Launch while facing away from the intended play direction; hold the Meta button and confirm the menu is centered after Horizon OS recentering.
-- The panel must remain stationary in world space while the player turns their head.
-- The menu should be approximately 2.45 m away, centered near eye height, fully inside the comfortable field of view.
+- The panel remains stationary in world space while the player turns their head.
+- The menu sits about 2.45 m away, centered near eye height, inside the comfortable field of view.
 
 ## Pointer interaction
 
 - Both controllers show a laser only when a menu is visible.
-- Pointing at a button visibly highlights its border/background.
-- Pulling and releasing the trigger activates exactly one action.
-- Lasers disappear during active combat and reappear on pause/results.
-- Buttons must be selectable without wrist twisting or crossing hands.
+- Pointing at a button visibly highlights its border or background.
+- Pulling and releasing the trigger activates exactly one action, on release.
+- Lasers disappear during combat and reappear on pause, XR suspend, and results.
+- Buttons are selectable without wrist twisting or crossing hands.
+- The results panel responds to both lasers after victory and after defeat (regression check for the earlier Quest 3 issue).
 
 ## Main menu comprehension
 
 Ask a player who has not seen the project to identify, without coaching:
 
-1. Which option starts real combat? Expected: **Deploy Mission**.
-2. Which option teaches the game? Expected: **Start Training**.
-3. Which option changes audio/haptics/comfort? Expected: **Open Settings**.
+1. Which option starts real combat? Expected: **Deploy Mission**. The button also names the next or replay contract.
+2. Which option lets you pick a specific mission? Expected: **Operations**.
+3. Which option teaches the game? Expected: **Start Training**.
+4. Which option changes audio, haptics, or comfort? Expected: **Open Settings**.
 
-Pass condition: all three are identified correctly within 10 seconds.
+Pass condition: all four identified within 10 seconds.
 
-## Tutorial pacing
+## Operations
 
-- Every lesson remains visible indefinitely until Continue is selected.
-- Continue, Back, and Exit Training are visually distinct.
+- Six contracts listed with codename, title, summary, and state: SEALED, OPEN, or LOCKED.
+- Locked contracts show which operation must be sealed first and cannot be selected.
+- Selecting an open or sealed contract starts it. Back returns to the main menu.
+- After Phase 6: best score and medal are visible per contract.
+
+## Training pacing
+
+- Each of the six modules stays visible until Continue is selected.
+- Continue, Back, and Exit Training are visually distinct. The last module reads Complete Training.
 - No trigger press outside a button advances the tutorial.
-- Each lesson answers one question: space/recenter, punching, left/right, block/dodge, life force, mission objective.
-- The final lesson returns to the main menu rather than starting combat automatically.
+- Modules answer one question each: play space and recenter, grip and strike, yellow and blue, green and pink, life force, rifts and the objective.
+- Completing training returns to the main menu rather than starting combat.
 
 ## Settings
 
-- Music, haptics, and reduced flashes show their current value.
-- Selecting a setting updates the displayed value immediately.
-- Back clearly returns to the correct origin: main menu or pause menu.
-- Settings persist after app restart.
+- Music, Effects, Haptics steppers show their current value and explain what they affect.
+- Reduced Flashes shows its state.
+- Reset Progress asks for confirmation and explains that audio and training are kept.
+- Back returns to the correct origin: main menu or pause.
+- Settings and progress persist after an app restart.
 
-## Pause and results
+## Pause, suspend, and results
 
-- Pause shows Resume Mission as the primary action, Settings as secondary, and End Mission as destructive.
-- End Mission requires a confirmation page.
-- Results clearly separate Retry Mission, Review Training, and Main Menu.
+- Pause shows Resume Mission as primary, Settings as secondary, End Mission as destructive with a confirmation page.
+- Headset removal shows the XR suspended page; Resume When Ready is required to continue.
+- Results show the outcome, final score, the operation's debrief line, and Next Operation (after a victory that unlocks one), Retry Mission, and Main Menu. Next Operation is the primary action when present.
+
+## In-fight readability
+
+- Bracer panel text is readable at a glance mid-combat.
+- Chen captions are legible and do not cover the life force bar.
+- Rift compass chevron is noticed by an untold tester when a rift opens behind them.
 
 ## Visual quality
 
-- Text remains readable on Quest 3 without leaning.
-- No button text clips at normal or seated eye heights.
+- Text is readable on Quest 3 without leaning.
+- No button text clips at standing eye height.
 - Hover and selected states remain legible for common color-vision deficiencies; do not rely on color alone.
-- UI audio is subtle and never louder than critical gameplay cues.
+- UI audio stays below critical gameplay cues and Chen.
 - No visible pixel shimmer or excessive aliasing at the panel distance.

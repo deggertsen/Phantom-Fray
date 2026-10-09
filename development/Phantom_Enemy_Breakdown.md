@@ -1,149 +1,71 @@
-## **Phantom Enemy System Breakdown**
+# Phantom Enemy System
 
-### 1. **Phantom Base Setup**
-   - **Create Base `Phantom` Scene**
-     - **Nodes Structure:**
-       - `CharacterBody3D` *(preferred for controlled movement)*
-       - `CollisionShape3D` *(defines physical boundaries)*
-       - `MeshInstance3D` *(placeholder or detailed models)*
-       - `AnimationPlayer` *(handles animations: idle, attack, death)*
-       - `Area3D` *(for detecting player interactions)*
-     - **Extensibility:**
-       - Design the base `Phantom` to be inheritable for various types:
-         - `YellowPhantom`
-         - `BluePhantom`
-         - `GreenPhantom`
-         - `PinkPhantom`
-       - Ensure each subclass can override or extend behaviors and properties seamlessly.
+How phantoms work in the code today, and what is still planned. Updated 2026-10-08.
 
-### 2. **Phantom Variants Definition**
-   - **Identify and Define Variants:**
-     - **Yellow Phantom**
-       - **Behavior:** Basic movement and attack.
-       - **Defeat Mechanism:** Left hand collision.
-       - **Scoring:** Points for hitting the sweet spot.
-     - **Blue Phantom**
-       - **Behavior:** Basic movement and attack.
-       - **Defeat Mechanism:** Right hand collision.
-       - **Scoring:** Points for hitting the sweet spot.
-     - **Green Phantom**
-       - **Behavior:** Faster movement.
-       - **Defeat Mechanism:** Block with both hands.
-       - **Scoring:** Fixed points per successful block.
-     - **Pink Phantom**
-       - **Behavior:** Projectile-like, requiring dodging.
-       - **Defeat Mechanism:** Successful dodge.
-       - **Scoring:** Fixed points per successful dodge.
-   - **Create Individual Scenes:**
-     - Inherit each variant from the base `Phantom` scene.
-     - Customize properties (speed, attack patterns) and scripts per type.
+## Species and rules
 
-### 3. **Collision and Interaction System**
-   - **Hitbox and Hurtbox Setup:**
-     - **Hitboxes:**
-       - Use `Area3D` with `CollisionShape3D` for detecting player punches.
-       - Implement "sweet spot" areas for Yellow and Blue Phantoms to encourage varied attacks.
-     - **Hurtboxes:**
-       - Define areas on the player to detect phantom collisions.
-       - Utilize `Area3D` for detecting when phantoms reach the player, triggering damage.
-   - **Signal Connections:**
-     - Connect collision signals to handlers for:
-       - Calculating damage.
-       - Updating scores based on hit quality (e.g., velocity, direction).
+| Color | Species | Script | Rule | Base score | Rift damage |
+|---|---|---|---|---|---|
+| Yellow | Angler | `yellow_phantom.gd` on `resonance_phantom.gd` | Left hand. Lure is the crit. | 100 (crit 220) | 10 (crit 20) |
+| Blue | Angler | `blue_phantom.gd` on `resonance_phantom.gd` | Right hand. Lure is the crit. | 100 (crit 220) | 10 (crit 20) |
+| Green | Carapace | `green_phantom.gd` | Both hands inside 0.55 s. First hand is a catch. | 180 | 16 |
+| Pink | Spearfin | `pink_phantom.gd` | Cannot be punched. Leave its lane. | 200 | 18 |
+| none | Drifter | `phantom.gd` base | Any hand. Not in any wave pool today. | 100 | 10 |
 
-### 4. **AI Behavior Development**
-   - **Movement Patterns:**
-     - Implement AI to approach the player from diverse angles and heights.
-     - Utilize pathfinding or scripted movement for varied behaviors.
-   - **Sweet Spot Targeting:**
-     - Define optimal hit areas and velocities to maximize damage or score.
-   - **State Management:**
-     - Use Godot’s `StateMachine` or Behavior Trees for managing AI states (e.g., idle, attacking, retreating).
+A valid strike during the phantom's commit phase is "on beat": score times 1.25, rift damage times 1.15. Because strikes only count in reach, nearly every valid hit is on beat. Pink's dodge is always on beat.
 
-### 5. **Phantom Spawning System (Rift System)**
-   - **Rift Manager Node:**
-     - Create a central `RiftManager` node responsible for spawning phantoms.
-     - Attach scripts to handle spawn intervals and conditions.
-   - **Spawn Randomization:**
-     - Randomize spawn timings and phantom types to increase unpredictability.
-   - **Rift Mechanics:**
-     - Implement visual indicators for rift activity.
-     - **Rift Closure:**
-       - Close rift upon reaching certain score milestones.
-       - Display rift weakening effects as player scores points.
-       - Declare player victory when rift is fully closed.
+Every phantom that reaches the player drains 20 life force (`contact_damage`).
 
-### 6. **Health, Damage, and Scoring System**
-   - **Phantom Health Management:**
-     - Implement health properties for phantoms if partial damage is required.
-     - For this design, phantoms are destroyed upon successful player actions.
-   - **Scoring Mechanism:**
-     - **Yellow & Blue Phantoms:**
-       - Points awarded based on hit velocity and accuracy within the sweet spot.
-     - **Green & Pink Phantoms:**
-       - Fixed points awarded upon successful block or dodge.
-   - **Player Life Force Management:**
-     - Track player’s life force.
-     - Deplete life force when phantoms reach the player.
-     - **Visual Indicators:**
-       - Implement glowing veins or similar effects to represent life force.
-     - **Audio Cues:**
-       - Intensify heartbeat sounds as life force depletes.
-   - **Death and Destruction Effects:**
-     - Trigger appropriate animations and particle effects upon phantom defeat or player death.
+## Body forms
 
-### 7. **Integration with Core Systems**
-   - **Weapon System Interaction:**
-     - Ensure phantoms respond to player’s energy gloves and melee attacks.
-     - Handle different punch types (uppercut, jab, left hook, right hook) within attack scripts.
-   - **Progression System Alignment:**
-     - Tie phantom encounters to game progression milestones.
-     - Adjust difficulty based on player’s advancement.
-   - **Combo and Scoring System:**
-     - Incorporate successful hits into combo mechanics.
-     - Multiply scores based on consecutive successful actions.
+`Scripts/Presentation/creature_mesh.gd` builds each species as one mesh, shared by every phantom of that shape and prewarmed during the menu.
 
-### 8. **Testing and Optimization**
-   - **Unit Testing AI Behaviors:**
-     - Test each AI behavior individually to ensure consistency.
-   - **Performance Optimization:**
-     - Optimize phantom scripts and collision detection for smooth VR experiences.
-     - Use Godot’s profiling tools to identify and address performance bottlenecks.
-   - **Playtesting:**
-     - Conduct playtests to gather feedback on phantom difficulty and behavior.
-     - Adjust AI parameters based on player feedback to balance challenge and fun.
+- Angler: Lantern (round), Gulper (long jaw, whip tail), Thornback (squat, spined). The lure stalk is built to reach wherever the sweet spot sits.
+- Carapace: Crab, Horseshoe (dome shell, tail spike), Mantis (upright, raptor arms). Two crystal claws say "both hands".
+- Spearfin: Needle, Sailfish (huge sail, long bill), Ribbon (long eel, frilled fin). The bill says "charge".
+- Drifter: jellyfish trailing tentacles.
 
-### 9. **Documentation and Support**
-   - **Code Documentation:**
-     - Comment scripts thoroughly using Godot’s documentation standards.
-     - Maintain a README for the Phantom Enemy System outlining setup and customization.
-   - **User Guides:**
-     - Create tutorials or in-engine help guides detailing how the Phantom Enemy System operates.
-     - Include examples of extending the base `Phantom` scene for new variants.
+A phantom picks a form at random unless `creature_form` is set. Materials come from `Resources/Materials/creature.tres` with per-species sway, flap, and snap parameters.
 
-### 10. **Future Enhancements**
-   - **Advanced Phantom Abilities:**
-     - Introduce phantoms with unique abilities (e.g., teleportation, area-of-effect attacks).
-   - **Phantom Variety Expansion:**
-     - Continuously add new phantom types to keep gameplay engaging.
-   - **Adaptive AI:**
-     - Implement AI that learns and adapts to player strategies, enhancing replayability.
+## Movement: one arc into reach
 
-### **Best Practices Alignment**
-- **Scene Organization:**
-  - Maintain a clean hierarchy by separating phantoms into their own scenes.
-  - Use inheritance to promote reusability and reduce redundancy.
-- **Modular Design:**
-  - Keep the `RiftManager` separate from individual phantoms to adhere to single responsibility.
-- **Signal Utilization:**
-  - Leverage Godot’s signal system for decoupled communication between nodes.
-- **Performance Considerations:**
-  - Optimize phantom scripts and collision areas to ensure VR performance is not hindered.
-- **Documentation:**
-  - Keep all systems well-documented to facilitate team collaboration and future enhancements.
+`Scripts/Phantoms/phantom.gd`
 
-### **References and Resources**
-- [Godot XR Tools Documentation](https://godotvr.github.io/godot-xr-tools/docs/home/)
-- [Godot 4 Official Documentation](https://docs.godotengine.org/en/stable/)
-- [Godot Behavior Trees](https://docs.godotengine.org/en/stable/tutorials/ai/behavior_tree.html)
-- [Godot State Machine Tutorial](https://docs.godotengine.org/en/stable/tutorials/ai/state_machine.html)
+1. **Approach.** On spawn the phantom locks a target just under the player's eyes (18 to 30 cm below the camera) and builds a cubic bezier from its position to that point. The bow is sideways: yellow bows left, blue bows right, green stays near center. Speed ramps from `move_speed` toward `pattern_commit_speed` along the curve. There is no stop-then-dash.
+2. **Commit.** Within `strike_reach` (1.7 m) the phase is COMMIT, the body shows its alert glow, and a punch counts. This is also when it homes on the head.
+3. **Possession.** If the phantom core passes within `possession_radius` (0.30 m) of the head, the lunge target point, or the body node, it possesses the player: it dissolves, plays the siphon, and emits `player_contact`.
+4. **Recover.** If it passes through without possessing, it retreats for `recover_seconds` and builds a new arc. A phantom that stalls twice or lives past 22 s cleans itself up.
+
+Strikes outside the window buzz the hand and return `not_open`. Wrong-hand strikes return `wrong_hand`, emit `strike_rejected`, and break the chain.
+
+### Angler specifics
+The lure (`SweetSpotVisual`) sits in one of three places relative to the face that travels toward the player: hook (out on the punching side), uppercut (under the chin), or jab (in front of the mouth). A strike within `sweet_spot_radius` (0.32 m) of the lure is the crit. The lure flashes white on a crit, the species color on a plain hit, red on a wrong hand.
+
+### Carapace specifics
+Approaches lower and faster, widens its body in the commit phase. The first hand to touch it starts a 0.55 s window and returns `block_half`; the other hand inside that window completes the block. The same hand again, or a late second hand, restarts the window.
+
+### Spearfin specifics
+Does not use the arc. It telegraphs for `telegraph_seconds` (1.15 s) while a chevron lane shader draws on the floor from the fish to the player and a little past. The aim starts bowed to one side and straightens as the telegraph completes, then it charges at `charge_speed` (7 m/s). Passing its locked target without possessing resolves it as a dodge.
+
+## Pressure
+
+`apply_pressure(speed_scale, telegraph_scale)` is called per spawn from the rift's wave entry. Speed multiplies `move_speed`, `pattern_commit_speed`, and pink's `charge_speed`. The telegraph scale divides acceleration (a longer tell is a gentler ramp) and scales the telegraph time with a floor of 0.35 s (0.45 s for pink).
+
+## Spawning
+
+`Scripts/Rifts/rift_manager.gd` spawns on a timer from its wave's `pool`, up to `max_live` live phantoms, offset in front of the portal. `Scripts/Rifts/rift_spawn_manager.gd` (the RiftDirector) decides how many rifts are open, where they sit, and when the next one replaces a sealed one. Wave fields: `health`, `interval`, `max_live`, `speed_scale`, `telegraph_scale`, `pool`, `scale`.
+
+## Feedback
+
+- `feedback_requested(kind, position, intensity)` drives `Scripts/Presentation/combat_vfx.gd`: hit, sweet, guard, rejected.
+- Hand haptics in `Scripts/Player/hand_collision.gd`: normal, crit or on-beat, half block, rejected.
+- Death and possession sounds pick from takes in `Assets/Audio/SFX/` via `sfx_variations.gd`.
+- Chen calls the first sighting of each species once per session, and wrong-hand corrections on a cooldown.
+
+## Planned
+
+- Low approaches that ask for uppercuts and squats. Everything currently aims at head height.
+- A finale behavior for The Maw and an Overseer presence.
+- Intelligence targets from the lore: relay phantoms, captures.
+- Further species ideas kept from the original design: a shield phantom needing a punch sequence, phantoms that drain from range, projectile phantoms to punch away.
+- The Drifter is built but unused. It could seed a mixed "any hand" wave for warmups or the endless hold.

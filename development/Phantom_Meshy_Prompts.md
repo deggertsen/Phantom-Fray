@@ -1,3 +1,5 @@
+> **Status (2026-10-08):** The phantoms are procedural creature meshes built in `Scripts/Presentation/creature_mesh.gd` (Angler, Carapace, Spearfin, Drifter), not authored models. These prompts are kept for a future authored-art pass and for the Overseer boss, which has no in-game form yet.
+
 # Phantom Design Prompts for Meshy.ai
 
 ## Basic Phantom

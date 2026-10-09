@@ -1,4 +1,5 @@
 # Meta Quest Release Evidence
+> **Stale artifact (noted 2026-10-08).** The packages recorded below were built before the October content (six-operation campaign, creature species, breach city, Chen comms). Rebuild and re-sign from current `main` and refresh the hashes before any distribution or VRC submission.
 
 ## Exact release artifact
 

@@ -1,37 +1,51 @@
-# Production Status — 2026-07-18
+# Production Status — 2026-10-08
 
-## Implemented in `production-roadmap-through-phase-5`
+## Implemented on `main`
 
-- Finite three-rift mission with countdown, score, combo, timer, victory, defeat, timeout, results, and retry
-- Life-force drain/recovery/fail-state integration
-- Yellow left-hand and Blue right-hand resonance-point rules
-- Green two-hand block and Pink telegraphed physical dodge
-- Honest rift health/closure shader path
-- Wrist score/progress/time HUD
-- RSF training-chamber presentation and ERM gauntlet overlays
-- Audio buses, music pressure hooks, and Critical life-force routing
-- Main menu, tutorial, pause, persistent audio/haptic settings, and session flow
-- XR focus-loss suspension hook and debug performance monitor
-- Automated validation runner and GitHub Actions import/test workflow
-- Quest export, release, performance, known-issues, and store-asset documentation
+### Combat
+- Phantom base: one continuous accelerating bezier arc into reach, lunge at the head, recover and re-approach. Strikes count once in reach. Stall and lifetime cleanup.
+- Angler (yellow left, blue right): lure as the resonance crit in hook, uppercut, or jab position. Wrong hand rejects and breaks the chain.
+- Carapace (green): first hand is a catch, second hand inside 0.55 s is the block.
+- Spearfin (pink): telegraph, floor lane shader, charge; resolved by leaving the lane. Cannot be punched.
+- Three body forms per species, built as one mesh each and prewarmed with the combat shaders while the menu is up.
+- Pressure scaling per wave: speed and telegraph scales applied to every phantom.
+- Possession: head or body within 0.30 m of the phantom core. Drains 20 life force, plays the siphon sound, frost and veins, distortion and impact slam.
+- Strike VFX: sparks, shockwave, flash. Haptic tiers for normal, crit, guard, and rejected.
 
-## Build artifact produced
+### Rifts and missions
+- Six operations in `Scripts/Core/mission_catalog.gd` with per-rift wave tables, pressure labels, open barks, seal lines, and debriefs.
+- Rift director: single, clustered pair, or front-arc placement; up to two concurrent rifts; staggered first spawns.
+- Rift manager: health, damage flash, health shader, beacon column with floor ring and label, orbiting debris, scale for The Maw, dissolve on seal.
+- Rift compass chevron at the edge of view and phantom bearing markers.
+- Round controller: countdown, timer, chain multiplier to 3x with crit and on-beat gains, victory, defeat, timeout, pause and resume.
 
-- Signed ARM64 Meta Quest debug APK: `builds/phantom-fray-debug.apk` (generated artifact, ignored by Git)
-- Debug SHA-256: `67577d91353ef873128e3e4e097f1aa6f41ccd8bd8593f28896ec7a310012332`
-- Production-signed ARM64 Meta Quest release APK: `builds/phantom-fray-release.apk`
-- Release SHA-256: `cd0f3e98b0f007f5ca8cb867823ed9fea20d0345f748411d4ff5b778b2bd2ee9`
-- Release package: `com.phantomfray.resonancerising`, version `1.0.0`, target SDK 36
-- APK Signature Scheme v2 verified with the 4096-bit Phantom Fray production certificate
-- OpenXR Vendors 5.1.0 Meta plugin packaged
-- Manifest contains `org.khronos.openxr.intent.category.IMMERSIVE_HMD`, `com.oculus.intent.category.VR`, Quest supported-device metadata, and `android.hardware.vr.headtracking`
+### Player and presentation
+- XR origin with tracked hands, grip-gated strike spheres, haptics.
+- ERM gauntlet armor with color-coded bracers.
+- Bracer wrist panel: operation, timer, life force bar, rift hexes, score, multiplier, Chen caption.
+- Breach-site arena: hex floor with rift-driven corruption veins, pylons, procedural dead city and rubble, sky crack.
+- Dr. Chen comms: 29 events in `Assets/Audio/VO/chen/chen_lines.json`, 4 to 5 takes each, priority and cooldown queue, radio treatment on the Voice bus, music ducking.
+- Music manager with six tracks and an intensity controller driven by pressure and life state.
 
-## Cannot be completed without external resources
+### Flow and platform
+- World-space holographic menu with dual lasers and trigger-release selection: main, Operations, Training (six modules), Settings, pause, abort confirm, reset confirm, XR suspended, results with Next Operation.
+- Persistent settings and cleared-mission progress in `user://phantom_fray_settings.cfg`.
+- XR focus-loss suspension, debug performance monitor.
+- Validation runner covering resources, SFX takes, variant rules, life force, strike window, mission catalog, menu surfaces, results menu, pink dodge. GitHub Actions on Godot 4.7.1.
+- Desktop art and play capture scenes writing stills to `reports/`.
+- Quest debug and release build scripts, Android template installer, export presets.
 
-- Physical Quest installation, validation, and balance (no ADB headset connected)
-- Secure off-machine backup of the release keystore and its password
-- Meta dashboard/VRC/store submission
-- Closed playtest recruitment and recorded results
-- Final bespoke art, logo/key art, trailer capture, and professional audio mastering
+## Build artifacts
 
-These are documented as release gates rather than represented as complete.
+The signed debug and release APKs recorded in [Meta_VRC_Evidence.md](Meta_VRC_Evidence.md) were built before the October content (campaign, creatures, city, comms). Rebuild and re-sign before any distribution.
+
+## Playtesting
+
+Headset playtesting has happened throughout, on Quest 3, but was not recorded. Standing verdicts are in the roadmap. Future sessions go in [Playtest_Log.md](Playtest_Log.md).
+
+## Not done
+
+- Chen's takes are Windows text-to-speech placeholders. The ElevenLabs generator is ready and has not been run.
+- No best scores, medals, session stats, endless mode, leaderboards, war map, or difficulty tiers. These are the Phase 6 and 7 work.
+- One arena for all six operations, still labeled as a training chamber.
+- Final audio mix, key art, trailer, store copy, and Meta dashboard work.

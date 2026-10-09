@@ -1,122 +1,60 @@
 # Phantom Implementation Checklist
 
-## 1. Base Phantom Scene Setup
-- [x] Create Base `Phantom` Scene
-  - [x] Set up `CharacterBody3D`
-  - [x] Add `CollisionShape3D`
-  - [x] Add `MeshInstance3D`
-  - [x] Add `AnimationPlayer`
-  - [x] Add `Area3D` for interactions
-- [ ] Create Inheritance Structure
-  - [ ] `YellowPhantom` class
-  - [ ] `BluePhantom` class
-  - [ ] `GreenPhantom` class
-  - [ ] `PinkPhantom` class
+Status as of 2026-10-08. Design detail is in [Phantom_Enemy_Breakdown.md](Phantom_Enemy_Breakdown.md).
 
-## 2. Collision System
-- [x] Hitbox System
-  - [x] Create phantom hitbox using Area3D
-  - [x] Set up collision detection
-  - [ ] Implement sweet spot areas
-- [x] Hurtbox System
-  - [x] Create phantom hurtbox
-  - [x] Set up player damage detection
-- [ ] Signal Connections
-  - [ ] Damage calculation
-  - [ ] Score calculation
-  - [ ] Hit feedback
+## 1. Base phantom
+- [x] `CharacterBody3D` base with collision, mesh, contact `Area3D`
+- [x] Inheritance: `ResonancePhantom` (yellow, blue), green, pink
+- [x] Procedural creature meshes, three forms per species, prewarmed
+- [x] Per-species material tuning (sway, flap, snap)
 
-## 3. AI Behavior
-- [x] Basic Movement
-  - [x] Implement approach patterns
-  - [ ] Add varied movement speeds
-  - [ ] Implement evasion mechanics
-- [ ] Sweet Spot Targeting
-  - [ ] Define optimal hit areas
-  - [ ] Implement velocity tracking
-  - [ ] Add position indicators
-- [ ] State Management
-  - [ ] Create state machine
-  - [ ] Implement idle state
-  - [ ] Implement attack state
-  - [ ] Implement retreat state
+## 2. Collision and strikes
+- [x] Grip-gated strike spheres on both hands with velocity quality
+- [x] Strike window: in reach or commit phase only
+- [x] Lure sweet spot for Anglers in hook, uppercut, jab positions
+- [x] Possession on core proximity to head, lunge point, or body
+- [x] Signals: `resolved`, `player_contact`, `strike_rejected`, `feedback_requested`
 
-## 4. Phantom Variants
-### Yellow Phantom
-- [ ] Basic movement and attack
-- [ ] Left hand collision detection
-- [ ] Sweet spot scoring system
+## 3. Behavior
+- [x] One continuous bezier arc into reach with speed ramp
+- [x] Lateral bow per color, height jitter
+- [x] Homing near the head, pass-through and recover, re-approach
+- [x] Stall and lifetime cleanup
+- [x] Pressure scaling per wave (speed, telegraph)
+- [ ] Low approaches for uppercuts and squats
+- [ ] Boss or finale behavior
 
-### Blue Phantom
-- [ ] Basic movement and attack
-- [ ] Right hand collision detection
-- [ ] Sweet spot scoring system
+## 4. Variants
+- [x] Yellow: left hand, lure crit
+- [x] Blue: right hand, lure crit
+- [x] Green: faster, two-hand block window
+- [x] Pink: telegraph, floor lane, charge, dodge resolve
+- [x] Drifter base (unused in waves)
+- [ ] New species (shield, ranged drain, projectile)
 
-### Green Phantom
-- [ ] Faster movement implementation
-- [ ] Two-handed block detection
-- [ ] Block scoring system
+## 5. Spawning
+- [x] RiftDirector: rift count, concurrency, placement modes (random ring, clustered pair, front arc)
+- [x] RiftManager: timer spawns from wave pool, live cap, health, flash, dissolve
+- [x] Beacon column, floor ring, label, compass chevron, phantom bearings
+- [x] Six operations as wave tables
 
-### Pink Phantom
-- [ ] Projectile movement pattern
-- [ ] Dodge detection system
-- [ ] Dodge scoring system
+## 6. Health and scoring
+- [x] Rift health and damage per resolve
+- [x] Score, crit bonus, on-beat bonus, chain multiplier to 3x
+- [x] Life force drain on possession
+- [x] Strike VFX (sparks, shockwave, flash), haptic tiers, death and siphon takes
+- [ ] Score popups beyond the wrist delta
+- [ ] Persisted best scores and medals
 
-## 5. Spawning System
-- [ ] Rift Manager
-  - [ ] Create central spawn controller
-  - [ ] Implement spawn intervals
-  - [ ] Add spawn conditions
-- [ ] Spawn Mechanics
-  - [ ] Random timing system
-  - [ ] Phantom type selection
-  - [ ] Position randomization
-- [ ] Rift Visuals
-  - [ ] Create rift effects
-  - [ ] Add weakening indicators
-  - [ ] Implement closure animations
+## 7. Integration
+- [x] Chen comms for first contact, wrong hand, chain, life force, outcome
+- [x] Music intensity by pressure and life state
+- [ ] Difficulty tiers
+- [ ] Endless hold mode
+- [ ] Session stats
 
-## 6. Health & Scoring
-- [ ] Health System
-  - [ ] Add health properties
-  - [ ] Implement destruction logic
-- [ ] Scoring Mechanism
-  - [ ] Basic hit scoring
-  - [ ] Sweet spot bonuses
-  - [ ] Combo system
-- [ ] Visual Feedback
-  - [ ] Hit effects
-  - [ ] Destruction effects
-  - [ ] Score popups
-
-## 7. Core System Integration
-- [x] Weapon System Integration
-  - [x] Energy glove collision detection
-  - [ ] Different punch type detection
-- [ ] Progression System
-  - [ ] Difficulty scaling
-  - [ ] Variant unlocking
-  - [ ] Score milestones
-- [ ] Combo System
-  - [ ] Hit chaining
-  - [ ] Score multipliers
-  - [ ] Visual feedback
-
-## 8. Performance & Polish
-- [ ] Optimization
-  - [ ] AI behavior optimization
-  - [ ] Collision optimization
-  - [ ] Particle system optimization
-- [ ] Visual Enhancement
-  - [ ] Phantom materials
-  - [ ] Hit effects
-  - [ ] Destruction effects
-- [ ] Audio Implementation
-  - [ ] Movement sounds
-  - [ ] Attack sounds
-  - [ ] Destruction sounds
-
-## Notes
-- Items marked [x] are confirmed complete based on the implementation plan
-- Some items may be partially complete but need verification
-- Additional items may need to be added based on development progress 
+## 8. Performance and polish
+- [x] One mesh per creature, shaders compiled during the menu
+- [x] No per-phantom raycasts in steady state
+- [ ] Final SFX mix on headset
+- [ ] Movement and attack sounds per species

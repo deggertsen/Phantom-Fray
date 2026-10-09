@@ -35,9 +35,9 @@ The project uses the Compatibility renderer for standalone Quest reliability. Be
 
 - Quest 2-class minimum: 72 Hz, 13.9 ms frame budget
 - Quest 3/3S target: validate 90 Hz only after the 72 Hz maximum-load gate passes
-- Maximum active gameplay load: 1 rift and 4 live phantoms in the launch mission
+- Maximum active gameplay load: 2 concurrent rifts (OP-04, OP-05) or one double-size rift with 4 live phantoms (OP-06)
 - No real-time shadows in the launch arena
-- MSAA 4x (`msaa_3d=2` in Godot project settings)
+- MSAA 2x (`msaa_3d=1` in Godot project settings); raise only with device measurements
 
 Tune render-target multiplier and foveation only on device.
 
@@ -66,7 +66,7 @@ adb logcat | grep -i -E "godot|openxr|phantom"
 - OpenXR loader is version 1.0.34 or later.
 - ARM64 native libraries are present.
 - Debug symbols and signing credentials are absent from the release package.
-- Dynamic music resources under `Assets/Audio/Music/` are included by the export preset.
+- Music under `Assets/Audio/Music/` and Chen takes under `Assets/Audio/VO/chen/` are included by the export preset.
 - The application launches from a clean installation and after an upgrade installation.
 
 ## Hardware-only acceptance

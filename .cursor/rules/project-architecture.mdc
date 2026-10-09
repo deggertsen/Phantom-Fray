@@ -1,54 +1,65 @@
 ---
 alwaysApply: true
-description: Project structure and architecture guidelines for Phantom-Fray VR game
+description: Project structure and architecture guidelines for Phantom Fray VR game
 ---
 
-# Phantom-Fray Project Architecture
+# Phantom Fray Project Architecture
 
 ## Project Overview
-**Phantom-Fray** is a VR combat game where players fight ethereal phantom enemies using energy gauntlets. The game uses Godot 4.7 with the godot-xr-tools plugin for VR functionality.
+**Phantom Fray: Resonance Rising** is a stationary VR fitness-combat game for Meta Quest. Players physically punch, two-hand block, and side-step phantoms pouring out of dimensional rifts. Godot 4.7.1 with OpenXR and the godot-xr-tools 4.5.1 plugin. Compatibility renderer.
 
 ## Core Game Mechanics
-- **Stationary VR Combat**: Player stays in place but can dodge, duck, and punch
-- **Phantom Enemies**: Multiple types (Yellow, Blue, Green, Pink) with different defeat mechanics
-- **Rift System**: Phantoms spawn from dimensional rifts that must be closed by defeating phantoms
-- **Life Force System**: Player health represented as life force that phantoms drain when they touch the player instead of the player punching them with the gauntlets
-- **Dissolve Effects**: Custom shaders for phantom destruction and rift closure
+- **Stationary physical combat**: no artificial locomotion; the player turns, ducks, and steps
+- **Four phantom rules on three species**: Angler (yellow left hand, blue right hand, lure is the crit), Carapace (green, two-hand block), Spearfin (pink, floor lane, dodge)
+- **Rifts** with health, up to two open at once; each resolved phantom damages its rift; sealing every rift wins the operation
+- **Six-operation campaign** defined as wave tables in `Scripts/Core/mission_catalog.gd`
+- **Life force** drained by possession (phantom reaches the head), recovering after clear seconds; zero ends the operation
+- **Chain multiplier** and resonance crits for score
+- **Dr. Chen comms** driven by `Assets/Audio/VO/chen/chen_lines.json`
+
+## Main Scene (`main.tscn`)
+`Main` holds `WorldEnvironment`, `DirectionalLight3D`, `XRLifecycleController`, `StartXR`, `Player` (XROrigin3D, group `Player`), `ArenaPresentation`, `Floor`, `RiftSpawnManager` (the RiftDirector), `PhantomContainer`, `MusicManager` with `MusicIntensityController`, `RoundController`, `ChenComms`, `VRMenuPresenter`, `GameFlowController`, `PerformanceMonitor`. Systems find each other by group, never by hard path.
 
 ## Project Structure
+- **[Scripts/](mdc:Scripts/)**
+  - `Scripts/Core/`: `mission_catalog.gd`, `round_controller.gd`, `game_flow_controller.gd`, `game_settings.gd` (autoload)
+  - `Scripts/Phantoms/`: `phantom.gd` base arc, `resonance_phantom.gd` (Angler), `yellow_phantom.gd`, `blue_phantom.gd`, `green_phantom.gd`, `pink_phantom.gd`
+  - `Scripts/Rifts/`: `rift_spawn_manager.gd` (RiftDirector: how many rifts, where, when), `rift_manager.gd` (one rift: spawning, health, visuals, closure)
+  - `Scripts/Player/`: `xr_player.gd`, `hand_collision.gd` (strike detection and haptics), `life_force_manager.gd`, `life_force_feedback.gd`
+  - `Scripts/Presentation/`: `creature_mesh.gd`, `breach_city.gd`, `arena_builder.gd`, `erm_gauntlet.gd`, `combat_vfx.gd`, `rift_compass.gd`, `phantom_bearings.gd`, `glow_sprite.gd`, `shader_warmup.gd`
+  - `Scripts/Audio/`: `chen_comms.gd`, `music_intensity_controller.gd`, `sfx_variations.gd`
+  - `Scripts/UI/`: `vr_menu_panel.gd`, `vr_menu_presenter.gd`, `round_hud.gd` (bracer panel)
+  - `Scripts/XR/`: `xr_lifecycle_controller.gd`
+  - `Scripts/Debug/`: `performance_monitor.gd`, `art_capture.gd`, `play_capture.gd`, `menu_capture.gd`, `menu_preview.gd`
+- **[Scenes/](mdc:Scenes/)**: `Phantoms/` (base and four variants), `Player/`, `Rifts/`, `UI/`, `Debug/`
+- **[Resources/Materials/](mdc:Resources/Materials/)**: creature, rift, lane, city, damage shaders and materials
+- **[Assets/](mdc:Assets/)**: `Audio/Music/`, `Audio/SFX/` (takes picked by stem), `Audio/VO/chen/`
+- **[Tests/](mdc:Tests/)**: `validation_runner.gd`, run by `tools/validate_project.sh` and GitHub Actions
+- **[tools/](mdc:tools/)**: Quest build scripts, Android template installer, VO generators
+- **[development/](mdc:development/)**: roadmap, status, known issues, playtest log, design docs, release docs
 
-### Main Directories
-- **[Scripts/](mdc:Scripts/)**: All GDScript files organized by system
-  - `Scripts/Phantoms/`: Phantom enemy logic and variants
-  - `Scripts/Player/`: VR player and hand interaction scripts
-  - `Scripts/Rifts/`: Rift spawning and management systems
-- **[Scenes/](mdc:Scenes/)**: Godot scene files (.tscn)
-  - `Scenes/Phantoms/`: Phantom enemy scenes and variants
-  - `Scenes/Player/`: VR player setup
-  - `Scenes/Rifts/`: Rift spawning scenes
-- **[Resources/](mdc:Resources/)**: Materials, shaders, and reusable assets
-- **[Assets/](mdc:Assets/)**: Audio, textures, and imported assets
-- **[development/](mdc:development/)**: Design documents and implementation plans
-
-### Key Files
-- **[project.godot](mdc:project.godot)**: Project configuration with VR settings
-- **[main.tscn](mdc:main.tscn)**: Main scene entry point
+## Key Files
+- **[project.godot](mdc:project.godot)**: Godot 4.7, GL Compatibility, OpenXR enabled, autoloads `GameSettings`, `XRToolsUserSettings`, `XRToolsRumbleManager`
+- **[main.tscn](mdc:main.tscn)**: main scene
 - **[openxr_action_map.tres](mdc:openxr_action_map.tres)**: VR input mapping
+- **[default_bus_layout.tres](mdc:default_bus_layout.tres)**: Master, Music (ducked under Voice), SFX, Voice, Critical, UI
 
-## VR/XR Integration
-- Uses **godot-xr-tools** plugin for VR functionality
-- OpenXR for VR headset compatibility
-- Hand tracking and controller input
-- 3D physics layers for hands, phantoms, and world
+## Collision Layers
+- **1** world
+- **2** hands (strike spheres, mask phantoms)
+- **3** phantoms (punchable bodies)
+- **4** phantom_sensors (contact areas, mask world/player body)
+- **5** ui
 
-## Collision System
-- **Layer 1**: World (static environment)
-- **Layer 2**: Hands (player interaction)
-- **Layer 3**: Phantoms (enemy entities)
+## Signal Flow
+Phantom `resolved` / `player_contact` / `strike_rejected` → RiftManager → RiftDirector → RoundController (score, chain, life force) → HUD, ChenComms, MusicIntensityController. RoundController `round_finished` → GameFlowController → VRMenuPresenter results.
 
 ## Development Guidelines
-- Follow Godot 4.x best practices
-- Use proper signal connections for gameplay events
-- Implement proper VR comfort features
-- Maintain consistent naming conventions
-- Document complex systems in development/ folder
+- Follow Godot 4.x best practices; typed GDScript; signals over polling
+- Find systems by group (`Player`, `PlayerBody`, `RoundController`, `RiftSpawnManager`, `LifeForceManager`, `VRMenuPresenter`, `CombatVFX`, `ChenComms`, `PhantomContainer`)
+- Keep gameplay numbers in exports or the mission catalog; presentation reads signals and never owns state
+- One mesh per creature and per set piece; no per-phantom raycasts or allocations in steady state; prewarm shaders during the menu
+- Keep the desktop fallback working (`--xr-mode off`) so flow and art can be checked without a headset
+- Run `tools/validate_project.sh` before committing gameplay or scene changes
+- Record headset sessions in `development/Playtest_Log.md`
+- Document design and production changes in `development/`

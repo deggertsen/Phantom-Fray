@@ -1,3 +1,5 @@
+> **Historical (completed 2026-07-18).** This breakdown drove the life force vertical slice and is kept as a record. Current numbers and feedback are in [Life_Force_System.md](Life_Force_System.md). Note the slice shipped with a flat 20 drain per possession, not the 5 planned here.
+
 # Next Step Breakdown — Life Force + Fail State
 
 **Last updated:** 2026-07-18  

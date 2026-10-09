@@ -1,45 +1,104 @@
-# Phantom-Fray
+# Phantom Fray: Resonance Rising
 
-You are a soldier in a world that is being invaded by an alien phantom race that cannot be touched or killed through by flesh or normal weaponry. A breakthrough has been made and you have been recruited and equipped with new melee weapons that effectively destroy the phantoms instantly once they are touched. But if enough of them get inside your body, they will suck out your life force and you will die. It is your mission to drive the invaders from the world and restore peace.
+A stationary VR fitness-combat game for Meta Quest, built in Godot 4.7.1 with OpenXR and godot-xr-tools. You stand at a breach site in a dead city, wearing Dr. Chen's Ethereal Resonance Matrix (ERM) gauntlets, and physically punch, block, and dodge phantoms pouring out of dimensional rifts until every rift is sealed.
 
-## Game Mechanics
+The goal of the project is a workout you want to come back to because the world needs saving, not because a timer told you to. Everything below describes the game as it exists in this repository today. Plans live in [development/Production_Roadmap.md](development/Production_Roadmap.md).
 
-This is a Virtual Reality game that uses a VR controller that has a gripper and a button. The player can use the gripper to punch the phantoms. The player is stationary but can dodge the phantoms. The phantoms will try to touch the player and if they do, the player will lose life force and the game will end. The player can punch the phantoms to destroy them and if they destroy enough of them, they will win the game.
+## How it plays
 
-1. Player Movement:
-   - Stationary position with ability to dodge, duck, and possibly jump
-   - Focus on upper body movement for punching
-   - Dodge enemy projectiles at times by doing squats or dodging to the side
+- **Stationary, physical.** No artificial locomotion. You turn, duck, and take a step to the side. Everything comes to you.
+- **Grip, then strike.** Hold grip and punch. A strike counts once a phantom is in reach, which is also when it lunges. Jabs, hooks, and uppercuts all work, and the Angler's glowing lure hangs where the matching punch lands.
+- **Four phantom rules, each a different movement.**
 
-2. Phantom Behavior and Combat:
-   - Phantoms approach the player from various angles
-   - Each phantom type has a "sweet spot" for maximum points (points are what are needed to close the rifts)
-   - Encourage different punch types (jabs, hooks, uppercuts, punch while squatting) for optimal scoring
+| Color | Species | Rule | What the body does |
+|---|---|---|---|
+| Yellow | Angler | Left hand only. Strike the lure for a resonance crit. | Left jabs, hooks, uppercuts |
+| Blue | Angler | Right hand only. Strike the lure for a resonance crit. | Right jabs, hooks, uppercuts |
+| Green | Carapace | Catch it with both hands inside a short window. | Two-hand block |
+| Pink | Spearfin | Cannot be punched. Paints a lane on the floor, then charges it. | Side-step or duck out of the lane |
 
-3. Weapon System:
-   - Start with special energy gloves for punching
-   - Possible special abilities on cooldown for variety (not in initial release)
+- **Rifts are the objective.** Each phantom you resolve damages the rift it came from. Seal every rift in the operation before the window closes.
+- **Life force is the stakes.** A phantom that reaches your head possesses you: it vanishes, drains 20 of 100 life force, and your vision frosts and distorts. Life force recovers after three clear seconds. At zero the operation ends.
+- **Score and chain.** Every resolve adds to a chain multiplier up to 3x. Resonance crits and on-arrival hits grow it faster. A wrong hand or a possession resets it.
+- **Dr. Chen on comms.** Spoken callouts for rift bearings, first contact with each species, wrong-hand corrections, chain milestones, life force warnings, time, and debriefs. Captioned on the wrist panel.
 
-4. Health/Life Force System:
-   - Visual indicator of phantom "infection" (glowing veins?)
-   - Heartbeat audio cue that intensifies as life force depletes
+## The campaign today
 
-5. Progression:
-   - Story-driven progression
-   - Save Earth as the primary goal
-   - Potential for DLC with off-planet missions or Earth mission replays
+Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission_catalog.gd](Scripts/Core/mission_catalog.gd).
 
-Other possible features or mechanics we may want to add:
+| Op | Title | Window | Rifts | What it introduces |
+|---|---|---|---|---|
+| OP-01 | First Light | 3:00 | 2 | Yellow and blue |
+| OP-02 | Widen the Ring | 7:00 | 6 | Green and pink in the mix |
+| OP-03 | Chen's Gambit | 8:00 | 6 | Shorter tells, faster lunges |
+| OP-04 | Double Breach | 8:40 | 8 paired | Two rifts open side by side |
+| OP-05 | Open Arc | 8:40 | 8 paired | Paired rifts spread across the front arc |
+| OP-06 | The Maw | 4:00 | 1 | One double-size rift that spawns fast |
 
-1. Combo System: Reward players for chaining together successful hits on sweet spots. This could increase a multiplier for points or charge up a special ability faster.
+A clean run through all six takes roughly 20 minutes. The campaign currently works as an extended tutorial for the combat system. Replay value and narrative hooks are the next things to build; see the roadmap.
 
-2. Phantom Variety: Even without different weapons, we could have phantoms that require specific punch combinations to defeat. Like a "shield" phantom that needs a specific 1-2-3 punch combo to break its defenses.
+## Controls
 
-3. Environmental Hazards: While we're not doing full environment interaction, what about simple hazards that appear randomly? Things like energy beams that you need to duck under or phantom projectiles you need to punch away.
+| Action | Quest controller | Desktop fallback |
+|---|---|---|
+| Strike | Hold grip and punch | none |
+| Menu select | Point and pull trigger | Enter or Space |
+| Pause | Menu button | Esc |
+| Training | Button on the panel | T |
+| Settings | Button on the panel | S |
+| Recenter | Hold Meta button | none |
 
-4. Power-Ups: Temporary boosts that appear in your reach. Grab them for effects like slowing down time, increasing punch power, or restoring life force.
+Debug builds also accept `H` to take a hit and `R` to reset life force.
 
-5. Boss Battles: Larger phantoms that require more complex strategies to defeat. These could be tied to story progression.
+## Running and validating
+
+Godot 4.7.1 exactly. The desktop fallback runs without a headset for menu, flow, and art review.
+
+```bash
+godot --path .
+```
+
+Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, menu surfaces, pink dodge):
+
+```bash
+tools/validate_project.sh
+```
+
+Art and play-through stills for review, written to the gitignored `reports/` folder:
+
+```bash
+godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/art_capture.tscn
+```
+
+```bash
+godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn
+```
+
+Quest builds: [development/Quest_Export_Guide.md](development/Quest_Export_Guide.md).
+
+## Project layout
+
+- `Scripts/Core/` mission catalog, round controller, game flow, settings
+- `Scripts/Phantoms/` phantom base arc, Angler (yellow, blue), Carapace (green), Spearfin (pink)
+- `Scripts/Rifts/` rift director (which rifts open where) and rift manager (spawning, health, closure)
+- `Scripts/Player/` XR origin, hands and strike detection, life force and its feedback
+- `Scripts/Presentation/` creature meshes, breach city, arena, gauntlets, VFX, compass and bearings
+- `Scripts/Audio/` Chen comms, music intensity, SFX takes
+- `Scripts/UI/` world-space menu panel and presenter, wrist HUD
+- `Scripts/Debug/` performance monitor and capture scenes
+- `Assets/Audio/VO/chen/` Chen's script (`chen_lines.json`) and takes
+- `development/` design, production, and release documents
+- `tools/` Quest build scripts, validation, VO generation
+
+## Where this is going
+
+The design intent, in priority order. Details and status in the roadmap.
+
+1. **Fitness first.** Session stats, workout-length sessions, and a reason to sweat that is bigger than a score.
+2. **Replay value.** Best scores and medals per operation, an endless hold mode, and leaderboards.
+3. **Narrative hooks.** A shared war against the Overseer, with a world map in the spirit of Helldivers 2 where every operator's seals push the front line.
+4. **Location variety.** Different breach sites, skies, and lighting per operation.
+5. **Difficulty tiers.** Assist, Standard, and Operator.
 
 ## Lore
 

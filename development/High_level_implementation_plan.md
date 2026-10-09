@@ -1,175 +1,103 @@
-# Phantom-Fray Implementation Checklist 🎮
+# Phantom Fray Implementation Checklist
 
-## 🎯 Current Progress
-- Core Systems: [##--------] 20%
-- Game Mechanics: [###-------] 30%
-- Additional Features: [####------] 40%
-- User Interface: [####------] 40%
-- Audio Design: [####------] 40%
-- Testing and Optimization: [####------] 40%
-- Deployment: [####------] 40%
-- Documentation and Support: [####------] 40%
-- Future Enhancements: [####------] 40%
+Master checklist across systems, as of 2026-10-08. Phase ownership is in [Production_Roadmap.md](Production_Roadmap.md).
 
-## 1. Project Setup
-- [x] Initialize Godot Project
-  - [x] Create new project named `Phantom-Fray`
-  - [x] Set up directory structure
-- [x] Version Control
-  - [x] Initialize Git repository
-  - [x] Configure .gitignore
-- [x] Project Settings
-  - [x] Configure VR settings
-  - [x] Set up input mappings
-  - [x] Configure resolution and aspect ratio
+## Progress
+- Core systems: complete
+- Combat mechanics: complete, low approaches and boss planned
+- Campaign content: six operations, replay layer not started
+- User interface: complete for the current flow
+- Audio: integrated, Chen takes are placeholders, final mix pending
+- Testing and optimization: validation and CI in place, soak and perf on headset pending
+- Deployment: build path complete, store work not started
+- Fitness, narrative, and location features: planned (Phases 6 to 8)
 
-## 2. Core Systems
-- [x] Player System
-  - [x] Create Player scene with required nodes
-  - [x] Implement movement mechanics (dodge, duck, jump)
-  - [x] Integrate VR controller inputs for melee
-- [x] Phantom System
-  - [x] Create Phantom scene with variants
-  - [x] Implement collision detection
-    - [x] Create phantom hitbox system
-    - [x] Create phantom hurtbox system
-  - [x] Develop AI behavior
-    - [x] Implement approach patterns
-    - [ ] Implement sweet spot system
-    - [x] Add visual feedback for hits
-- [ ] Weapon System
-  - [ ] Design ERM gauntlets
-  - [ ] Integrate punch inputs
-- [ ] Health/Life Force System
-  - [ ] Create visual infection indicators
-  - [ ] Implement audio depletion cues
-- [ ] Progression System
-  - [ ] Set up mission objectives
-  - [ ] Implement checkpoint system
-  - [ ] Create DLC/expansion framework
+## 1. Project setup
+- [x] Godot 4.7.1 project, OpenXR, godot-xr-tools 4.5.1
+- [x] Git, ignore rules for builds, reports, keystores
+- [x] Compatibility renderer, Quest-first settings, audio bus layout
 
-## 3. Game Mechanics
-- [x] Player Movement
-  - [x] Implement stationary dodging
-  - [x] Implement ducking mechanics
-  - [x] Implement jumping system
-  - [ ] Fine-tune upper body VR interactions
-- [ ] Phantom Behavior and Combat
-  - [ ] Create diverse approach patterns
-  - [ ] Implement varied attack patterns
-  - [ ] Design scoring system for different punch types
-- [ ] Weapon System
-  - [ ] Implement basic energy gloves
-  - [ ] Create framework for special abilities
-- [ ] Health/Life Force System
-  - [ ] Implement visual health indicators
-  - [ ] Create audio feedback system
-- [ ] Progression
-  - [ ] Implement story element triggers
-  - [ ] Create progression tracking system
+## 2. Core systems
+- [x] Player: XR origin, tracked hands, grip-gated strikes, haptics, gauntlet armor
+- [x] Phantoms: base arc, four rules, three species with three forms each
+- [x] Rifts: director and manager, health, placement modes, concurrency, Maw scale
+- [x] Life force: drain, recovery, states, fail state
+- [x] Round: countdown, timer, score, chain, outcomes, pause
+- [x] Flow: menu, operations, training, settings, results, progress persistence
+- [ ] Progression beyond unlock order (best scores, medals, map)
 
-## 4. Additional Features
-- [ ] Rift System
-  - [ ] Create rift weak points
-  - [ ] Implement scoring system
-  - [ ] Add rift health bar mechanics
-- [ ] Simulated Training Room
-  - [ ] Create black box environment
-  - [ ] Implement phantom projections
-  - [ ] Add practice rift system
-  - [ ] Create phantom selection interface
-  - [ ] Disable damage system for training
-- [ ] Combo System
-  - [ ] Implement hit chaining
-  - [ ] Create score multipliers
-  - [ ] Add ability charge-up system
-- [ ] Phantom Variety
-  - [ ] Create basic phantom types
-  - [ ] Implement shield phantoms
-  - [ ] Design punch combination requirements
-- [ ] Environmental Hazards
-  - [ ] Add energy beam system
-  - [ ] Implement projectile mechanics
-- [ ] Power-Ups
-  - [ ] Create time slow mechanic
-  - [ ] Implement punch power boost
-- [ ] Boss Battles
-  - [ ] Design boss phantom mechanics
-  - [ ] Integrate with story progression
-- [ ] Hand Tracking Support (Quest 3)
-  - [ ] Research Godot hand tracking capabilities
-  - [ ] Design hand gesture recognition system
-  - [ ] Implement hand-based collision detection
+## 3. Game mechanics
+- [x] Stationary play with physical duck and side-step
+- [x] Punch with any style; lure placement rewards hook, uppercut, jab
+- [x] Two-hand block, lane dodge
+- [x] Chain multiplier and crit bonus
+- [x] Pressure scaling per wave
+- [ ] Difficulty tiers
+- [ ] Low approaches for squats and uppercuts
+- [ ] Validate the strike-window feel with untold testers
 
-## 5. User Interface
-- [ ] Main Menu
-  - [ ] Design VR-compatible interface
-  - [ ] Implement menu navigation
-- [ ] In-Game HUD
-  - [ ] Create life force display
-  - [ ] Add score counter
-  - [ ] Implement status indicators
-- [ ] Pause and Settings
-  - [ ] Create pause mechanism
-  - [ ] Implement settings menu
-  - [ ] Add control
+## 4. Additional features
+- [x] Rift system with weakening shader and closure
+- [x] Combo system (chain multiplier)
+- [x] Training: six-module guided orientation on the menu panel
+- [ ] Training room with damage off and species selection
+- [ ] Shield phantom needing a punch sequence
+- [ ] Environmental hazards (beams to duck, projectiles to punch away)
+- [ ] Power-ups (slow time, punch power, life force restore)
+- [ ] Boss battles and The Maw finale
+- [ ] Hand tracking as an input option
 
-## 6. Audio Design
-- [ ] Sound Effects
-  - [ ] Create punch sound effects
-  - [ ] Add phantom audio
-  - [ ] Implement environmental sounds
-- [ ] Music
-  - [ ] Implement background music system
-  - [ ] Create/integrate music tracks
-- [ ] Audio Cues
-  - [ ] Add life force depletion sounds
-  - [ ] Implement positional audio
+## 5. Fitness (Phase 6)
+- [ ] Session stats on results
+- [ ] Best score and medals per operation
+- [ ] Endless hold with 10, 20, 30 minute lengths
+- [ ] Workout-length framing in the menu
+- [ ] Fitness tagging and platform integration
 
-## 7. Testing and Optimization
-- [ ] VR Performance
-  - [ ] Implement performance monitoring
-  - [ ] Optimize render pipeline
-  - [ ] Fine-tune physics calculations
-- [ ] Gameplay Testing
-  - [ ] Conduct internal playtests
-  - [ ] Gather and analyze feedback
-  - [ ] Balance difficulty curves
-- [ ] Bug Fixing
-  - [ ] Set up bug tracking system
-  - [ ] Implement automated testing
-  - [ ] Create debug tools
+## 6. Narrative and war (Phase 7)
+- [ ] Story beats and Chen debriefs that reveal the Overseer
+- [ ] War map with a front line, local first, shared later
+- [ ] Daily and weekly breach
+- [ ] Leaderboards
+- [ ] Intelligence operations
 
-## 8. Deployment
-- [ ] Platform Optimization
-  - [ ] Optimize for target VR platforms
-  - [ ] Test on different VR headsets
-- [ ] Build Pipeline
-  - [ ] Set up CI/CD pipeline
-  - [ ] Create build automation
-- [ ] Release Management
-  - [ ] Create release checklist
-  - [ ] Plan update schedule
-  - [ ] Set up distribution channels
+## 7. Locations (Phase 8)
+- [ ] Breach-site presets per operation
+- [ ] Training chamber as its own site
+- [ ] Two or three additional sites
 
-## 9. Documentation and Support
-- [ ] Code Documentation
-  - [ ] Document core systems
-  - [ ] Create API documentation
-  - [ ] Write development guides
-- [ ] User Documentation
-  - [ ] Create player manual
-  - [ ] Write tutorials
-  - [ ] Design in-game help system
+## 8. User interface
+- [x] World-space menu with lasers, Operations, Training, Settings, pause, results
+- [x] Bracer wrist panel with Chen captions
+- [x] Rift compass and phantom bearings
+- [ ] Map screen
+- [ ] Stats and medals on results and Operations
 
-## 10. Future Enhancements
-- [ ] Expanded Lore
-  - [ ] Develop additional storylines
-  - [ ] Create lore documents
-- [ ] Advanced VR Features
-  - [ ] Research new VR capabilities
-  - [ ] Plan feature implementations
-- [ ] Community Features
-  - [ ] Design leaderboard system
-  - [ ] Plan achievement system
-  - [ ] Create mod support framework
+## 9. Audio
+- [x] Six music tracks with intensity control
+- [x] Death, siphon, rift open and close takes
+- [x] Procedural heartbeat, drain blip, depletion stinger
+- [x] Chen comms system with 29 moments
+- [ ] Chen takes that are not text-to-speech
+- [ ] Species movement and attack sounds
+- [ ] Final mix on headset
+
+## 10. Testing and optimization
+- [x] Validation runner and GitHub Actions
+- [x] Performance monitor, shader prewarm, one-mesh creatures and city
+- [x] Desktop art and play capture scenes
+- [ ] Playtest log kept per session
+- [ ] Headset performance and soak evidence
+- [ ] Round and rift integration fixtures
+
+## 11. Deployment
+- [x] Quest debug and release build scripts, export presets, signing evidence
+- [ ] Rebuild from current main
+- [ ] VRC test plan on the exact release build
+- [ ] Store listing, art, trailer
+- [ ] Soft launch and 1.0
+
+## 12. Documentation
+- [x] README, roadmap, status, known issues, release checklist, store plan, export guide, performance budget, enemy and life force design, Chen script
+- [x] Playtest log
+- [ ] Player-facing help beyond Training (if needed after testing)

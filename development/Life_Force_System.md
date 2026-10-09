@@ -1,94 +1,58 @@
-# Life Force System Design
+# Life Force System
 
-## Overview
-The Life Force System represents the player's vital energy and their resistance to phantom corruption. Using an Iron Man-style HUD interface, players can monitor their life force status through visual and audio cues.
+Player vitality and the stakes of a possession. Updated 2026-10-08 to match `Scripts/Player/life_force_manager.gd` and `Scripts/Player/life_force_feedback.gd`.
 
-## Core Mechanics
+## Numbers in the code
 
-### Life Force Properties
-- **Maximum Life Force**: 100 units
-- **Drain Rate**: 
-  - Basic phantom touch: -5 units when hit
-  - Elite phantom touch: -10 units when hit
-  - Boss phantom touch: -20 units when hit
-- **Recovery Rate**: 
-  - Natural recovery: +1 unit/second when no phantom contact for 3 seconds
-  - Future power-up potential: Temporary recovery boost items
+| Property | Value |
+|---|---|
+| Maximum | 100 |
+| Drain per possession | 20 (every phantom; `contact_damage`) |
+| Recovery | 1 per second after 3 clear seconds |
+| Healthy | above 70% |
+| Caution | 40% to 70% |
+| Danger | 10% to 40% |
+| Critical | 10% and below |
+| Depleted | 0, ends the operation |
 
-### Visual Representation
+Five possessions without recovery end a run. Recovery resets on every hit. Damage is ignored once depleted so the fail state fires once.
 
-#### Body Aura System
-- **Healthy State (100-70%)**
-  - Bright blue aura
-  - Minimal particle emission
-  - Clear, crisp HUD elements
-  
-- **Cautionary State (69-40%)**
-  - Blue-purple transitioning aura
-  - Increased particle turbulence
-  - HUD begins showing interference patterns
-  
-- **Danger State (39-10%)**
-  - Purple-red aura
-  - Violent particle emissions
-  - HUD displays warning messages and glitch effects
-  
-- **Critical State (<10%)**
-  - Deep red aura
-  - Maximum particle density
-  - HUD severely distorted with emergency warnings
+The original design had tiered drain (basic 5, elite 10, boss 20). The code settled on a flat 20 because the campaign's pressure comes from the number of phantoms, and a possession needs to hurt enough to matter. Tiers return if elite or boss phantoms arrive.
 
-### Iron Man-Style HUD Elements
-1. **Life Force Meter**
-   - Arc reactor-style circular gauge
-   - Position: Upper left peripheral vision
-   - Color shifts match aura states
-   
-2. **Warning System**
-   - Directional damage indicators
-   - Phantom proximity alerts
-   - Critical status warnings
+## Signals
 
-### Audio Feedback
-1. **Heartbeat System**
-   - Normal State: No audible heartbeat
-   - Below 70%: Subtle heartbeat
-   - Below 40%: Pronounced heartbeat
-   - Below 10%: Rapid, intense heartbeat + alarm
+- `life_force_changed(current, maximum)`
+- `life_force_state_changed(state)` with `healthy`, `caution`, `danger`, `critical`, `depleted`
+- `life_force_depleted`
+- `damage_applied(amount, current)`
 
-2. **Environmental Effects**
-   - Life force drain creates spatial audio distortion
-   - Recovery produces a "clearing" sound effect
-   - Critical state triggers emergency warning sounds
+The manager owns the numbers only. Presentation listens.
 
-## Implementation Checklist
+## Feedback that ships
 
-### Vertical slice (Phase 1A) — shipped 2026-07-18
-- [x] Create base Life Force manager class (`Scripts/Player/life_force_manager.gd`)
-- [x] Add phantom interaction detection (`player_hit` → `apply_basic_hit`)
-- [x] Implement recovery system (+1/s after 3s clear)
-- [x] Minimal HUD meter (left-wrist bar + LIFE label)
-- [x] Camera danger tint (stand-in for infection feedback)
-- [x] Heartbeat audio by state (procedural loop)
-- [x] Drain blip on damage
-- [x] Game over on depletion + trigger restart
-- [x] Debug controls (H = hit, R = reset in debug builds)
+### Visual
+- **Bracer panel bar.** Life force readout and bar on the left wrist.
+- **Frost and veins.** A camera overlay that closes in from the edges as state worsens, glowing veins over frost.
+- **Camera tint.** Danger tint by state.
+- **Possession hit.** A screen distortion pulse and an impact slam on `damage_applied`, plus a flash of the possession color.
 
-### Deferred to presentation pass (Phase 3)
-- [ ] Implement aura shader system
-  - [ ] Color transition logic
-  - [ ] Particle emission scaling
-  - [ ] Aura intensity control
-- [ ] Design HUD elements
-  - [ ] Arc reactor meter
-  - [ ] Warning system
-  - [ ] Directional indicators
-- [ ] Set up audio system
-  - [ ] Spatial audio effects
-  - [ ] Warning sounds (beyond heartbeat / drain blip)
-- [ ] Elite / boss drain tiers
+### Audio
+- **Heartbeat.** Procedural loop on the Critical bus. Silent when healthy, quiet in caution, clear in danger, fast and loud in critical.
+- **Drain blip** on each hit and a **depletion stinger** at zero.
+- **Siphon sound** from the phantom on possession, with takes from `Assets/Audio/SFX/` or a procedural fallback.
+- **Music** drops to its low-life level in danger and critical.
+- **Chen** calls caution, danger, and critical as the state falls, and a possession line on each hit.
 
-## Future Enhancements
-- Power-up system integration
-- Special abilities tied to life force levels
-- Multiplayer life force sharing mechanics 
+### Haptics
+- Possession rumble on both controllers.
+
+## Debug
+- `H` applies a hit, `R` resets, in debug builds only.
+
+## Planned
+
+- Reduced Flashes should cap the tint and distortion harder; confirm strength on headset.
+- Directional damage indicator if testers lose track of where the possession came from.
+- Elite and boss drain tiers when those phantoms exist.
+- Life force restore power-up from the original design.
+- Session stats will count possessions and recoveries for the after-action report.

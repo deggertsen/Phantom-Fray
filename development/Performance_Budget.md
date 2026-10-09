@@ -1,5 +1,7 @@
 # Quest Performance Budget
 
+Updated 2026-10-08.
+
 ## Launch targets
 
 | Metric | Minimum gate | Preferred target |
@@ -7,31 +9,40 @@
 | Refresh rate | 72 Hz | 90 Hz on Quest 3/3S |
 | Frame budget | 13.9 ms | 11.1 ms |
 | Missed frames | <1% over 5 minutes | <0.25% |
-| Active rifts | 1 | 1 |
-| Active phantoms | 4 | 4 |
+| Concurrent rifts | 2 | 2 |
+| Live phantoms | 4 | 4 |
 | Real-time shadow lights | 0 | 0 |
 | Simultaneous dissolve VFX | 4 | 4 |
+| Simultaneous strike VFX | 4 | 4 |
+
+Paired operations run two rifts at `max_live` 2 each. The Maw runs one rift at `max_live` 4 with a 1.75 s spawn interval, so it is the phantom-count stress case. Double Breach is the rift and beacon stress case.
 
 ## Content budgets
 
-- Prefer opaque or cutout materials; transparent portals and resonance markers are the exceptions.
-- Avoid per-phantom raycasts and allocations during steady-state combat.
-- Keep particle systems short-lived and below 40 particles per effect.
-- Use low-poly XR Tools hands plus lightweight ERM overlays.
-- Keep music and SFX on explicit buses and cap simultaneous one-shot voices during stress tests.
+- Every creature species and form is one `ArrayMesh`, shared across instances, built and shader-prewarmed while the menu is up (`CreatureMesh.prewarm`, `shader_warmup.gd`).
+- The dead city and rubble are each one merged mesh and one draw call.
+- Prefer opaque or cutout materials; transparent exceptions are the portal, glow sprites, beacon, debris, and the pink lane.
+- No per-phantom raycasts or allocations during steady-state combat. Pink's lane is one quad with a shader.
+- Particle systems are short-lived and below 40 particles per effect.
+- Low-poly XR Tools hands plus the ERM gauntlet armor.
+- Music, SFX, Voice, Critical, and UI stay on explicit buses. Cap simultaneous one-shot voices during stress tests. Chen plays one line at a time.
 - No runtime video texture is used for the rift.
 
-## Test scenario
+## Test scenarios
 
-Run a five-minute mission containing the full Yellow/Blue/Green/Pink mix, four live phantoms, repeated rift damage flashes, maximum combo feedback, low-life heartbeat, and three retries. Record:
+1. **OP-04 Double Breach**, two rifts open, both beacons, full color mix, maximum chain feedback, low-life frost and heartbeat, Chen talking. Five minutes.
+2. **OP-06 The Maw**, four live phantoms at double rift scale, repeated damage flashes. Full window.
+3. **Thirty-minute soak** across Next Operation and Retry transitions, standing in for the planned endless hold.
+
+Record for each:
 
 - CPU and GPU frame time
 - FPS distribution
-- missed/reprojected frames
-- draw calls and primitives
-- node count before and after retries
-- memory before and after retries
-- audio voice count
-- thermal throttling symptoms
+- Missed and reprojected frames
+- Draw calls and primitives
+- Node count before and after each transition
+- Memory before and after each transition
+- Audio voice count
+- Thermal throttling symptoms
 
-The built-in `PerformanceMonitor` warns below 68 FPS in debug builds. Device profiling remains the source of truth.
+The built-in `PerformanceMonitor` warns below 68 FPS in debug builds. Device profiling remains the source of truth. Log results in [Playtest_Log.md](Playtest_Log.md).

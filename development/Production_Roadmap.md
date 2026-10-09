@@ -1,161 +1,107 @@
-# Phantom-Fray — Production Roadmap
+# Phantom Fray — Production Roadmap
 
-**Last updated:** 2026-07-18  
-**Current stage:** Software-complete launch candidate; Quest hardware/store gates outstanding
+**Last updated:** 2026-10-08
+**Current stage:** Combat system complete and fun in headset. Six-operation campaign plays as an extended tutorial. Replay value and narrative hooks are the gap before launch.
 **Engine:** Godot 4.7.1 + OpenXR / godot-xr-tools 4.5.1
 **Target:** Meta Quest-class standalone headset
+**Positioning:** Gamified fitness. Supernatural-class workout intensity with a save-the-world story that gives the sweat a purpose.
 
 ---
 
-## Scope Freeze for v1
+## What the game is today
 
-One short, replayable RSF operation:
+`Main Menu → Training or Deploy → one of six operations (3 to 9 minutes) → After-action report → Next operation / Retry`
 
-`Main Menu → Tutorial or Deploy → 3–5 minute three-rift mission → Results → Retry`
+- Stationary, physical play: punch, two-hand block, side-step or duck. No artificial locomotion.
+- Four phantom rules on three creature species with three body forms each: Angler (yellow left, blue right, lure is the crit), Carapace (green, two-hand block), Spearfin (pink, floor lane, dodge).
+- Phantoms arrive on one continuous accelerating arc and lunge for the head. A strike counts once the body is in reach.
+- Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift.
+- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state.
+- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses.
+- Dr. Chen on comms: 29 moments, 4 to 5 takes each, priority queue, radio filter, wrist captions. Current takes are text-to-speech placeholders.
+- Breach-site arena: hex floor with corruption veins that follow open rifts, RSF pylons, dead-city skyline, rubble, sky crack.
+- Bracer wrist panel: operation, timer, life force, rift hexes, score, multiplier, Chen caption.
+- World-space menu with dual lasers: main, Operations (six contracts with lock state), six-page Training, Settings (music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation.
+- Mission progress and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, and the pink dodge.
+- Quest debug and release build scripts, signed-package evidence, export guide.
 
-The player is stationary, physically punches, blocks, ducks, and side-steps. There is no artificial locomotion. Full campaign progression, bosses, powers, multiplayer, online leaderboards, and hand tracking as the primary input remain post-launch work.
-
----
-
-## Current Status
-
-| Area | Status |
-|---|---|
-| OpenXR bootstrap, tracked controllers, ERM glove overlays | Implemented; headset verification required |
-| Life force, recovery, infection feedback, fail state | Implemented |
-| Finite round, score, combo, timer, win/lose/timeout, retry | Implemented |
-| Yellow/Blue/Green/Pink mechanics | Implemented; headset balance required |
-| Rift weakening and closure shader | Implemented |
-| Wrist HUD and world-space messaging | Implemented |
-| Main menu, tutorial, pause, settings, results flow | Implemented |
-| RSF arena presentation and audio buses/intensity | Implemented procedural launch-candidate pass |
-| Automated import/rule validation and CI | Implemented |
-| Android/Quest export and signed package | Blocked on local Android/export toolchain |
-| Meta VRC/store submission and closed playtest | External release gate |
-
-See [Production_Status.md](Production_Status.md) and [Known_Issues.md](Known_Issues.md) for the exact boundary between implemented work and external gates.
+See [Production_Status.md](Production_Status.md) for the implemented list and [Known_Issues.md](Known_Issues.md) for what is open.
 
 ---
 
-## Phase 0 — Reorientation
+## Playtest verdicts so far
 
-- [x] Upgrade and clean-import under Godot 4.7.1
-- [x] Confirm desktop fallback startup and gameplay scene loading
-- [x] Audit orphaned architecture, variant shells, shader paths, audio, UI, and build configuration
-- [x] Freeze the focused v1 scope
-- [ ] Launch and verify on the minimum supported Quest headset
+Headset sessions through 2026-10-08 were not written down. Record future ones in [Playtest_Log.md](Playtest_Log.md). The standing verdicts:
 
-**Status:** Software complete; hardware check remains.
-
----
-
-## Phase 1 — Vertical Slice: One Round That Matters
-
-### Life force and fail state
-
-- [x] Phantom contact drains life force
-- [x] Recovery after a clear interval
-- [x] Wrist meter, heartbeat, danger tint, damage cue
-- [x] Clear depletion state
-
-### Win condition and round loop
-
-- [x] Three-rift finite mission; no infinite refill
-- [x] Countdown, four-minute window, victory, defeat, and timeout
-- [x] Score, combo multiplier, rift progress, and retry
-
-### Minimal HUD
-
-- [x] Life force
-- [x] Score and multiplier
-- [x] Rifts closed and remaining time
-- [x] World-space mission/result messaging
-
-### Yellow and rift visual honesty
-
-- [x] Yellow requires the left hand
-- [x] Visible resonance point and bonus score/rift damage
-- [x] Rift shader reads health, damage flash, and closure dissolve
-
-**Status:** Implemented. The 3–5 minute feel target requires headset playtesting.
+- The combat feels good. Direction of the code is right.
+- A full run of all six operations takes about 20 minutes and there is no reason to return.
+- The campaign reads as a tutorial for a game that does not exist yet.
+- There is no narrative hook. Chen's lines carry flavor, but nothing is at stake beyond the current rift.
 
 ---
 
-## Phase 2 — Combat Depth
+## Phases 0 to 5 — Done
 
-- [x] Blue: right-hand resonance strike
-- [x] Green: two-hand timed block
-- [x] Pink: telegraphed locked-lane physical dodge
-- [x] Normal/sweet/rejected haptic tiers
-- [x] Sweet-spot combo multiplier
-- [x] Bounded mixed spawn pool and global launch load
-- [ ] Tune timings, sensor alignment, and mix weights through headset playtests
+Everything the earlier roadmap called the launch candidate is implemented and has been played in headset. Kept here as a record.
 
-**Status:** Mechanically implemented; ergonomic balance remains.
+- Phase 0 Reorientation: Godot 4.7.1, desktop fallback, scope freeze, audit.
+- Phase 1 Vertical slice: life force, fail state, finite round, HUD, yellow rule, rift honesty.
+- Phase 2 Combat depth: blue, green, pink, haptic tiers, chain multiplier, wave pools, pressure scaling.
+- Phase 3 Presentation: creature species and forms, ERM gauntlet armor, breach city, strike VFX, frost and veins, audio buses and pressure.
+- Phase 4 Meta and UX: menu, operations, training, pause, settings, results, Chen comms.
+- Phase 5 Platform: compatibility renderer, buses, XR suspend, performance monitor, validation, CI, Quest export, signed package.
 
----
+Still open from those phases:
 
-## Phase 3 — Presentation Pass
-
-- [x] Variant colors and mechanic-specific silhouettes/telegraphs
-- [x] ERM energy overlays on the low-poly glove rigs
-- [x] RSF training-chamber identity, safe-space ring, pylons, and briefing
-- [x] Rift and phantom dissolve correction
-- [x] Life-force tint/heartbeat presentation
-- [x] Music/SFX/Critical/UI bus architecture and pressure hooks
-- [ ] Replace procedural launch-candidate art with final authored models/key art if budget permits
-- [ ] Final impact/UI/proximity sound design and mastering
-
-**Status:** Coherent procedural product pass implemented. Bespoke production art/audio is a quality upgrade, not silently marked complete.
+- [ ] Replace Chen's text-to-speech takes with ElevenLabs or recorded takes (`tools/generate_elevenlabs_vo.ps1`).
+- [ ] Final impact, UI, and proximity mix on headset speakers.
+- [ ] Rebuild and re-sign the release APK from current `main`; the recorded artifact predates the October content.
 
 ---
 
-## Phase 4 — Meta and UX
+## Phase 6 — Make it a workout you return to
 
-- [x] Main menu
-- [x] Tutorial explaining stationary space, grip punches, all four variants, rifts, and life force
-- [x] Menu → Play → Results → Retry flow
-- [x] Pause and explicit resume
-- [x] Persistent music and haptic settings
-- [x] Keyboard fallbacks for desktop validation
-- [ ] Validate controller button labels, text distance, readability, and seated use in headset
-- [ ] Optional laser-pointer panel polish after hardware UX findings
+Fitness is the product. The campaign is the on-ramp.
 
-**Status:** Implemented with controller-button world-space UI; hardware UX pass remains.
+- [ ] Session stats on the after-action report: punches thrown, resolves by type, crits, longest chain, active minutes, calorie estimate.
+- [ ] Persist a best score per operation and show it on Operations and on results, so a player can see that lures and chains pay.
+- [ ] Medals per operation (bronze, silver, gold) from score thresholds that reward crits and unbroken chains.
+- [ ] Endless "Hold the Breach" mode: cycle the existing wave tables with rising speed and shrinking telegraph scale until life force fails. Length options 10, 20, 30 minutes.
+- [ ] Workout-length framing in the menu: a quick 10-minute hold, a 20-minute operation set, a 30-minute campaign.
+- [ ] Meta fitness tracking tag for the store listing and Horizon OS Move integration if the SDK exposes it.
+- [ ] Difficulty tiers: Assist, Standard, Operator. Implemented as multipliers on the wave fields `speed_scale`, `telegraph_scale`, rift health, and contact damage.
 
----
+## Phase 7 — Narrative hooks and the war
 
-## Phase 5 — Platform and Production Hardening
+Give the sweat a purpose. The Overseer is winning unless operators show up.
 
-- [x] Compatibility renderer and Quest-first content budget
-- [x] Explicit audio buses
-- [x] XR focus/session-loss suspension hooks
-- [x] Debug performance monitor and documented 72/90 Hz gates
-- [x] Automated resource/rule validation runner
-- [x] GitHub Actions validation workflow pinned to Godot 4.7.1
-- [x] Quest export guide, release checklist, store asset plan, and known issues
-- [x] Signing/build-output ignore rules and portable editor configuration
-- [x] Install JDK/Android SDK/NDK/export templates/OpenXR Vendors plugin
-- [x] Generate tracked Godot Android export presets from the pinned toolchain
-- [x] Produce a signed, ARM64 Meta Quest debug APK
-- [x] Produce the release-signed package with the private production keystore
-- [ ] Complete on-device performance, suspend/resume, soak, and clean-install matrices
-- [x] Record release artifact signing, package, ABI, and Meta/OpenXR manifest evidence
-- [ ] Run closed playtest and balance pass
+- [ ] Campaign restructure: the current six operations become the RSF onboarding arc. Each clear is also a story beat with a Chen debrief that reveals one thing about the Overseer.
+- [ ] War map: a world map of breach sites with a front line. Sealing rifts in an operation pushes the line. Early version is local-only; later versions aggregate across players, in the spirit of Helldivers 2's galactic war.
+- [ ] Daily and weekly breach: a seeded operation on the map everyone fights that day.
+- [ ] Leaderboards per operation and for the endless hold.
+- [ ] A real finale for The Maw: distinct behavior rather than only faster spawns, and an Overseer presence.
+- [ ] Intelligence operations from the lore: target a relay phantom, capture a signal, hold a position while Chen's team works.
 
-**Status:** Build tooling and a Meta-packaged debug artifact are complete. Hardware validation, private release signing, playtesting, and store-account operations remain external gates.
+## Phase 8 — Location variety
 
----
+- [ ] Breach-site presets per operation: sky color and crack, pylon state, city density and height, floor palette, rubble. All of it is already procedural.
+- [ ] Remove the training-chamber briefing text from the dead-city arena, or make the first operation a chamber and move the rest outside.
+- [ ] Two or three distinct sites for the map: dead city, coastal breach, mountain relay, and a training chamber.
 
-## Phase 6 — Launch and Immediate Post-Launch
+## Phase 9 — Comfort and feel
 
-- [ ] Complete the Meta Quest VRC test plan against the exact signed release build
-- [ ] Submit store listing, privacy/age-rating declarations, screenshots, and trailer
-- [ ] Release v1.0.0
-- [ ] Monitor the hotfix window for comfort, crash, input, and progression defects
-- [ ] Convert playtest/support evidence into a 1.1 backlog
+- [ ] Validate the strike-window rule with testers: punches only count once the phantom is within `strike_reach` or in its commit phase. The developer has not felt this as a problem. Confirm with players who have not been told the rule before changing anything.
+- [ ] Cap the full-screen damage tint and distortion in headset, and make Reduced Flashes cap them harder.
+- [ ] Phantom approach heights: currently every phantom aims just below the eyes. Add lower approaches that ask for uppercuts and squats.
+- [ ] Seated mode (lower pink dodge threshold, height calibration). Deferred by decision on 2026-10-08.
 
-Phase 6 is not representable as complete from source code alone. The repository contains the launch procedure; release requires an authorized Meta developer account, signing identity, target hardware, store assets, and human playtest evidence.
+## Phase 10 — Launch
+
+- [ ] Rewrite the store copy for the fitness-combat position and the current campaign ([Store_Asset_Plan.md](Store_Asset_Plan.md)).
+- [ ] Key art, icon, trailer captured from a release build on headset.
+- [ ] Complete the Meta Quest VRC test plan against the exact signed release build.
+- [ ] Soft launch: a free first operation or an early-access listing to gather reviews before 1.0.
+- [ ] Release v1.0.0, hotfix window, turn feedback into the 1.1 backlog.
 
 ---
 
@@ -163,24 +109,27 @@ Phase 6 is not representable as complete from source code alone. The repository 
 
 A release build is ready when:
 
-1. A first-time player can learn and complete the mission without developer narration.
-2. Victory, defeat, timeout, pause, resume, results, and retry are reliable.
-3. All four Phantom rules are readable and physically comfortable.
-4. The maximum-load mission meets the documented frame budget on the minimum headset.
-5. Three retries and a ten-minute soak do not leak gameplay nodes, timers, or audio voices.
-6. The signed package installs and launches cleanly on a factory-clean Quest profile.
-7. The exact release build passes Meta's current VRC test plan.
-8. Known issues contain non-blockers only.
+1. A first-time player can learn and complete the first two operations without developer narration.
+2. Victory, defeat, timeout, pause, resume, results, next operation and retry are reliable.
+3. All four phantom rules are readable and physically comfortable at every difficulty tier.
+4. A player who finishes the campaign has a reason to come back tomorrow: a best score to beat, a hold to survive, or a front line to push.
+5. The maximum-load operation meets the documented frame budget on the minimum headset.
+6. Three retries and a thirty-minute hold do not leak gameplay nodes, timers, or audio voices.
+7. The signed package installs and launches cleanly on a factory-clean Quest profile.
+8. The exact release build passes Meta's current VRC test plan.
+9. Known issues contain non-blockers only.
 
 ---
 
 ## Production References
 
 - [Production status](Production_Status.md)
+- [Known issues](Known_Issues.md)
+- [Playtest log](Playtest_Log.md)
 - [Quest export guide](Quest_Export_Guide.md)
 - [Performance budget](Performance_Budget.md)
 - [Release checklist](Release_Checklist.md)
 - [Store asset plan](Store_Asset_Plan.md)
-- [Known issues](Known_Issues.md)
 - [Life force design](Life_Force_System.md)
 - [Phantom enemy design](Phantom_Enemy_Breakdown.md)
+- [Chen voice script](Chen_VO_Script.md)
