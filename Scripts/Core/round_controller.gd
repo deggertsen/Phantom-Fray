@@ -4,12 +4,11 @@ class_name RoundController
 signal score_changed(total: int, delta: int, reason: StringName)
 signal combo_changed(streak: int, multiplier: float)
 signal rift_progress_changed(closed: int, total: int)
-signal time_changed(seconds_remaining: float)
+signal time_changed(elapsed_seconds: float)
 signal mission_status_changed(text: String)
 signal pressure_changed(ratio: float)
 signal round_finished(outcome: StringName, score: int)
 
-@export var round_duration: float = 240.0
 @export var countdown_seconds: int = 3
 @export var combo_timeout: float = 4.0
 @export var maximum_multiplier: float = 3.0
@@ -17,7 +16,8 @@ signal round_finished(outcome: StringName, score: int)
 var score: int = 0
 var sweet_streak: int = 0
 var multiplier: float = 1.0
-var seconds_remaining: float
+## Seconds the round has been live. Counts up from zero, holds while paused, never ends the round.
+var elapsed_seconds: float = 0.0
 var _last_emitted_second: int = -1
 var _combo_remaining: float = 0.0
 var _round_active: bool = false
@@ -34,7 +34,6 @@ var _mission: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("RoundController")
-	seconds_remaining = round_duration
 	await get_tree().process_frame
 	_director = get_tree().get_first_node_in_group("RiftSpawnManager") as RiftDirector
 	_life_force = get_tree().get_first_node_in_group("LifeForceManager") as LifeForceManager
@@ -85,9 +84,10 @@ func begin_round(mission: Dictionary = {}) -> void:
 	if _round_active or _countdown_active or _finished or _director == null:
 		return
 	_mission = mission
-	if mission.has("duration"):
-		round_duration = float(mission.get("duration", round_duration))
-	seconds_remaining = round_duration
+	elapsed_seconds = 0.0
+	# A first deploy from the main menu never passes through abandon_round, so announce the fresh round here too.
+	score = 0
+	score_changed.emit(score, 0, &"reset")
 	_last_emitted_second = -1
 	_emit_time_if_changed()
 	_life_force.reset()
@@ -146,20 +146,21 @@ func _process(delta: float) -> void:
 			var bark := String(_mission.get("start_line", _mission.get("objective", "CLOSE THE RIFTS")))
 			_show_message(bark, Color(0.7, 0.95, 1.0), 1.8)
 			_round_active = true
+			# Lay out the rift row before the first rift opens so the HUD has a slot to mark open.
+			var waves: Array = _mission.get("rifts", [])
+			rift_progress_changed.emit(0, waves.size() if not waves.is_empty() else _director.total_rifts)
 			_director.start_round(_mission)
 			_emit_status()
 			_emit_pressure()
 		return
 	if not _round_active:
 		return
-	seconds_remaining = maxf(seconds_remaining - delta, 0.0)
+	elapsed_seconds += delta
 	_emit_time_if_changed()
 	if _combo_remaining > 0.0:
 		_combo_remaining -= delta
 		if _combo_remaining <= 0.0:
 			_reset_combo()
-	if seconds_remaining <= 0.0:
-		_finish_round(&"timeout")
 
 func _on_phantom_resolved(result: Dictionary) -> void:
 	if not _round_active:
@@ -246,20 +247,16 @@ func _finish_round(outcome: StringName) -> void:
 	round_finished.emit(outcome, score)
 
 func _emit_time_if_changed() -> void:
-	var displayed_second := ceili(seconds_remaining)
+	var displayed_second := floori(elapsed_seconds)
 	if displayed_second == _last_emitted_second:
 		return
 	_last_emitted_second = displayed_second
-	time_changed.emit(seconds_remaining)
+	time_changed.emit(elapsed_seconds)
 
 func get_debrief(outcome: StringName) -> String:
-	match outcome:
-		&"victory":
-			return String(_mission.get("victory_line", "All rifts sealed."))
-		&"defeat":
-			return String(_mission.get("defeat_line", "Life force collapsed before the seal."))
-		_:
-			return String(_mission.get("timeout_line", "The window closed with rifts still open."))
+	if outcome == &"victory":
+		return String(_mission.get("victory_line", "All rifts sealed."))
+	return String(_mission.get("defeat_line", "Life force collapsed before the seal."))
 
 func _emit_status() -> void:
 	mission_status_changed.emit(_status_text())

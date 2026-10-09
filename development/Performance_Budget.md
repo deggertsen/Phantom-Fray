@@ -10,12 +10,12 @@ Updated 2026-10-08.
 | Frame budget | 13.9 ms | 11.1 ms |
 | Missed frames | <1% over 5 minutes | <0.25% |
 | Concurrent rifts | 2 | 2 |
-| Live phantoms | 4 | 4 |
+| Live phantoms | 4 (8 in The Maw) | 4 (8 in The Maw) |
 | Real-time shadow lights | 0 | 0 |
 | Simultaneous dissolve VFX | 4 | 4 |
 | Simultaneous strike VFX | 4 | 4 |
 
-Paired operations run two rifts at `max_live` 2 each. The Maw runs one rift at `max_live` 4 with a 1.75 s spawn interval, so it is the phantom-count stress case. Double Breach is the rift and beacon stress case.
+Paired operations run two rifts at `max_live` 2 each. The Maw runs one rift at `max_live` 8 with a 0.875 s spawn interval and 800 health, so it is the phantom-count stress case and the only place eight phantoms are live at once. Double Breach is the rift and beacon stress case.
 
 ## Content budgets
 
@@ -31,7 +31,7 @@ Paired operations run two rifts at `max_live` 2 each. The Maw runs one rift at `
 ## Test scenarios
 
 1. **OP-04 Double Breach**, two rifts open, both beacons, full color mix, maximum chain feedback, low-life frost and heartbeat, Chen talking. Five minutes.
-2. **OP-06 The Maw**, four live phantoms at double rift scale, repeated damage flashes. Full window.
+2. **OP-06 The Maw**, eight live phantoms at double rift scale, repeated damage flashes. Play it to the seal.
 3. **Thirty-minute soak** across Next Operation and Retry transitions, standing in for the planned endless hold.
 
 Record for each:

@@ -4,7 +4,7 @@ Updated 2026-10-09.
 
 ## Content and design gaps
 
-1. **Thin replay loop.** Best scores are now stored per operation but are not shown anywhere a player would see them. There are no medals, session stats, endless mode, or leaderboards. A full campaign run is about 20 minutes with little reason to return. Phase 6 in the roadmap.
+1. **Thin replay loop.** Best scores and fastest victory times are stored per operation. Results show the completion time and call a new best time, but neither best is shown on the Operations list. There are no medals, session stats, endless mode, or leaderboards. A full campaign run is about 20 minutes with little reason to return. Phase 6 in the roadmap.
 2. **No narrative hook.** Six operations with debrief lines, but nothing larger at stake and no payoff for the Overseer thread. The Maw differs from other rifts only in size and spawn rate. Phase 7.
 3. **One arena.** Every operation is the same dead-city breach site, and the briefing panel still reads "RSF // ERM TRAINING CHAMBER 07" (`Scripts/Presentation/arena_builder.gd`). Phase 8.
 4. **OP-04 and OP-05 share one wave table.** Only rift placement differs (`_paired_assault_waves` in `Scripts/Core/mission_catalog.gd`).
@@ -13,7 +13,7 @@ Updated 2026-10-09.
 ## Audio
 
 - Chen's clips are generated; listen through once in headset and run `tools/check_vo.ps1` after any script change. Any clip the check flags gets regenerated with `-Only <event>`.
-- Chen no longer calls the clock. A timeout shows its debrief text with no voice line. Decide whether that is wanted or whether a timeout line should come back.
+- Missions have no time limit and no timeout outcome, so Chen has no clock lines. If completion time later feeds medals or a race mode, decide whether she should call a pace.
 - Impact, UI, and proximity audio have not had a final mix on headset speakers.
 
 ## Comfort and feel to validate

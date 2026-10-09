@@ -12,20 +12,20 @@ Ideas that are not scheduled live in [Ideas_Backlog.md](Ideas_Backlog.md).
 
 ## What the game is today
 
-`Main Menu → Training or Deploy → one of six operations (3 to 9 minutes) → After-action report → Next operation / Retry`
+`Main Menu → Training or Deploy → one of six operations (no time limit; the clock counts up) → After-action report → Next operation / Retry`
 
 - Stationary, physical play: punch, two-hand block, side-step or duck. No artificial locomotion.
 - Four phantom rules on three creature species with three body forms each: Angler (yellow left, blue right, lure is the crit), Carapace (green, two-hand block), Spearfin (pink, floor lane, dodge).
 - Phantoms arrive on one continuous accelerating arc and lunge for the head. A strike counts once the body is in reach.
 - Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift. A sealed rift's phantoms stay in play; the operation is won when the last one is dealt with.
 - Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the operator out. Operators never die.
-- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score per operation is stored.
+- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score and fastest victory per operation are stored; results show the completion time and call a new best time.
 - Dr. Chen on comms: 33 moments, 4 to 5 takes each, voiced with ElevenLabs. Cooldown and max-wait pacing so she never cuts herself off. Opening line knows if this is a first attempt, a retry after the failsafe, or a replay; victory line knows if it was flawless, at critical, or a new best.
 - Play My Own Music: a settings switch silences the soundtrack so any music app plays through.
 - Breach-site arena: hex floor with corruption veins that follow open rifts, RSF pylons, dead-city skyline, rubble, sky crack.
-- Bracer wrist panel: operation, timer, life force, rift hexes, score, multiplier, Chen caption.
+- Bracer wrist panel: operation, elapsed time, life force, rift hexes, score, multiplier, Chen caption.
 - World-space menu with dual lasers: main, Operations (six contracts with lock state), six-page Training, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation.
-- Mission progress, best scores, and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, own-music settings, rift stragglers, and the pink dodge.
+- Mission progress, best scores, best times, and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, own-music settings, rift stragglers, and the pink dodge.
 - Quest debug and release build scripts, signed-package evidence, export guide, ElevenLabs generation and transcription check for Chen's lines.
 
 See [Production_Status.md](Production_Status.md) for the implemented list and [Known_Issues.md](Known_Issues.md) for what is open.
@@ -116,7 +116,7 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 A release build is ready when:
 
 1. A first-time player can learn and complete the first two operations without developer narration.
-2. Victory, defeat, timeout, pause, resume, results, next operation and retry are reliable.
+2. Victory, defeat, pause, resume, results, next operation and retry are reliable.
 3. All four phantom rules are readable and physically comfortable at every difficulty tier.
 4. A player who finishes the campaign has a reason to come back tomorrow: a best score to beat, a hold to survive, or a front line to push.
 5. The maximum-load operation meets the documented frame budget on the minimum headset.

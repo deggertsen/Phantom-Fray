@@ -17,7 +17,11 @@ var tutorial_completed: bool = false
 var cleared_missions: PackedStringArray = PackedStringArray()
 ## Mission id -> the best score a victory has earned there.
 var best_scores: Dictionary = {}
+## Mission id -> the fastest victory there, in seconds of live round time.
+var best_times: Dictionary = {}
 var pending_mission_id: String = ""
+## Where load_settings and save_settings read and write. Validation points it at a scratch file.
+var settings_path: String = SETTINGS_PATH
 
 func _ready() -> void:
 	load_settings()
@@ -25,7 +29,7 @@ func _ready() -> void:
 
 func load_settings() -> void:
 	var config := ConfigFile.new()
-	if config.load(SETTINGS_PATH) != OK:
+	if config.load(settings_path) != OK:
 		haptic_scale = XRToolsUserSettings.haptics_scale
 		_snap_volumes(false)
 		return
@@ -46,6 +50,9 @@ func load_settings() -> void:
 	var saved_bests: Variant = config.get_value("progress", "best_scores", {})
 	if saved_bests is Dictionary:
 		best_scores = saved_bests
+	var saved_times: Variant = config.get_value("progress", "best_times", {})
+	if saved_times is Dictionary:
+		best_times = saved_times
 	_snap_volumes(true)
 
 func save_settings() -> void:
@@ -60,7 +67,8 @@ func save_settings() -> void:
 	config.set_value("progress", "tutorial_completed", tutorial_completed)
 	config.set_value("progress", "cleared_missions", cleared_missions)
 	config.set_value("progress", "best_scores", best_scores)
-	config.save(SETTINGS_PATH)
+	config.set_value("progress", "best_times", best_times)
+	config.save(settings_path)
 	apply_audio()
 
 func apply_audio() -> void:
@@ -133,9 +141,24 @@ func record_score(mission_id: String, score: int) -> void:
 	best_scores[mission_id] = score
 	save_settings()
 
+## Fastest stored victory in seconds, or 0.0 when the mission has never been won.
+func best_time(mission_id: String) -> float:
+	return float(best_times.get(mission_id, 0.0))
+
+## Keeps the faster of the stored best and this victory's time.
+func record_time(mission_id: String, seconds: float) -> void:
+	if mission_id == "" or seconds <= 0.0:
+		return
+	var previous := best_time(mission_id)
+	if previous > 0.0 and seconds >= previous:
+		return
+	best_times[mission_id] = seconds
+	save_settings()
+
 func clear_mission_progress() -> void:
 	cleared_missions = PackedStringArray()
 	best_scores = {}
+	best_times = {}
 	pending_mission_id = ""
 
 func reset_mission_progress() -> void:

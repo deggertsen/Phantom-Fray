@@ -8,7 +8,9 @@
 - [ ] Menu, Operations, six Training modules, Settings, Deploy, pause, abort confirm, results, Next Operation, and Retry work.
 - [ ] Every operation seals its listed rift count and spawns no extra rift. Paired operations keep at most two rifts open.
 - [ ] Sealing a rift leaves its phantoms in play; the mission ends in victory only after the last straggler is resolved or reaches the player.
-- [ ] Victory, defeat, and timeout each emit once and show the operation's debrief line.
+- [ ] Victory and defeat each emit once and show the operation's debrief line.
+- [ ] The wrist clock counts up from 0:00 when the round goes live, holds while paused, and never ends the mission.
+- [ ] Victory results show the completion time; a faster victory reads NEW BEST TIME, and Reset Progress clears best times.
 - [ ] Clearing an operation unlocks the next and records a best score; Reset Progress relocks them, clears best scores, and leaves audio and training settings alone.
 - [ ] Yellow rejects the right hand; blue rejects the left. The lure grants the crit score and rift damage.
 - [ ] Green needs both hands inside its block window; the first hand reads as a catch.

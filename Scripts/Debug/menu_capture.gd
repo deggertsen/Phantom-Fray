@@ -39,7 +39,7 @@ func _capture_pause() -> void:
 	await _capture("pause.png")
 
 func _capture_results() -> void:
-	_menu.show_results(&"victory", 12840)
+	_menu.show_results(&"victory", 12840, "Chen: It knows your resonance now. This was the opening move. Not the end of the war.", "DOUBLE BREACH", 252.0, 280.0)
 	await _capture("results.png")
 
 func _capture(file_name: String) -> void:

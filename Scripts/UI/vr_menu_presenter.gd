@@ -71,9 +71,9 @@ func show_suspended() -> void:
 	_show()
 	_menu.show_suspended()
 
-func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "") -> void:
+func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0) -> void:
 	_show()
-	_menu.show_results(outcome, score, debrief, next_title)
+	_menu.show_results(outcome, score, debrief, next_title, seconds, previous_best)
 
 func activate_at_viewport_point(point: Vector2) -> bool:
 	if _menu == null or not _is_visible:

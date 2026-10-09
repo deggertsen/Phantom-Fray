@@ -56,7 +56,7 @@ Pass condition: all four identified within 10 seconds.
 
 - Pause shows Resume Mission as primary, Settings as secondary, End Mission as destructive with a confirmation page.
 - Headset removal shows the XR suspended page; Resume When Ready is required to continue.
-- Results show the outcome, final score, the operation's debrief line, and Next Operation (after a victory that unlocks one), Retry Mission, and Main Menu. Next Operation is the primary action when present.
+- Results show the outcome, final score, the completion time after a victory (SEALED IN m:ss, with NEW BEST TIME when it beats the stored best), the operation's debrief line, and Next Operation (after a victory that unlocks one), Retry Mission, and Main Menu. Next Operation is the primary action when present.
 
 ## In-fight readability
 

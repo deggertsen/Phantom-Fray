@@ -17,7 +17,7 @@ The goal of the project is a workout you want to come back to because the world 
 | Green | Carapace | Catch it with both hands inside a short window. | Two-hand block |
 | Pink | Spearfin | Cannot be punched. Paints a lane on the floor, then charges it. | Side-step or duck out of the lane |
 
-- **Rifts are the objective.** Each phantom you resolve damages the rift it came from. Sealing a rift stops its spawning, but the phantoms it already released keep coming. The operation is won when every rift is sealed and the last straggler is dealt with, inside the window.
+- **Rifts are the objective.** Each phantom you resolve damages the rift it came from. Sealing a rift stops its spawning, but the phantoms it already released keep coming. The operation is won when every rift is sealed and the last straggler is dealt with. There is no time limit: the wrist clock counts up from 0:00 and your fastest victory per operation is kept.
 - **Life force is the stakes.** The gauntlets run on your own life force. A phantom that reaches your head possesses you: it vanishes, drains 20 of 100, and your vision frosts and distorts. Life force recovers after three clear seconds. At zero the gauntlets' failsafe fires, the recovery team pulls you out, and the operation is failed. Operators are never consumed; you go back in and try again.
 - **Score and chain.** Every resolve adds to a chain multiplier up to 3x. Resonance crits and on-arrival hits grow it faster. A wrong hand or a possession resets it. Your best score per operation is kept.
 - **Dr. Chen on comms.** Fully voiced callouts for rift bearings, first contact with each species, wrong-hand corrections, chain milestones, life force warnings, possession, and debriefs that know whether this is your first attempt, a retry after the failsafe, a replay, a flawless seal, or a new best. Captioned on the wrist panel.
@@ -27,14 +27,14 @@ The goal of the project is a workout you want to come back to because the world 
 
 Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission_catalog.gd](Scripts/Core/mission_catalog.gd).
 
-| Op | Title | Window | Rifts | What it introduces |
-|---|---|---|---|---|
-| OP-01 | First Light | 3:00 | 2 | Yellow and blue |
-| OP-02 | Widen the Ring | 7:00 | 6 | Green and pink in the mix |
-| OP-03 | Chen's Gambit | 8:00 | 6 | Shorter tells, faster lunges |
-| OP-04 | Double Breach | 8:40 | 8 paired | Two rifts open side by side |
-| OP-05 | Open Arc | 8:40 | 8 paired | Paired rifts spread across the front arc |
-| OP-06 | The Maw | 4:00 | 1 | One double-size rift that spawns fast |
+| Op | Title | Rifts | What it introduces |
+|---|---|---|---|
+| OP-01 | First Light | 2 | Yellow and blue |
+| OP-02 | Widen the Ring | 6 | Green and pink in the mix |
+| OP-03 | Chen's Gambit | 6 | Shorter tells, faster lunges |
+| OP-04 | Double Breach | 8 paired | Two rifts open side by side |
+| OP-05 | Open Arc | 8 paired | Paired rifts spread across the front arc |
+| OP-06 | The Maw | 1 | One double-size rift that spawns fast |
 
 A clean run through all six takes roughly 20 minutes. They work as an extended tutorial for the combat system, and that is what they will become: the on-ramp that teaches every mechanic before the world map opens. Replay value and narrative hooks are the next things to build; see the roadmap.
 
@@ -59,7 +59,7 @@ Godot 4.7.1 exactly. The desktop fallback runs without a headset for menu, flow,
 godot --path .
 ```
 
-Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, menu surfaces, own-music settings, rift stragglers, pink dodge, squat detector prototype):
+Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, rift stragglers, elapsed timer and best time, menu surfaces, own-music settings, pink dodge, squat detector prototype):
 
 ```bash
 tools/validate_project.sh

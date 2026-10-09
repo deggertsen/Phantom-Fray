@@ -45,7 +45,7 @@ var _time: float = 0.0
 
 var _in_mission: bool = false
 var _status: String = ""
-var _seconds_left: float = -1.0
+var _elapsed: float = 0.0
 var _score: int = 0
 var _delta: int = 0
 var _delta_age: float = 99.0
@@ -91,7 +91,7 @@ func _process(delta: float) -> void:
 	if _delta_age < 0.8:
 		_delta_age += delta
 		animating = true
-	if _life_state == &"critical" or _has_open_rift() or (_in_mission and _seconds_left < 10.0 and _seconds_left >= 0.0):
+	if _life_state == &"critical" or _has_open_rift():
 		animating = true
 	_since_redraw += delta
 	if (_dirty or animating) and _since_redraw >= REDRAW_INTERVAL:
@@ -177,9 +177,9 @@ func _on_combo_changed(_streak: int, multiplier: float) -> void:
 	_mark_dirty()
 
 func _on_time_changed(seconds: float) -> void:
-	var before := ceili(_seconds_left)
-	_seconds_left = seconds
-	if ceili(seconds) != before:
+	var before := floori(_elapsed)
+	_elapsed = seconds
+	if floori(seconds) != before:
 		_mark_dirty()
 
 func _on_round_finished(_outcome: StringName, _final_score: int) -> void:
@@ -286,13 +286,8 @@ func _draw_panel() -> void:
 
 	# Mission and time.
 	_text(c, _status if _status != "" else "STAND BY", Vector2(24.0, 52.0), 24, MUTED, _font, 280.0)
-	var whole := maxi(ceili(_seconds_left), 0)
-	var clock_color := INK
-	if _seconds_left >= 0.0 and _seconds_left < 30.0:
-		clock_color = RED
-		if _seconds_left < 10.0 and fmod(_time, 1.0) > 0.6:
-			clock_color = Color(RED, 0.35)
-	_text_right(c, "%d:%02d" % [whole / 60, whole % 60], Vector2(w - 24.0, 58.0), 46, clock_color, _bold)
+	var whole := maxi(floori(_elapsed), 0)
+	_text_right(c, "%d:%02d" % [whole / 60, whole % 60], Vector2(w - 24.0, 58.0), 46, INK, _bold)
 	c.draw_line(Vector2(24.0, 74.0), Vector2(w - 24.0, 74.0), Color(CYAN, 0.25), 2.0)
 
 	_draw_life(c, 92.0)
