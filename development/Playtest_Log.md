@@ -26,3 +26,16 @@ Developer sessions on Quest 3 across the September and October builds. No per-se
 - Results pointer selection after defeat was unreliable before the 2026-10-03 and 2026-10-04 fixes. Not yet retested.
 
 ## Sessions
+
+### 2026-10-09 — self, Quest 3, debug build with the SquatDetector overlay (ef96a58, then eec4d01)
+
+Exercise exploration tests 1 to 3 (`Exercise_Mechanics_Exploration.md`, section 3), read from `SQUAT` logcat lines.
+
+- **Calibration (test 1):** standing eye height read 1.66 m, settling to 1.62 to 1.64 m. No head-height jump on recenter. Measured floor-to-eye height not yet taken.
+- **Squats (test 2), detector as built (20 % depth, -50° pitch, 1.0 travel per drop):** 20 of 20 squats counted (drops of 73 to 86 cm, travel per drop 0.04 to 0.15, eyes never below -5°). **13 of 17 waist bends counted**: a bend crosses the squat line with the eyes level, looks down only afterwards, and moves the head almost straight down (travel per drop under 0.3). 2 of 9 side-step ducks counted (travel per drop 0.82 to 2.44). 0 of 6 shallow ducks (deepest 20 %).
+- **Fix (eec4d01):** a dip is judged again over the whole dip; pitch limit -30°, travel per drop 0.5, squat depth 25 %. Against the recorded numbers that counts 20 of 20 squats and none of the bends, side ducks, or shallow ducks. **Not yet re-checked on the headset.**
+- **Jump signal (test 3):** 10 jumps peaked at 1.89 to 2.15 m/s upward, head 21 to 31 cm above standing, 0.39 to 0.50 s up. 10 calf raises peaked at 0.30 to 0.54 m/s, 4 to 10 cm. Separation about 1.35 m/s against the 0.3 m/s needed: jump detection from head tracking alone is viable. Suggested rule: peak upward speed of 1.0 m/s or more.
+- **Performance:** the tutorial Maw's close dropped to 20 fps as the glimpse tentacle first drew (shader compiled on the spot). Fixed in eec4d01 by prewarming the boss and hazard shaders; not yet re-checked.
+- **Launch notes:** launching over adb with the headset off shows Meta's "controllers required" dialog until the controllers are picked up. Debug missions launch without a keyboard through the intent extra, e.g. `adb shell am start -n com.phantomfray.resonancerising/com.godot.game.GodotAppLauncher --esa command_line_params --mission=sweep_drill` (the extra name is in the Godot Android library; untried).
+
+**Still to run:** the re-check of bends, side ducks, and squats on eec4d01; the measured eye height; the Sweep Drill (Step 4); the boss Maw with `--mission=the_maw_boss,--maw-breaks`; the glimpse at 90 fps; hand tracking tests 7 and 8 (`tools/build_quest_debug.ps1 -HandTrackingTest`). For the overlay and `SQUAT` lines, set `debug_enabled` on the Player's SquatDetector before building; it is off in the committed scene.
