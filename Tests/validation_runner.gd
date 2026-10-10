@@ -269,10 +269,11 @@ func _validate_pink_dodge() -> void:
 	missed.player_contact.connect(func(_amount: float) -> void:
 		dodged_hurt[0] = true
 	)
-	for _step in 40:
+	missed.set_physics_process(false)
+	for _step in 120:
 		if missed._terminal:
 			break
-		missed._physics_process(0.05)
+		await _physics_step(missed)
 	if dodged_hurt[0] or not missed._terminal:
 		failures.append("Pink dodge still damaged the player")
 	missed.queue_free()
@@ -292,10 +293,11 @@ func _validate_pink_dodge() -> void:
 	caught.player_contact.connect(func(_amount: float) -> void:
 		lane_hurt[0] = true
 	)
-	for _step in 40:
+	caught.set_physics_process(false)
+	for _step in 120:
 		if caught._terminal:
 			break
-		caught._physics_process(0.05)
+		await _physics_step(caught)
 	if not lane_hurt[0]:
 		failures.append("Pink lane hit did not damage the player")
 	caught.queue_free()
@@ -330,9 +332,15 @@ func _validate_arc_motion(yellow_scene: PackedScene) -> void:
 	yellow.global_position = Vector3(0.0, 1.3, 8.0)
 	yellow._player_camera = head
 	var start: Vector3 = yellow.global_position
+	yellow.set_physics_process(false)
+	# Judged while it is under way: a short arc can reach the head and possess inside two seconds.
+	var under_way := false
 	for _step in 120:
-		yellow._physics_process(0.016)
-	if yellow.global_position.distance_to(start) < 1.0 or yellow.velocity.length() < 0.3:
+		await _physics_step(yellow)
+		if yellow.global_position.distance_to(start) >= 1.0 and yellow.velocity.length() >= 0.3:
+			under_way = true
+			break
+	if not under_way:
 		failures.append("Yellow arc stalled during approach")
 	if yellow.get_node_or_null("ApproachColumn") != null:
 		failures.append("Approach column is still attached")
@@ -354,11 +362,12 @@ func _validate_green_arrival() -> void:
 	var stalled := false
 	var slow_frames := 0
 	var closest := INF
-	for _step in 420:
+	green.set_physics_process(false)
+	for _step in 400:
 		if green._terminal:
 			break
 		var before: float = green_body.global_position.distance_to(head.global_position)
-		green._physics_process(0.016)
+		await _physics_step(green)
 		var after: float = green_body.global_position.distance_to(head.global_position)
 		closest = minf(closest, after)
 		var still_closing := after < before - 0.001 and before < 2.0
@@ -1136,6 +1145,12 @@ func _step_chen(chen: ChenComms, seconds: float) -> void:
 		chen._process(step)
 		if chen._playing_event != "" and chen._clock >= chen._speaking_until:
 			chen._on_line_finished()
+
+## Steps a phantom by hand inside a physics frame. Outside one, move_and_slide moves by the process
+## delta, which uncapped headless frames make arbitrarily small, so the body barely moves.
+func _physics_step(body: Node) -> void:
+	await physics_frame
+	body._physics_process(body.get_physics_process_delta_time())
 
 func _drive_head(squat: SquatDetector, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float, seconds: float) -> void:
 	var step := 1.0 / 72.0
