@@ -31,6 +31,7 @@ var _mission: Dictionary = {}
 var _wave_cursor: int = 0
 var _cluster_rifts: bool = false
 var _arc_rifts: bool = false
+var _boss: MawBoss
 
 func _ready() -> void:
 	add_to_group("RiftSpawnManager")
@@ -41,6 +42,9 @@ func _ready() -> void:
 	var bearings := preload("res://Scripts/Presentation/phantom_bearings.gd").new()
 	bearings.name = "PhantomBearings"
 	add_child(bearings)
+	_boss = MawBoss.new()
+	_boss.name = "MawBoss"
+	add_child(_boss)
 
 func start_round(mission: Dictionary = {}) -> void:
 	_mission = mission
@@ -50,6 +54,8 @@ func start_round(mission: Dictionary = {}) -> void:
 	max_concurrent_rifts = maxi(int(mission.get("max_concurrent", 1)), 1)
 	_cluster_rifts = bool(mission.get("cluster_rifts", false))
 	_arc_rifts = bool(mission.get("arc_rifts", false))
+	if _boss:
+		_boss.prepare(mission)
 	_wave_cursor = spawned_rifts
 	spawning_enabled = true
 	_fill_rift_slots()
@@ -69,6 +75,8 @@ func resume_spawning() -> void:
 
 func cleanup_round() -> void:
 	spawning_enabled = false
+	if _boss:
+		_boss.cleanup()
 	for rift in rift_instances + draining_rifts:
 		if is_instance_valid(rift) and rift.has_method("force_cleanup"):
 			rift.force_cleanup()

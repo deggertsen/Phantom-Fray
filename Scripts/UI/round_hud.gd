@@ -25,6 +25,7 @@ const DIM := Color(0.1, 0.14, 0.22)
 const GOLD := Color(1.0, 0.78, 0.08)
 const VIOLET := Color(0.62, 0.35, 1.0)
 const RED := Color(1.0, 0.25, 0.3)
+const BOSS := Color(0.95, 0.16, 0.36)
 const LIFE_COLORS := {
 	&"healthy": Color(0.25, 0.65, 1.0),
 	&"caution": Color(0.55, 0.35, 0.95),
@@ -58,6 +59,9 @@ var _life_state: StringName = &"healthy"
 ## One entry per rift in the mission: {state: &"pending"/&"open"/&"sealed", progress: 0..1}.
 var _rifts: Array[Dictionary] = []
 var _rift_slot: Dictionary = {}
+## In a boss fight one rift hex shows the boss's anchor instead, under the boss's name.
+var _boss_name: String = ""
+var _boss_slot: int = -1
 var _caption: String = ""
 var _caption_speaker: String = ""
 var _caption_left: float = 0.0
@@ -75,6 +79,7 @@ func _ready() -> void:
 	_connect_life()
 	_connect_rifts()
 	_connect_comms()
+	_connect_boss()
 	_mark_dirty()
 
 func _process(delta: float) -> void:
@@ -139,6 +144,24 @@ func _connect_comms() -> void:
 	var comms := get_tree().get_first_node_in_group("ChenComms")
 	if comms:
 		comms.line_started.connect(_on_comms_line)
+		if comms.has_signal("line_cut"):
+			comms.line_cut.connect(_on_comms_cut)
+
+func _connect_boss() -> void:
+	var boss := get_tree().get_first_node_in_group("MawBoss")
+	if boss:
+		boss.phase_two_started.connect(_on_boss_phase_two)
+
+## The rift hex becomes the anchor and takes the boss's name. It drains as the boss weakens.
+func _on_boss_phase_two(boss_name: String, rift_id: int) -> void:
+	_boss_name = boss_name
+	_boss_slot = _rift_slot.get(rift_id, -1)
+	_mark_dirty()
+
+func _on_comms_cut() -> void:
+	# The cut-off words hang for a moment, then go.
+	_caption_left = minf(_caption_left, 0.6)
+	_mark_dirty()
 
 func _on_comms_line(speaker: String, text: String, seconds: float) -> void:
 	_caption_speaker = speaker
@@ -160,6 +183,8 @@ func _on_progress_changed(closed: int, total: int) -> void:
 	if closed == 0 or _rifts.size() != total:
 		_rifts.clear()
 		_rift_slot.clear()
+		_boss_name = ""
+		_boss_slot = -1
 		for _i in total:
 			_rifts.append({"state": &"pending", "progress": 0.0})
 	for i in mini(closed, _rifts.size()):
@@ -365,7 +390,10 @@ func _draw_life(c: Control, top: float) -> void:
 ## from the center as the rift weakens. Not yet open: a dim outline. Past eight rifts the
 ## row folds into two offset rows, like a honeycomb, so the hexes stay readable.
 func _draw_rifts(c: Control, top: float) -> void:
-	_text(c, "RIFTS", Vector2(24.0, top + 22.0), 22, MUTED)
+	if _boss_name != "":
+		_text(c, _boss_name, Vector2(24.0, top + 22.0), 18, BOSS, _bold, 96.0)
+	else:
+		_text(c, "RIFTS", Vector2(24.0, top + 22.0), 22, MUTED)
 	var rows := 2 if _rifts.size() > 8 else 1
 	var per_row := maxi(ceili(float(_rifts.size()) / rows), 1)
 	var spacing := minf(60.0, (float(CANVAS.x) - 140.0) / (per_row + (0.5 if rows > 1 else 0.0)))
@@ -374,6 +402,14 @@ func _draw_rifts(c: Control, top: float) -> void:
 		var row := i / per_row
 		var center := Vector2(128.0 + (i % per_row + row * 0.5) * spacing, top + 14.0 + row * radius * 1.55)
 		var rift: Dictionary = _rifts[i]
+		if i == _boss_slot and rift["state"] == &"open":
+			# The anchor: a solid hex that shrinks as the boss loses its hold.
+			var anchor := 1.0 - float(rift["progress"])
+			var throb := 0.7 + 0.3 * absf(sin(_time * 2.2))
+			if anchor > 0.02:
+				c.draw_colored_polygon(_hexagon(center, radius * clampf(anchor, 0.15, 1.0)), Color(BOSS, 0.9))
+			c.draw_polyline(_hexagon(center, radius, true), Color(BOSS, throb), 3.0)
+			continue
 		match rift["state"]:
 			&"sealed":
 				c.draw_colored_polygon(_hexagon(center, radius), CYAN)

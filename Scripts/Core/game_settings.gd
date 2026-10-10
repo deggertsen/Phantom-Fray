@@ -19,6 +19,10 @@ var cleared_missions: PackedStringArray = PackedStringArray()
 var best_scores: Dictionary = {}
 ## Mission id -> the fastest victory there, in seconds of live round time.
 var best_times: Dictionary = {}
+## Maws faced at the boss difficulty, and how many in a row have sealed without a boss.
+## They drive the break odds (MawBoss.decide_break) and persist with progress.
+var boss_maws_faced: int = 0
+var maws_without_boss: int = 0
 var pending_mission_id: String = ""
 ## Where load_settings and save_settings read and write. Validation points it at a scratch file.
 var settings_path: String = SETTINGS_PATH
@@ -53,6 +57,8 @@ func load_settings() -> void:
 	var saved_times: Variant = config.get_value("progress", "best_times", {})
 	if saved_times is Dictionary:
 		best_times = saved_times
+	boss_maws_faced = int(config.get_value("progress", "boss_maws_faced", boss_maws_faced))
+	maws_without_boss = int(config.get_value("progress", "maws_without_boss", maws_without_boss))
 	_snap_volumes(true)
 
 func save_settings() -> void:
@@ -68,6 +74,8 @@ func save_settings() -> void:
 	config.set_value("progress", "cleared_missions", cleared_missions)
 	config.set_value("progress", "best_scores", best_scores)
 	config.set_value("progress", "best_times", best_times)
+	config.set_value("progress", "boss_maws_faced", boss_maws_faced)
+	config.set_value("progress", "maws_without_boss", maws_without_boss)
 	config.save(settings_path)
 	apply_audio()
 
@@ -155,10 +163,18 @@ func record_time(mission_id: String, seconds: float) -> void:
 	best_times[mission_id] = seconds
 	save_settings()
 
+## Counts one Maw at the boss difficulty, and whether a boss came through it.
+func record_maw(broke: bool) -> void:
+	boss_maws_faced += 1
+	maws_without_boss = 0 if broke else maws_without_boss + 1
+	save_settings()
+
 func clear_mission_progress() -> void:
 	cleared_missions = PackedStringArray()
 	best_scores = {}
 	best_times = {}
+	boss_maws_faced = 0
+	maws_without_boss = 0
 	pending_mission_id = ""
 
 func reset_mission_progress() -> void:

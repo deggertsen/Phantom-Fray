@@ -7,15 +7,19 @@ class_name ChenComms
 ## Assets/Audio/VO/chen/chen_lines.json. Each line plays from <event>_<n>.ogg beside it, so a
 ## new recording replaces a placeholder by name. A missing file is skipped and only captioned.
 ##
-## Pacing, as chen_lines.json sets it. Chen never cuts herself off.
+## Pacing, as chen_lines.json sets it. Chen never cuts herself off; only the boss turn
+## cuts her off (cut_off), because the script asks for it.
 ##   cooldown  seconds of silence a moment needs after her previous line (any line) finishes
 ##             before it may start.
 ##   priority  decides which waiting line gets the next slot. 3 skips the cooldown and plays
 ##             the moment she finishes.
 ##   max_wait  a line that cannot start within this many seconds of the moment that triggered
-##             it is dropped, because the moment has passed. Priority 3 is never dropped.
+##             it is dropped, because the moment has passed. Priority 3 is never dropped,
+##             unless the moment sets its own max_wait, which holds whatever the priority.
 
 signal line_started(speaker: String, text: String, seconds: float)
+## She was cut off mid-line (cut_off). The caption should go too.
+signal line_cut
 
 const FOLDER := "res://Assets/Audio/VO/chen/"
 const SCRIPT := preload("res://Assets/Audio/VO/chen/chen_lines.json")
@@ -24,6 +28,8 @@ const MAX_QUEUE := 3
 ## Rifts this close to where the player is looking are "dead ahead"; wider ones get a clock bearing.
 const IN_VIEW_DEGREES := 50.0
 const LIFE_ORDER := {&"healthy": 0, &"caution": 1, &"danger": 2, &"critical": 3, &"depleted": 4}
+## After correcting a bend under a resonance sweep, this many more sweeps light before she corrects another.
+const BEND_CALL_EVERY_SWEEPS := 3
 
 var _speaker: String = "CHEN"
 var _events: Dictionary = {}
@@ -37,6 +43,10 @@ var _ended_at: float = -INF
 var _speaking_until: float = -INF
 var _max_wait: float = DEFAULT_MAX_WAIT
 var _last_take: Dictionary = {}
+## Counts finished lines, so a caption timer from a line that was cut off cannot end the next one.
+var _line_serial: int = 0
+## While a boss scene plays out (the turn), only its own lines get through.
+var scripted: bool = false
 
 var _round: RoundController
 var _director: Node
@@ -55,6 +65,8 @@ var _last_outcome: Dictionary = {}
 ## Phantom kinds already introduced this session, so each gets one coaching line.
 var _introduced: Dictionary = {}
 var _scan_left: float = 0.0
+## Sweeps lit since her last bend correction; -1 until she has made one this mission.
+var _sweeps_since_bend_call: int = -1
 
 func _ready() -> void:
 	add_to_group("ChenComms")
@@ -74,7 +86,7 @@ func _ready() -> void:
 ## Queue a line for one of the events in chen_lines.json.
 func say(event: String) -> void:
 	var info: Dictionary = _events.get(event, {})
-	if info.is_empty() or event == _playing_event:
+	if info.is_empty() or event == _playing_event or (scripted and not event.begins_with("boss_")):
 		return
 	for queued in _queue:
 		if queued["event"] == event:
@@ -83,6 +95,7 @@ func say(event: String) -> void:
 		"event": event,
 		"priority": int(info.get("priority", 1)),
 		"cooldown": float(info.get("cooldown", 0)),
+		"max_wait": float(info.get("max_wait", -1.0)),
 		"at": _clock,
 	})
 	_queue.sort_custom(_goes_first)
@@ -115,6 +128,9 @@ func _earliest_start(entry: Dictionary) -> float:
 
 ## Dropped as soon as it can no longer start within max_wait of its trigger.
 func _can_still_start(entry: Dictionary) -> bool:
+	var own_wait: float = entry["max_wait"]
+	if own_wait >= 0.0:
+		return _earliest_start(entry) - float(entry["at"]) <= own_wait
 	return entry["priority"] >= 3 or _earliest_start(entry) - float(entry["at"]) <= _max_wait
 
 func _play(event: String) -> void:
@@ -140,13 +156,29 @@ func _play(event: String) -> void:
 		seconds = stream.get_length()
 	else:
 		# No recording yet: caption it and hold the line's time as if it were spoken.
-		get_tree().create_timer(seconds).timeout.connect(_on_line_finished)
+		get_tree().create_timer(seconds).timeout.connect(_on_caption_finished.bind(_line_serial))
 	_speaking_until = _clock + seconds
 	line_started.emit(_speaker, String(lines[take]), seconds)
 
 func _on_line_finished() -> void:
 	_ended_at = _clock
 	_playing_event = ""
+	_line_serial += 1
+
+## A captioned line's time ran out, unless she was cut off and has started another since.
+func _on_caption_finished(serial: int) -> void:
+	if serial == _line_serial and _playing_event != "":
+		_on_line_finished()
+
+## Stops her mid-word and forgets what was waiting. Only the boss's turn does this: the one
+## moment the script wants her cut off.
+func cut_off() -> void:
+	_queue.clear()
+	if _playing_event == "":
+		return
+	_player.stop()
+	_on_line_finished()
+	line_cut.emit()
 
 ## Loaded up front: a few dozen short compressed clips, and no hitch on first use.
 func _load_streams() -> void:
@@ -175,6 +207,15 @@ func _connect() -> void:
 	if _life:
 		_life.life_force_state_changed.connect(_on_life_state_changed)
 		_life.damage_applied.connect(_on_damage_applied)
+	# Sweeps come from rifts and, later, the boss's tentacles. Her call has to land as the rails
+	# light, which the half-second phantom scan would miss, so she hears each one as it arrives.
+	get_tree().node_added.connect(_on_node_added)
+
+func _on_node_added(node: Node) -> void:
+	var sweep := node as ResonanceSweep
+	if sweep:
+		sweep.telegraph_started.connect(_on_sweep_lit)
+		sweep.resolved.connect(_on_sweep_resolved)
 
 func _watch_round(delta: float) -> void:
 	if _round == null:
@@ -201,6 +242,7 @@ func _begin_mission() -> void:
 	_last_multiplier = 1.0
 	_life_level = 0
 	_took_damage = false
+	_sweeps_since_bend_call = -1
 	_mission_id = String(_round.current_mission().get("id", ""))
 	var settings := get_node_or_null("/root/GameSettings")
 	var cleared: bool = settings != null and settings.has_cleared_mission(_mission_id)
@@ -252,6 +294,20 @@ func _on_rift_closed(_rift_id: int, closed: int, total: int) -> void:
 func _on_strike_rejected(reason: StringName) -> void:
 	if reason == &"wrong_hand":
 		say("wrong_hand")
+
+func _on_sweep_lit() -> void:
+	if _sweeps_since_bend_call >= 0:
+		_sweeps_since_bend_call += 1
+	say("sweep")
+
+## Decision 5: a bend under the blade still clears it. She coaches the squat, and not every time.
+func _on_sweep_resolved(result: Dictionary) -> void:
+	if result.get("form_fault", &"") == &"":
+		return
+	if _sweeps_since_bend_call >= 0 and _sweeps_since_bend_call < BEND_CALL_EVERY_SWEEPS:
+		return
+	_sweeps_since_bend_call = 0
+	say("sweep_bend")
 
 func _on_combo_changed(_streak: int, multiplier: float) -> void:
 	if _round and multiplier >= _round.maximum_multiplier and _last_multiplier < _round.maximum_multiplier:

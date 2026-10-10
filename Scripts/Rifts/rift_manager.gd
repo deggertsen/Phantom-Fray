@@ -10,6 +10,9 @@ signal strike_rejected(reason: StringName)
 signal closed
 ## Closed, and every phantom it released has been struck, reached the player, or left.
 signal drained
+## Health reached zero while `hold_open` is set: something on the far side is holding it open.
+## Sent instead of closing. The Maw's boss uses it to play the turn, then the anchor.
+signal held_at_zero
 
 @export var phantom_scenes: Array[PackedScene] = []
 @export var spawn_interval: float = 3.5
@@ -20,6 +23,15 @@ signal drained
 var rift_id: int = 0
 var rift_health: int
 var spawning_enabled: bool = false
+## At zero health, hold at zero and send held_at_zero instead of sealing.
+var hold_open: bool = false
+## False once a boss holds the rift: no more phantoms pour out on the spawn timer.
+var feed_enabled: bool = true
+## How fast the seal dissolves the portal, per second. A glimpse slows it to leave room.
+var dissolve_rate: float = 0.75
+var _held: bool = false
+## While 0 or more, the portal shows this much dissolve instead of the seal's own ramp.
+var _dissolve_override: float = -1.0
 var _closing: bool = false
 var _drained: bool = false
 var _dissolve_amount: float = 0.0
@@ -29,6 +41,7 @@ var _phantom_container: Node3D
 var _live_phantoms: Dictionary = {}
 var _portal_material: ShaderMaterial
 var _wave_scenes: Array[PackedScene] = []
+var _wave: Dictionary = {}
 var _speed_scale: float = 1.0
 var _telegraph_scale: float = 1.0
 var _rift_scale: float = 1.0
@@ -50,6 +63,7 @@ func _ready() -> void:
 		_phantom_container = self
 
 func configure_wave(wave: Dictionary) -> void:
+	_wave = wave
 	maximum_health = int(wave.get("health", maximum_health))
 	rift_health = maximum_health
 	spawn_interval = float(wave.get("interval", spawn_interval))
@@ -70,7 +84,7 @@ func configure_wave(wave: Dictionary) -> void:
 	_update_health_shader()
 
 func start_spawning(spawn_immediately: bool = false) -> void:
-	if _closing:
+	if _closing or _held or not feed_enabled:
 		return
 	spawning_enabled = true
 	_spawn_timer.start()
@@ -117,9 +131,13 @@ func _process(delta: float) -> void:
 	_damage_flash = maxf(_damage_flash - delta * 4.0, 0.0)
 	if _portal_material:
 		_portal_material.set_shader_parameter("damage_flash", _damage_flash)
+	if _dissolve_override >= 0.0:
+		if _portal_material:
+			_portal_material.set_shader_parameter("dissolve_amount", _dissolve_override)
+		return
 	if not _closing:
 		return
-	_dissolve_amount = minf(_dissolve_amount + delta * 0.75, 1.0)
+	_dissolve_amount = minf(_dissolve_amount + delta * dissolve_rate, 1.0)
 	if _portal_material:
 		_portal_material.set_shader_parameter("dissolve_amount", _dissolve_amount)
 	# Phantoms already out keep their course after the seal. The rift outlives its
@@ -133,23 +151,53 @@ func _on_spawn_timer_timeout() -> void:
 		return
 	_spawn_phantom()
 
-func _spawn_phantom() -> void:
+func _spawn_phantom() -> Node3D:
 	if phantom_scenes.is_empty():
 		push_warning("RiftManager: no phantom scenes configured")
-		return
+		return null
 	var scenes: Array[PackedScene] = _wave_scenes if not _wave_scenes.is_empty() else phantom_scenes
 	var scene := scenes[randi() % scenes.size()]
 	if scene == null:
-		return
+		return null
 	var phantom := scene.instantiate() as Node3D
 	if phantom == null:
-		return
+		return null
 	var angle := randf_range(-0.65, 0.65)
 	var offset := Vector3(sin(angle), randf_range(-0.35, 0.35), cos(angle)) * randf_range(0.8 * _rift_scale, spawn_radius)
 	phantom.position = _phantom_container.to_local(global_position + offset)
 	_phantom_container.add_child(phantom)
 	if phantom.has_method("apply_pressure"):
 		phantom.apply_pressure(_speed_scale, _telegraph_scale)
+	# Hazards such as the resonance sweep read their own settings (squat_depth) from the wave.
+	if phantom.has_method("apply_wave"):
+		phantom.apply_wave(_wave)
+	_register(phantom)
+	return phantom
+
+## One phantom from this rift's pool, out of the mouth now, whatever the spawn timer says.
+## A boss calls its escort through this way.
+func spawn_escort() -> Node3D:
+	if _closing:
+		return null
+	return _spawn_phantom()
+
+## Something other than a phantom that attacks for this rift, such as a boss's sweep or slam.
+## Its resolves and contacts count exactly as a phantom's do.
+func add_attacker(attacker: Node3D, world_position: Vector3) -> void:
+	attacker.position = _phantom_container.to_local(world_position)
+	_phantom_container.add_child(attacker)
+	_register(attacker)
+
+## Phantoms from this rift still in play, the ones a sealing would leave as stragglers.
+func live_phantoms() -> Array[Node3D]:
+	_prune_phantoms()
+	var live: Array[Node3D] = []
+	for phantom in _live_phantoms.values():
+		if not phantom.has_method("shows_approach_cue") or phantom.shows_approach_cue():
+			live.append(phantom)
+	return live
+
+func _register(phantom: Node3D) -> void:
 	_live_phantoms[phantom.get_instance_id()] = phantom
 	phantom.resolved.connect(_on_phantom_resolved.bind(phantom))
 	phantom.player_contact.connect(_on_phantom_player_contact.bind(phantom))
@@ -159,6 +207,10 @@ func _spawn_phantom() -> void:
 
 func _on_phantom_resolved(result: Dictionary, phantom: Node3D) -> void:
 	_unregister_phantom(phantom)
+	apply_result(result)
+
+## A resolve, from a phantom or from work done on a boss: it scores, and its rift damage lands.
+func apply_result(result: Dictionary) -> void:
 	if _closing:
 		phantom_resolved.emit(result)
 		_check_drained()
@@ -170,7 +222,68 @@ func _on_phantom_resolved(result: Dictionary, phantom: Node3D) -> void:
 	health_changed.emit(rift_health, maximum_health)
 	phantom_resolved.emit(result)
 	if rift_health <= 0:
+		_reach_zero()
+
+## Takes health with no resolve behind it: a boss's anchor draining on its own.
+func drain_health(amount: int) -> void:
+	if amount <= 0 or _closing or _held:
+		return
+	rift_health = maxi(rift_health - amount, 0)
+	_update_health_shader()
+	health_changed.emit(rift_health, maximum_health)
+	if rift_health <= 0:
+		_reach_zero()
+
+## Gives health back: a boss's anchor feeding on a possession.
+func restore_health(amount: int) -> void:
+	if amount <= 0 or _closing or _held:
+		return
+	rift_health = mini(rift_health + amount, maximum_health)
+	_update_health_shader()
+	health_changed.emit(rift_health, maximum_health)
+
+## The bar becomes a boss's anchor: a new maximum, starting almost empty for the boss to fill.
+func begin_anchor(maximum: int) -> void:
+	maximum_health = maxi(maximum, 1)
+	rift_health = 1
+	_held = false
+	_update_health_shader()
+	health_changed.emit(rift_health, maximum_health)
+
+## Lets go of a held rift and seals it the ordinary way.
+func release_hold() -> void:
+	hold_open = false
+	_held = false
+	_dissolve_override = -1.0
+	_close_rift()
+
+## True while held at zero, waiting for whatever is holding it open.
+func is_held() -> bool:
+	return _held
+
+## Shows this much dissolve on the portal (0 whole, 1 gone), or -1 to hand it back to the seal.
+func set_dissolve_override(amount: float) -> void:
+	_dissolve_override = amount if amount < 0.0 else clampf(amount, 0.0, 1.0)
+
+func set_rift_scale(rift_scale: float) -> void:
+	_apply_rift_scale(rift_scale)
+
+func rift_scale() -> float:
+	return _rift_scale
+
+## The middle of the portal, which rises as the portal grows so its lower edge stays put.
+func portal_center() -> Vector3:
+	return global_position + Vector3.UP * 2.0 * (_rift_scale - 1.0)
+
+func _reach_zero() -> void:
+	if not hold_open:
 		_close_rift()
+		return
+	if _held:
+		return
+	_held = true
+	stop_spawning()
+	held_at_zero.emit()
 
 func _on_phantom_strike_rejected(reason: StringName) -> void:
 	strike_rejected.emit(reason)

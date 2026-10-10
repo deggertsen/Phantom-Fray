@@ -1,7 +1,7 @@
 # Phantom Fray — Production Roadmap
 
 **Last updated:** 2026-10-09
-**Current stage:** Combat system complete and fun in headset. Chen fully voiced. Six-operation campaign plays as an extended tutorial. Replay value and narrative hooks are the gap before launch.
+**Current stage:** Combat system complete and fun in headset. Chen fully voiced. The six operations play as an extended tutorial, which is what they will become: the on-ramp to a world map of missions the player picks by difficulty. Replay value and narrative hooks are the gap before launch.
 **Engine:** Godot 4.7.1 + OpenXR / godot-xr-tools 4.5.1
 **Target:** Meta Quest-class standalone headset
 **Positioning:** Gamified fitness. Supernatural-class workout intensity with a save-the-world story that gives the sweat a purpose. Standing play only.
@@ -63,27 +63,29 @@ Still open from those phases:
 
 ## Phase 6 — Make it a workout you return to
 
-Fitness is the product. The campaign is the on-ramp.
+Fitness is the product. The tutorial operations are the on-ramp; the world map is where the workout lives.
 
 - [ ] Session stats on the after-action report: punches thrown, resolves by type, crits, longest chain, active minutes, calorie estimate.
 - [x] Persist a best score per operation (`GameSettings.record_score`; Chen's "new record" victory line uses it).
 - [ ] Show the best score on Operations and on results, so a player can see that lures and chains pay.
 - [ ] Medals per operation (bronze, silver, gold) from score thresholds that reward crits and unbroken chains.
 - [ ] Endless "Hold the Breach" mode: cycle the existing wave tables with rising speed and shrinking telegraph scale until the failsafe fires. Length options 10, 20, 30 minutes.
+- [ ] Mission length: five to ten minutes of actual play per mission from OP-02 on; OP-01 stays short. With no time limit, length comes from rift health, spawn interval, and `max_live`; retune those and time real runs on the headset.
 - [x] Expected mission time on every mission card: an `expected_minutes` range per operation ("6 TO 8 MIN") with the player's best time beside it once they have one. The ranges are estimates from the wave tables; replace them from timed headset runs.
 - [ ] Workout-length framing in the menu: a quick 10-minute hold, a 20-minute operation set, a 30-minute campaign.
 - [ ] Meta fitness tracking tag for the store listing and Horizon OS Move integration if the SDK exposes it.
-- [ ] Difficulty tiers: Assist, Standard, Operator. Implemented as multipliers on the wave fields `speed_scale`, `telegraph_scale`, rift health, and contact damage.
+- [ ] Difficulty per mission, chosen on the world map: Assist, Standard, Operator, and Full Resonance. The first three are multipliers on the wave fields `speed_scale`, `telegraph_scale`, rift health, and contact damage. Full Resonance is the movement difficulty (squats, jumps, push-ups), available from the start, never required. The tutorial operations run at Standard with no detected movement. Design in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 
 ## Phase 7 — Narrative hooks and the war
 
 Give the sweat a purpose. The Overseer is winning unless operators show up.
 
-- [ ] Campaign restructure: the current six operations become the RSF onboarding arc. Each clear is also a story beat with a Chen debrief that reveals one thing about the Overseer.
-- [ ] War map: a world map of breach sites with a front line. Sealing rifts in an operation pushes the line. Early version is local-only; later versions aggregate across players, in the spirit of Helldivers 2's galactic war.
+- [ ] Campaign restructure: the current six operations become the RSF tutorial. Together they teach the combat rules the world map uses, ending with The Maw's flood and a first glimpse of the tentacle holding it open. Each clear is also a story beat with a Chen debrief that reveals one thing about the Overseer.
+- [ ] War map: a world map of breach sites with a front line. After the tutorial this is how the game is played: the player picks a breach and a difficulty, not the next operation number. Sealing rifts pushes the line. Early version is local-only; later versions aggregate across players, in the spirit of Helldivers 2's galactic war.
 - [ ] Daily and weekly breach: a seeded operation on the map everyone fights that day.
 - [ ] Leaderboards per operation and for the endless hold.
-- [ ] A real finale for The Maw: distinct behavior rather than only faster spawns, and an Overseer presence.
+- [ ] A real finale for The Maw, as the first boss: phase one is today's flood of phantoms; when the rift's health hits zero it tears wider instead of sealing, and phase two is the tentacles. The turn into phase two is a false seal, then silence, then a tentacle rising over the player: it must feel like the opening of a boss fight. The Maw does not always break, so it is never a guaranteed boss. The full fight is a war-map mission at the movement difficulty; the tutorial keeps phase one and the glimpse. A prototype of both is built behind a debug mission (Step 6 in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md)); it needs the headset session, real tentacle art, the boss theme, and Chen's VO.
+- [ ] Bosses on the war map. Bosses never die: they are gathering enough energy to establish a permanent presence in our world, and holding their shape here burns so much that they drain on their own. Outlast one and it retreats through the rift it came from before the rift closes. In a boss mission the rift's health is the boss's anchor: it drains over time, possessions feed it, and resolved phantoms and work on a spent tentacle drain it faster. Tentacle attacks each have one physical answer: squat under a high sweep, jump a low sweep, side-step a slam, then push-ups on the spent tentacle to drive resonance through the ground into it. Phantoms circle the boss as an escort it sends in as volleys. A spent tentacle stays down for up to 20 seconds or 10 push-ups. Bosses appear only at the movement difficulty, because of the exertion; Assist, Standard, and Operator never meet one. See [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 - [ ] Intelligence operations from the lore: target a relay phantom, capture a signal, hold a position while Chen's team works.
 
 ## Phase 8 — Location variety
@@ -97,6 +99,8 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 - [ ] Validate the strike-window rule with testers: punches only count once the phantom is within `strike_reach` or in its commit phase. The developer has not felt this as a problem. Confirm with players who have not been told the rule before changing anything.
 - [ ] Cap the full-screen damage tint and distortion in headset, and make Reduced Flashes cap them harder.
 - [ ] Phantom approach heights: currently every phantom aims just below the eyes. Add lower approaches that ask for uppercuts and squats.
+- [ ] Squats, jumps, and push-ups: tune the squat detector prototype on headset, then headset-test the resonance sweep (the boss's high sweep, built as the debug-only Sweep Drill). Run the jump signal and hand tracking tests before building jumps or push-ups. Plan, thresholds, and safety tests in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
+- [ ] Hand tracking: test it at punch speed and with simultaneous hands and controllers (`godotopenxrvendors`). The direction is to move off controllers: hand tracking is required at Full Resonance as the first try, haptics loss accepted, with simultaneous hands and controllers as the fallback.
 
 ## Phase 10 — Launch
 

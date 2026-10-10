@@ -22,6 +22,9 @@ const RIFT_CLOSE: Array[AudioStream] = [
 const RIFT_OPEN: Array[AudioStream] = [
 	preload("res://Assets/Audio/SFX/rift_open_sound.mp3"),
 ]
+## The resonance sweep. No takes yet, so it generates its own; preload sweep_tell_1.mp3 and so on here.
+const SWEEP_TELL: Array[AudioStream] = []
+const SWEEP_WHOOSH: Array[AudioStream] = []
 
 static var _last_index: Dictionary = {}
 
@@ -54,5 +57,9 @@ static func streams_for(stem: String) -> Array[AudioStream]:
 			return RIFT_CLOSE
 		"rift_open_sound":
 			return RIFT_OPEN
+		"sweep_tell":
+			return SWEEP_TELL
+		"sweep_whoosh":
+			return SWEEP_WHOOSH
 		_:
 			return []

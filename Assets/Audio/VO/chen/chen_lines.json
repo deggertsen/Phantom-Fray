@@ -3,7 +3,7 @@
   "voice": "Dr. Elara Chen, RSF science lead, on comms to the operator. She built the ERM gauntlets, and because they run on the wearer's life force she reads the operator's vitals live through them. If those vitals collapse, the gauntlets' failsafe dumps its charge to throw the phantoms off, and the recovery team waiting at the pylon line pulls the operator out. Clipped and focused, quietly urgent, dry under pressure. Never shouts except at critical life force. Each line is short enough to say in under three seconds. The game adds a radio filter, so record clean.",
   "files": "Each line is a file named <event>_<number>.ogg in this folder, numbered from 1 in the order listed. Drop in a new recording with the same name to replace a placeholder.",
   "pacing": {
-    "note": "Each moment's cooldown is the silence it needs after Chen's previous line (any line) finishes before it may start. Priority only decides which waiting line goes next; priority 3 skips the cooldown and plays the moment she finishes. A line that cannot start within max_wait seconds of its trigger is dropped, except priority 3. She never cuts herself off.",
+    "note": "Each moment's cooldown is the silence it needs after Chen's previous line (any line) finishes before it may start. Priority only decides which waiting line goes next; priority 3 skips the cooldown and plays the moment she finishes. A line that cannot start within max_wait seconds of its trigger is dropped, except priority 3. A moment with its own max_wait is dropped after that long, whatever its priority. She never cuts herself off.",
     "max_wait": 3.0
   },
   "events": {
@@ -55,6 +55,16 @@
     "first_blue": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure.", "That's a blue. Hit the lure with your right.", "Blue means right. Aim for the light.", "Right hand on the blues. Strike the lure."]},
     "first_green": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands.", "Greens won't break to one hand. Use both.", "Green incoming. Both fists, block it.", "Catch the green on both hands."]},
     "first_pink": {"priority": 2, "cooldown": 5, "tag": "[urgent]", "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane.", "Pink charge. Step aside.", "Watch the pink. Get out of its line.", "Pink's lining up on you. Move."]},
+    "sweep": {
+      "priority": 3, "cooldown": 0, "max_wait": 0.6, "tag": "[urgent]",
+      "note": "Rails of rift energy just lit at head height. A blade is about to sweep through and the operator has about a second to squat under it. One or two sharp words, half a second at most. Dropped if she is mid-line, because a late call is worse than none.",
+      "lines": ["Low!", "Get low!", "Down!", "Under it!"]
+    },
+    "sweep_bend": {
+      "priority": 2, "cooldown": 1, "tag": "[instructive]",
+      "note": "The operator got under the sweep, but by bending at the waist or dropping their head instead of squatting. It still counted. A quick form tip, coach not critic. At most once every three sweeps.",
+      "lines": ["Bend your knees, not your waist.", "Knees, operator. Keep your chest up.", "Sit into it. Don't bow to it.", "From the legs. Back straight."]
+    },
     "wrong_hand": {
       "priority": 1, "cooldown": 20, "tag": "[firm]",
       "note": "The operator hit with the wrong hand. Corrective, not scolding.",
@@ -109,6 +119,61 @@
       "priority": 3, "cooldown": 0, "tag": "[proud]",
       "note": "Every rift sealed with a new personal best score on this breach. Proud, a little competitive.",
       "lines": ["That's your best score on this breach.", "New record, operator. Faster and harder.", "Best run yet. The numbers don't lie.", "You just beat your own record."]
+    },
+    "boss_false_seal": {
+      "priority": 3, "cooldown": 0, "tag": "[relieved]",
+      "note": "The Maw's health hit zero and the seal is starting, like every seal before it. She starts her usual relief and is cut off half a second in; record the whole word, the game stops it.",
+      "lines": ["That's it, it's clos—"]
+    },
+    "boss_holding_open": {
+      "priority": 3, "cooldown": 0, "tag": "[quiet, unsettled]",
+      "note": "Silence after the false seal. The Maw tore wider instead of closing. A breath first, then quietly.",
+      "lines": ["It's not closing. Something's holding it open."]
+    },
+    "boss_not_a_phantom": {
+      "priority": 3, "cooldown": 0, "tag": "[quiet, afraid]",
+      "note": "A tentacle has just risen over the operator. Straight after the line above.",
+      "lines": ["Operator. That is not a phantom."]
+    },
+    "boss_get_ready": {
+      "priority": 3, "cooldown": 0, "tag": "[focused]",
+      "note": "The boss music hits and the fight begins. She steadies herself and the operator.",
+      "lines": ["Get ready to move."]
+    },
+    "boss_sweep": {
+      "priority": 3, "cooldown": 0, "tag": "[urgent]",
+      "note": "A tentacle draws back to one side for a high sweep. One word, sharp.",
+      "lines": ["Low!", "Get low!", "Under it!"]
+    },
+    "boss_slam": {
+      "priority": 3, "cooldown": 0, "tag": "[urgent]",
+      "note": "A tentacle rises overhead and a ring paints the floor around the operator.",
+      "lines": ["Out of the ring!", "Step out!", "Move! It's coming down!"]
+    },
+    "boss_spent": {
+      "priority": 2, "cooldown": 0, "tag": "[urgent, eager]",
+      "note": "The slam missed and the tentacle lies spent on the floor. Push-ups on it drain the boss.",
+      "lines": ["It's spent. Ground the gauntlets on it.", "It's down. Palms flat, drive it in.", "Now. Hands on the floor, put it through."]
+    },
+    "boss_waking": {
+      "priority": 3, "cooldown": 0, "tag": "[firm]",
+      "note": "The spent tentacle twitches. The operator must stand before it recoils.",
+      "lines": ["Up. It's waking."]
+    },
+    "boss_volley": {
+      "priority": 2, "cooldown": 0, "tag": "[alert]",
+      "note": "The phantoms circling the boss break formation and come one at a time.",
+      "lines": ["The escort's breaking off. Count them.", "Here they come, one at a time.", "It's throwing its escort at you."]
+    },
+    "boss_retreat": {
+      "priority": 3, "cooldown": 0, "tag": "[breathless]",
+      "note": "The anchor ran out. The tentacles pull back and the Maw closes behind them.",
+      "lines": ["It's letting go. It's pulling back!", "It can't hold on. It's going back through!"]
+    },
+    "maw_glimpse": {
+      "priority": 3, "cooldown": 0, "tag": "[quiet, unsettled]",
+      "note": "As the Maw closed, one tentacle gripped the rim and was dragged back through. No fight; a story beat.",
+      "lines": ["Did you see that? Something bigger was holding it open."]
     },
     "defeat": {
       "priority": 3, "cooldown": 0, "tag": "[urgent]",

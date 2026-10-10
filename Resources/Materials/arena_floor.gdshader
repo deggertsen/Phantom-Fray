@@ -13,6 +13,8 @@ uniform float safe_radius = 1.375;
 uniform float pylon_radius = 6.5;
 // Each open rift: x and y are its floor position (world X and Z), w is how hard it corrupts.
 uniform vec4 rifts[4];
+// The boss turn: veins racing out from a rift at (x, y) to z metres, under the player's feet.
+uniform vec3 surge = vec3(0.0);
 
 varying vec3 world_pos;
 
@@ -45,6 +47,9 @@ void fragment() {
 		float rd = length(p - rifts[i].xy);
 		pool += exp(-rd * 0.22) * rifts[i].w;
 		reach += exp(-rd * 0.15) * rifts[i].w;
+	}
+	if (surge.z > 0.0) {
+		reach = max(reach, smoothstep(surge.z, surge.z - 4.0, length(p - surge.xy)) * 1.2);
 	}
 	col += breach_color * 0.28 * pool;
 	col += breach_color * vein * clamp(reach, 0.0, 1.0) * (0.8 + 0.4 * sin(TIME * 1.6 - d * 0.4));

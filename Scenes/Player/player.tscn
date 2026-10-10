@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cpty7xivtp6y2"]
+[gd_scene load_steps=12 format=3 uid="uid://cpty7xivtp6y2"]
 
 [ext_resource type="Script" path="res://Scripts/Player/hand_collision.gd" id="1_0pktb"]
 [ext_resource type="Script" path="res://Scripts/UI/round_hud.gd" id="2_iu2wh"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" uid="uid://xqimcf20s2jp" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_fullglove_low.tscn" id="4_o1mwp"]
 [ext_resource type="Script" path="res://Scripts/Player/life_force_manager.gd" id="5_life"]
 [ext_resource type="Script" path="res://Scripts/Player/life_force_feedback.gd" id="6_feedback"]
+[ext_resource type="Script" path="res://Scripts/Player/squat_detector.gd" id="9_squat"]
+[ext_resource type="Script" path="res://Scripts/Player/hand_tracking_probe.gd" id="10_handprobe"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_picfr"]
 
@@ -71,3 +73,9 @@ shape = SubResource("CapsuleShape3D_picfr")
 
 [node name="LifeForceManager" type="Node" parent="."]
 script = ExtResource("5_life")
+
+[node name="SquatDetector" type="Node" parent="."]
+script = ExtResource("9_squat")
+
+[node name="HandTrackingProbe" type="Node" parent="."]
+script = ExtResource("10_handprobe")
