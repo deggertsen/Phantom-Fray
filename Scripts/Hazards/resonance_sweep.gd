@@ -16,7 +16,10 @@ signal resolved(result: Dictionary)
 signal player_contact(damage: float)
 ## The blade reached the player: true if it passed over, false if it hit. Fires before resolved or player_contact.
 signal crossed(cleared: bool)
+## The rails start to light, after any wait for another sweep. Chen calls "Low!" on it.
+signal telegraph_started
 
+const SfxVariations := preload("res://Scripts/Audio/sfx_variations.gd")
 const RIFT_VIOLET := Color(0.78, 0.32, 1.0)
 const BLADE_WIDTH := 4.2
 const RAIL_OFFSET := 1.05
@@ -24,6 +27,12 @@ const RAIL_OFFSET := 1.05
 const FALLBACK_STANDING := 1.6
 const MIN_STANDING := 1.0
 const BLADE_GLOW := 0.55
+## The tell is pitched so it ends as the blade sets out, and the whoosh so its loudest moment,
+## this far in, lands as the blade reaches the player. Takes in SfxVariations follow the same rule.
+const WHOOSH_PEAK := 0.75
+const TELL_SECONDS := 1.15
+const WHOOSH_SECONDS := 1.1
+const SAMPLE_RATE := 22050
 
 @export var variant_id: StringName = &"sweep"
 @export var telegraph_seconds: float = 1.15
@@ -79,6 +88,11 @@ var _blade: MeshInstance3D
 var _blade_material: StandardMaterial3D
 var _blade_glow_material: StandardMaterial3D
 var _rail_time: float = 0.0
+var _tell_player: AudioStreamPlayer3D
+var _whoosh_player: AudioStreamPlayer3D
+## Made once, and only when there are no recorded takes.
+static var _generated_tell: AudioStreamWAV
+static var _generated_whoosh: AudioStreamWAV
 
 func _ready() -> void:
 	add_to_group("phantom")
@@ -92,6 +106,7 @@ func _ready() -> void:
 	_telegraph_remaining = telegraph_seconds
 	_lock_geometry()
 	_build_visuals()
+	_build_audio()
 	_update_visuals()
 
 func apply_pressure(speed_scale: float, telegraph_scale: float) -> void:
@@ -108,6 +123,9 @@ func apply_wave(wave: Dictionary) -> void:
 
 func set_interactions_enabled(enabled: bool) -> void:
 	_interactions_enabled = enabled
+	if _tell_player:
+		_tell_player.stream_paused = not enabled
+		_whoosh_player.stream_paused = not enabled
 
 func shows_approach_cue() -> bool:
 	return not _judged
@@ -133,6 +151,9 @@ func blade_position() -> Vector3:
 func force_cleanup() -> void:
 	_judged = true
 	_finished = true
+	if _tell_player:
+		_tell_player.stop()
+		_whoosh_player.stop()
 
 func _physics_process(delta: float) -> void:
 	advance(delta)
@@ -160,6 +181,8 @@ func advance(delta: float) -> void:
 	if _telegraph_remaining > 0.0:
 		_telegraph_remaining = maxf(_telegraph_remaining - delta, 0.0)
 		return
+	if _blade_travel == 0.0:
+		_play_whoosh()
 	_blade_travel += blade_speed * delta
 	if _blade_travel >= start_distance + overrun_distance:
 		_finished = true
@@ -203,6 +226,7 @@ func _hit() -> void:
 	_finished = true
 	# The blade goes out where it met the player instead of drawing on through the face.
 	_broken = true
+	_whoosh_player.stop()
 	player_contact.emit(contact_damage)
 
 ## Why this dip was not a clean squat, when the detector is calibrated: a lean, a bend, or "".
@@ -236,6 +260,8 @@ func _waiting_for_lane(delta: float) -> bool:
 	# The player may have moved while this one waited. Aim at where they stand now.
 	_lock_geometry()
 	_place_visuals()
+	_play_tell()
+	telegraph_started.emit()
 	return false
 
 func _lock_geometry() -> void:
@@ -320,6 +346,99 @@ func _build_visuals() -> void:
 	_blade.add_child(glow)
 	_place_visuals()
 
+## The tell rises from where the blade will appear, so it says which side it comes from. The
+## whoosh rides the blade, so it swells and pans as the blade passes overhead.
+## https://docs.godotengine.org/en/stable/classes/class_audiostreamplayer3d.html
+func _build_audio() -> void:
+	_tell_player = AudioStreamPlayer3D.new()
+	_tell_player.name = "TellAudio"
+	_tell_player.bus = &"SFX"
+	_tell_player.volume_db = -5.0
+	_tell_player.unit_size = 3.0
+	_tell_player.max_distance = 20.0
+	add_child(_tell_player)
+	_whoosh_player = AudioStreamPlayer3D.new()
+	_whoosh_player.name = "WhooshAudio"
+	_whoosh_player.bus = &"SFX"
+	_whoosh_player.volume_db = -2.0
+	# Small, so the pass overhead is clearly louder than the blade 4.5 m out.
+	_whoosh_player.unit_size = 1.5
+	_whoosh_player.max_distance = 20.0
+	_blade.add_child(_whoosh_player)
+	_place_visuals()
+
+func _play_tell() -> void:
+	var stream := SfxVariations.pick("sweep_tell")
+	if stream == null:
+		if _generated_tell == null:
+			_generated_tell = _make_tell()
+		stream = _generated_tell
+	# A shorter telegraph plays the tell faster and higher, so it still ends as the blade sets out.
+	_tell_player.stream = stream
+	_tell_player.pitch_scale = clampf(stream.get_length() / maxf(telegraph_seconds, 0.01), 0.8, 2.0)
+	_tell_player.play()
+
+func _play_whoosh() -> void:
+	var stream := SfxVariations.pick("sweep_whoosh")
+	if stream == null:
+		if _generated_whoosh == null:
+			_generated_whoosh = _make_whoosh()
+		stream = _generated_whoosh
+	var reach_seconds := start_distance / maxf(blade_speed, 0.01)
+	_whoosh_player.stream = stream
+	_whoosh_player.pitch_scale = clampf(WHOOSH_PEAK / reach_seconds, 0.6, 2.0)
+	_whoosh_player.play()
+
+## Used only when there is no sweep_tell take: a tone climbing two octaves, its tremolo
+## quickening like the rails' flicker, cut short at the top where the blade fires.
+## https://docs.godotengine.org/en/stable/classes/class_audiostreamwav.html
+static func _make_tell() -> AudioStreamWAV:
+	var count := int(SAMPLE_RATE * TELL_SECONDS)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var phase := 0.0
+	for i in count:
+		var t := float(i) / float(SAMPLE_RATE)
+		var progress := t / TELL_SECONDS
+		var freq := 160.0 * pow(4.0, progress)
+		phase += TAU * freq / float(SAMPLE_RATE)
+		var tremolo := 0.7 + 0.3 * sin(TAU * lerpf(4.0, 14.0, progress) * t)
+		var env := pow(progress, 1.4) * clampf(t / 0.02, 0.0, 1.0) * clampf((TELL_SECONDS - t) / 0.03, 0.0, 1.0)
+		var tone := sin(phase) * 0.6 + sin(phase * 1.5 + 0.7) * 0.22 + sin(phase * 3.0) * 0.1
+		samples[i] = tone * tremolo * env
+	return _to_wav(samples)
+
+## Used only when there is no sweep_whoosh take: noise that brightens and swells to WHOOSH_PEAK,
+## with a low blade hum under it, then falls away behind the player.
+static func _make_whoosh() -> AudioStreamWAV:
+	var count := int(SAMPLE_RATE * WHOOSH_SECONDS)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var noise := 0.0
+	for i in count:
+		var t := float(i) / float(SAMPLE_RATE)
+		var env := pow(t / WHOOSH_PEAK, 2.2) if t < WHOOSH_PEAK else exp(-(t - WHOOSH_PEAK) * 7.0)
+		env *= clampf((WHOOSH_SECONDS - t) / 0.04, 0.0, 1.0)
+		noise = lerpf(noise, randf_range(-1.0, 1.0), lerpf(0.04, 0.45, env))
+		var hum := sin(TAU * 95.0 * t) * 0.3 + sin(TAU * 190.0 * t + 0.3) * 0.1
+		samples[i] = (noise * 1.6 + hum) * env
+	return _to_wav(samples)
+
+static func _to_wav(samples: PackedFloat32Array) -> AudioStreamWAV:
+	var loudest := 0.001
+	for sample in samples:
+		loudest = maxf(loudest, absf(sample))
+	var data := PackedByteArray()
+	data.resize(samples.size() * 2)
+	for i in samples.size():
+		data.encode_s16(i * 2, int(clampf(samples[i] / loudest * 0.85, -1.0, 1.0) * 32767.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = SAMPLE_RATE
+	stream.stereo = false
+	stream.data = data
+	return stream
+
 func _energy_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -339,6 +458,8 @@ func _place_visuals() -> void:
 		var rail_side: float = rail.get_meta("side")
 		rail.position = Vector3(rail_side * RAIL_OFFSET, height, start_distance - length * 0.5)
 	_blade.position = Vector3(0.0, height, start_distance - _blade_travel)
+	if _tell_player:
+		_tell_player.position = Vector3(0.0, height, start_distance)
 
 func _update_visuals() -> void:
 	if _blade == null:

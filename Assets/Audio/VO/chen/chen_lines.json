@@ -3,7 +3,7 @@
   "voice": "Dr. Elara Chen, RSF science lead, on comms to the operator. She built the ERM gauntlets, and because they run on the wearer's life force she reads the operator's vitals live through them. If those vitals collapse, the gauntlets' failsafe dumps its charge to throw the phantoms off, and the recovery team waiting at the pylon line pulls the operator out. Clipped and focused, quietly urgent, dry under pressure. Never shouts except at critical life force. Each line is short enough to say in under three seconds. The game adds a radio filter, so record clean.",
   "files": "Each line is a file named <event>_<number>.ogg in this folder, numbered from 1 in the order listed. Drop in a new recording with the same name to replace a placeholder.",
   "pacing": {
-    "note": "Each moment's cooldown is the silence it needs after Chen's previous line (any line) finishes before it may start. Priority only decides which waiting line goes next; priority 3 skips the cooldown and plays the moment she finishes. A line that cannot start within max_wait seconds of its trigger is dropped, except priority 3. She never cuts herself off.",
+    "note": "Each moment's cooldown is the silence it needs after Chen's previous line (any line) finishes before it may start. Priority only decides which waiting line goes next; priority 3 skips the cooldown and plays the moment she finishes. A line that cannot start within max_wait seconds of its trigger is dropped, except priority 3. A moment with its own max_wait is dropped after that long, whatever its priority. She never cuts herself off.",
     "max_wait": 3.0
   },
   "events": {
@@ -55,6 +55,16 @@
     "first_blue": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First blue Angler of the session.", "lines": ["Blue. Right hand. Strike the lure.", "That's a blue. Hit the lure with your right.", "Blue means right. Aim for the light.", "Right hand on the blues. Strike the lure."]},
     "first_green": {"priority": 1, "cooldown": 5, "tag": "[instructive]", "note": "First green Carapace of the session.", "lines": ["Green. Block it with both hands.", "Greens won't break to one hand. Use both.", "Green incoming. Both fists, block it.", "Catch the green on both hands."]},
     "first_pink": {"priority": 2, "cooldown": 5, "tag": "[urgent]", "note": "First pink Spearfin of the session. It is about to charge.", "lines": ["Pink is locking on. Step out of its lane.", "Pink charge. Step aside.", "Watch the pink. Get out of its line.", "Pink's lining up on you. Move."]},
+    "sweep": {
+      "priority": 3, "cooldown": 0, "max_wait": 0.6, "tag": "[urgent]",
+      "note": "Rails of rift energy just lit at head height. A blade is about to sweep through and the operator has about a second to squat under it. One or two sharp words, half a second at most. Dropped if she is mid-line, because a late call is worse than none.",
+      "lines": ["Low!", "Get low!", "Down!", "Under it!"]
+    },
+    "sweep_bend": {
+      "priority": 2, "cooldown": 1, "tag": "[instructive]",
+      "note": "The operator got under the sweep, but by bending at the waist or dropping their head instead of squatting. It still counted. A quick form tip, coach not critic. At most once every three sweeps.",
+      "lines": ["Bend your knees, not your waist.", "Knees, operator. Keep your chest up.", "Sit into it. Don't bow to it.", "From the legs. Back straight."]
+    },
     "wrong_hand": {
       "priority": 1, "cooldown": 20, "tag": "[firm]",
       "note": "The operator hit with the wrong hand. Corrective, not scolding.",
