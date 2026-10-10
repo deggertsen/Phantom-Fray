@@ -20,17 +20,20 @@ enum State { CALIBRATING, STANDING, DIPPING, SQUAT, HOLD }
 @export var debug_enabled: bool = false
 ## A dip starts once the head is this far below standing, as a share of standing eye height.
 @export var dip_ratio: float = 0.06
-## The head must reach this far below standing for the dip to be a squat.
-@export var squat_ratio: float = 0.20
+## The head must reach this far below standing for the dip to be a squat. Quest 3, 2026-10-09:
+## squats reached 45 to 53 %, the shallowest "shallow duck" 20 %.
+@export var squat_ratio: float = 0.25
 ## And stay there this long.
 @export var squat_hold_seconds: float = 0.12
 ## Longer than this below the squat line is a kneel or a sit, not a rep.
 @export var max_squat_seconds: float = 6.0
-## Horizontal head travel divided by the drop. A squat keeps the head over the feet;
-## bending at the waist or lunging sideways moves it further than it falls.
-@export var max_travel_per_drop: float = 1.0
-## Looking further down than this (degrees) at the bottom reads as bending over to pick something up.
-@export var min_pitch_degrees: float = -50.0
+## Most horizontal head travel during the dip divided by the drop. A squat keeps the head over
+## the feet; lunging sideways moves it further than it falls. Quest 3: squats 0.04 to 0.15,
+## side-step ducks 0.82 to 2.44. Waist bends stayed under 0.3, so this does not catch them.
+@export var max_travel_per_drop: float = 0.5
+## Looking further down than this (degrees) at any point in the dip reads as bending over.
+## Quest 3: squats never went below -5, waist bends always reached -32 or lower (most -75 to -87).
+@export var min_pitch_degrees: float = -30.0
 ## Head vertical speed under this counts as still, for calibration.
 @export var still_speed: float = 0.15
 @export var calibration_seconds: float = 1.0
@@ -63,11 +66,20 @@ var _recent_peak: float = -1.0
 var _last_head: Vector3 = Vector3.ZERO
 var _last_pitch: float = 0.0
 var _label: Label3D
+## Debug only: every dip, rise, and calibration goes to the log as a SQUAT line, so a headset
+## session can be read back with `adb logcat -s godot` instead of from the wrist.
+var _log: bool = false
+var _min_pitch: float = 0.0
+var _rise_peak: float = 0.0
+var _rise_top: float = 0.0
+var _rise_time: float = 0.0
+var _logged_standing: float = -1.0
 
 func _ready() -> void:
 	if not debug_enabled or not OS.is_debug_build():
 		set_physics_process(false)
 		return
+	_log = true
 	var player := get_parent()
 	camera = player.get_node_or_null("XRCamera3D") as Node3D
 	var wrist := player.get_node_or_null("RightHandController") as Node3D
@@ -100,6 +112,8 @@ func sample(head: Vector3, pitch_degrees: float, delta: float) -> void:
 	if not is_nan(_previous_y):
 		var measured := (head.y - _previous_y) / delta
 		vertical_speed = lerpf(vertical_speed, measured, clampf(delta * 20.0, 0.0, 1.0))
+		if _log and absf(head.y - _previous_y) > 0.05:
+			print("SQUAT head_jump from=%.3f to=%.3f" % [_previous_y, head.y])
 	_previous_y = head.y
 	peak_rise_speed = maxf(peak_rise_speed * pow(0.5, delta), vertical_speed)
 	var still := absf(vertical_speed) < still_speed
@@ -109,6 +123,11 @@ func sample(head: Vector3, pitch_degrees: float, delta: float) -> void:
 	var drop := standing_height - head.y
 	depth_ratio = drop / standing_height
 	_follow_standing(head.y, still, delta)
+	if _log:
+		_log_rise(head.y, delta)
+		if absf(standing_height - _logged_standing) > 0.02:
+			_logged_standing = standing_height
+			print("SQUAT stand=%.3f head=%.3f" % [standing_height, head.y])
 	match state:
 		State.STANDING:
 			if depth_ratio >= dip_ratio:
@@ -118,9 +137,11 @@ func sample(head: Vector3, pitch_degrees: float, delta: float) -> void:
 				_below_time = 0.0
 				_max_depth = depth_ratio
 				_max_travel = 0.0
+				_min_pitch = pitch_degrees
 		State.DIPPING, State.SQUAT, State.HOLD:
 			_dip_time += delta
 			_max_depth = maxf(_max_depth, depth_ratio)
+			_min_pitch = minf(_min_pitch, pitch_degrees)
 			var travel := Vector2(head.x - _dip_start.x, head.z - _dip_start.z).length()
 			_max_travel = maxf(_max_travel, travel)
 			if depth_ratio < dip_ratio:
@@ -129,7 +150,7 @@ func sample(head: Vector3, pitch_degrees: float, delta: float) -> void:
 			if depth_ratio >= squat_ratio:
 				_below_time += delta
 			if state == State.DIPPING and _below_time >= squat_hold_seconds:
-				var reason := _squat_fault(drop, pitch_degrees)
+				var reason := _squat_fault(drop, _min_pitch)
 				if reason == &"":
 					state = State.SQUAT
 					squat_reached.emit(_max_depth)
@@ -152,7 +173,7 @@ func calibrate_now() -> void:
 func dip_fault() -> StringName:
 	if state == State.CALIBRATING or state == State.STANDING:
 		return &""
-	return _squat_fault(standing_height - _last_head.y, _last_pitch)
+	return _squat_fault(maxf(standing_height - _last_head.y, _max_depth * standing_height), _min_pitch)
 
 func debug_text() -> String:
 	if state == State.CALIBRATING:
@@ -181,6 +202,9 @@ func _calibrate(height: float, still: bool, delta: float) -> void:
 	_recent_peak = standing_height
 	_far_from_standing = 0.0
 	state = State.STANDING
+	if _log:
+		_logged_standing = standing_height
+		print("SQUAT calibrated stand=%.3f samples=%d" % [standing_height, sorted.size()])
 	calibrated.emit(standing_height)
 
 ## Standing height drifts with posture and fatigue. Still, upright samples pull it;
@@ -208,12 +232,43 @@ func _squat_fault(drop: float, pitch_degrees: float) -> StringName:
 	return &""
 
 func _finish_dip() -> void:
-	if state == State.SQUAT:
+	var outcome := "rejected:%s" % last_rejection
+	# Judged again over the whole dip: on Quest 3 a waist bend crossed the squat line with the eyes
+	# still level and only looked at the floor afterwards, so the check at that moment passed it.
+	var late_fault := _squat_fault(_max_depth * standing_height, _min_pitch) if state == State.SQUAT else &""
+	if late_fault != &"":
+		_reject(late_fault)
+		outcome = "rejected:%s" % late_fault
+	elif state == State.SQUAT:
 		rep_count += 1
+		outcome = "rep"
 		squat_completed.emit(_max_depth, _dip_time)
 	elif state == State.DIPPING and _max_depth < squat_ratio:
 		_reject(&"too_shallow")
+		outcome = "too_shallow"
+	if _log:
+		var drop := _max_depth * standing_height
+		print("SQUAT dip %s reps=%d depth=%.2f drop=%.3f travel=%.3f travel_per_drop=%.2f min_pitch=%.0f secs=%.2f" % [
+			outcome, rep_count, _max_depth, drop, _max_travel, _max_travel / maxf(drop, 0.001), _min_pitch, _dip_time,
+		])
 	state = State.STANDING
+
+## Debug log of every rise above standing: peak upward speed, height above standing, time up.
+## Test 3 (jumps against calf raises) reads these.
+func _log_rise(height: float, delta: float) -> void:
+	var above := height - standing_height
+	if above > 0.02:
+		if _rise_time == 0.0:
+			# Takeoff speed peaks just before the head clears standing; peak_rise_speed still holds it.
+			_rise_peak = peak_rise_speed
+		_rise_time += delta
+		_rise_top = maxf(_rise_top, above)
+		_rise_peak = maxf(_rise_peak, vertical_speed)
+	elif _rise_time > 0.0:
+		print("SQUAT rise peak_up=%.2f above=%.3f secs=%.2f" % [_rise_peak, _rise_top, _rise_time])
+		_rise_time = 0.0
+		_rise_top = 0.0
+		_rise_peak = 0.0
 
 func _reject(reason: StringName) -> void:
 	last_rejection = reason

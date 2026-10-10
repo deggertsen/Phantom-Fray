@@ -898,10 +898,35 @@ func _validate_squat_detector() -> void:
 	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
 	if squat.rep_count != 1:
 		failures.append("Squat detector counted a duck, a bend, a side-step, or a hop as a squat")
+	# Shapes from the Quest 3 session on 2026-10-09 (Exercise_Mechanics_Exploration.md, test 2).
+	# A waist bend to the floor: the head drops almost straight down with the eyes still level as it
+	# crosses the squat line, and only then looks at the floor.
+	var level := Vector3(0.0, 1.62 * 0.68, 0.12)
+	var floor_reach := Vector3(0.0, 0.5, 0.2)
+	_drive_head(squat, standing, level, 0.0, -5.0, 0.4)
+	_drive_head(squat, level, floor_reach, -5.0, -82.0, 0.5)
+	_drive_head(squat, floor_reach, floor_reach, -82.0, -82.0, 0.4)
+	_drive_head(squat, floor_reach, standing, -82.0, 0.0, 0.7)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
+	# A side-step duck at the gentlest ratio seen (0.82 travel per metre dropped).
+	var gentle_side := Vector3(0.41, 1.62 - 0.5, 0.0)
+	_drive_head(squat, standing, gentle_side, 0.0, -3.0, 0.6)
+	_drive_head(squat, gentle_side, gentle_side, -3.0, -3.0, 0.3)
+	_drive_head(squat, gentle_side, standing, -3.0, 0.0, 0.6)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
+	if squat.rep_count != 1:
+		failures.append("Squat detector counted a waist bend that looked down late, or a gentle side-step duck")
+	# A deep squat as recorded: an 83 cm drop, 10 cm of travel, eyes slightly up.
+	var deep := Vector3(0.0, 1.62 - 0.83, 0.1)
+	_drive_head(squat, standing, deep, 0.0, 6.0, 0.55)
+	_drive_head(squat, deep, standing, 6.0, 0.0, 0.55)
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
+	if squat.rep_count != 2:
+		failures.append("Squat detector missed a deep squat recorded on the headset")
 	squat.free()
 	var short := SquatDetector.new()
 	var short_standing := Vector3(0.0, 1.30, 0.0)
-	var short_bottom := Vector3(0.0, 1.30 * 0.75, 0.05)
+	var short_bottom := Vector3(0.0, 1.30 * 0.70, 0.05)
 	_drive_head(short, short_standing, short_standing, 0.0, 0.0, 1.5)
 	_drive_head(short, short_standing, short_bottom, 0.0, -15.0, 0.5)
 	_drive_head(short, short_bottom, short_bottom, -15.0, -15.0, 0.3)

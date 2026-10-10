@@ -46,6 +46,14 @@ var _mesh: ImmediateMesh
 var _material: ShaderMaterial
 var _time: float = 0.0
 var _phase: float = 0.0
+## One Shader for every tentacle, so ShaderWarmup can compile it during the menu.
+static var _shader: Shader
+
+static func shared_shader() -> Shader:
+	if _shader == null:
+		_shader = Shader.new()
+		_shader.code = SHADER
+	return _shader
 
 func _ready() -> void:
 	top_level = true
@@ -56,8 +64,7 @@ func _ready() -> void:
 	body.name = "Body"
 	body.mesh = _mesh
 	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var shader := Shader.new()
-	shader.code = SHADER
+	var shader := shared_shader()
 	_material = ShaderMaterial.new()
 	_material.shader = shader
 	_material.set_shader_parameter("skin", SKIN)
