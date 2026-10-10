@@ -273,10 +273,11 @@ func _validate_pink_dodge() -> void:
 	missed.player_contact.connect(func(_amount: float) -> void:
 		dodged_hurt[0] = true
 	)
-	for _step in 40:
+	missed.set_physics_process(false)
+	for _step in 120:
 		if missed._terminal:
 			break
-		missed._physics_process(0.05)
+		await _physics_step(missed)
 	if dodged_hurt[0] or not missed._terminal:
 		failures.append("Pink dodge still damaged the player")
 	missed.queue_free()
@@ -296,10 +297,11 @@ func _validate_pink_dodge() -> void:
 	caught.player_contact.connect(func(_amount: float) -> void:
 		lane_hurt[0] = true
 	)
-	for _step in 40:
+	caught.set_physics_process(false)
+	for _step in 120:
 		if caught._terminal:
 			break
-		caught._physics_process(0.05)
+		await _physics_step(caught)
 	if not lane_hurt[0]:
 		failures.append("Pink lane hit did not damage the player")
 	caught.queue_free()
@@ -334,9 +336,15 @@ func _validate_arc_motion(yellow_scene: PackedScene) -> void:
 	yellow.global_position = Vector3(0.0, 1.3, 8.0)
 	yellow._player_camera = head
 	var start: Vector3 = yellow.global_position
+	yellow.set_physics_process(false)
+	# Judged while it is under way: a short arc can reach the head and possess inside two seconds.
+	var under_way := false
 	for _step in 120:
-		yellow._physics_process(0.016)
-	if yellow.global_position.distance_to(start) < 1.0 or yellow.velocity.length() < 0.3:
+		await _physics_step(yellow)
+		if yellow.global_position.distance_to(start) >= 1.0 and yellow.velocity.length() >= 0.3:
+			under_way = true
+			break
+	if not under_way:
 		failures.append("Yellow arc stalled during approach")
 	if yellow.get_node_or_null("ApproachColumn") != null:
 		failures.append("Approach column is still attached")
@@ -358,11 +366,12 @@ func _validate_green_arrival() -> void:
 	var stalled := false
 	var slow_frames := 0
 	var closest := INF
-	for _step in 420:
+	green.set_physics_process(false)
+	for _step in 400:
 		if green._terminal:
 			break
 		var before: float = green_body.global_position.distance_to(head.global_position)
-		green._physics_process(0.016)
+		await _physics_step(green)
 		var after: float = green_body.global_position.distance_to(head.global_position)
 		closest = minf(closest, after)
 		var still_closing := after < before - 0.001 and before < 2.0
@@ -933,6 +942,17 @@ func _validate_resonance_sweep() -> void:
 		failures.append("Sweep did not sit at duck depth below the head at spawn: %.3f" % low.sweep_height)
 	var low_log := _watch_sweep(low)
 	camera.position = Vector3(0.0, 1.30, 0.0)
+	# The tell rises as the rails light, and the whoosh rides the blade once it sets out. Both on SFX.
+	low.advance(1.0 / 72.0)
+	if low._tell_player.stream == null or low._tell_player.bus != &"SFX" or not low._tell_player.playing:
+		failures.append("Sweep did not sound its tell as the rails lit")
+	elif absf(low._tell_player.pitch_scale - 1.0) > 0.01 or low._whoosh_player.playing:
+		failures.append("Sweep tell is off the telegraph, or the whoosh started early")
+	_run_sweep(low, low.telegraph_seconds + 0.05)
+	if low._whoosh_player.stream == null or low._whoosh_player.bus != &"SFX" or not low._whoosh_player.playing:
+		failures.append("Sweep blade set out without its whoosh")
+	elif low._whoosh_player.get_parent() != low._blade or absf(low._whoosh_player.pitch_scale - 1.0) > 0.01:
+		failures.append("Sweep whoosh does not ride the blade or peak as it reaches the player")
 	_run_sweep(low, 3.0)
 	var cleared: Dictionary = low_log["resolved"]
 	if cleared.is_empty() or low_log["hurt"] or not cleared.get("on_beat", false) or int(cleared.get("rift_damage", 0)) != 14 or int(cleared.get("base_score", 0)) != 150:
@@ -953,10 +973,16 @@ func _validate_resonance_sweep() -> void:
 	# Paused, it does not move and cannot hit; resumed, it carries on.
 	var held := _spawn_sweep(sweep_scene, ahead)
 	var held_log := _watch_sweep(held)
+	# Paused once its tell is sounding, so the tell has to hold too. A 3D player starts on its next physics frame.
+	held.advance(1.0 / 72.0)
+	await physics_frame
+	await physics_frame
 	held.set_interactions_enabled(false)
 	_run_sweep(held, 3.0)
 	if held_log["hurt"] or not held_log["resolved"].is_empty() or held._blade_travel > 0.0:
 		failures.append("Paused sweep still moved or judged the player")
+	if not held._tell_player.stream_paused:
+		failures.append("Paused sweep kept sounding")
 	held.set_interactions_enabled(true)
 	camera.position = Vector3(0.0, 1.30, 0.0)
 	_run_sweep(held, 3.0)
@@ -1022,24 +1048,42 @@ func _validate_resonance_sweep() -> void:
 	var standing := Vector3(0.0, 1.70, 0.0)
 	_drive_head(detector, standing, standing, 0.0, 0.0, 1.5)
 	camera.position = standing
+	# Chen calls each sweep as its rails light, and corrects a bend, but not every time.
+	var chen := ChenComms.new()
+	root.add_child(chen)
+	await process_frame
+	await process_frame
+	var said: Array[String] = []
+	chen.line_started.connect(func(_speaker: String, _text: String, _seconds: float) -> void: said.append(chen._playing_event))
 	var clean := _spawn_sweep(sweep_scene, ahead)
 	if absf(clean.sweep_height - 1.70 * 0.88) > 0.01:
 		failures.append("Sweep did not read standing height from the squat detector")
 	var clean_log := _watch_sweep(clean)
-	_dip_under_sweep(clean, detector, camera, standing, Vector3(0.0, 1.32, 0.04), 0.0, -10.0)
+	_dip_under_sweep(clean, detector, camera, standing, Vector3(0.0, 1.32, 0.04), 0.0, -10.0, chen)
 	if clean_log["resolved"].is_empty() or not clean_log["resolved"].get("on_beat", false):
 		failures.append("Clean squat under the sweep lost its bonus: %s" % clean_log["resolved"])
+	if said != ["sweep"]:
+		failures.append("Chen did not call the sweep, or corrected a clean squat: %s" % [said])
 	clean.free()
-	_drive_head(detector, camera.position, standing, -10.0, 0.0, 0.6)
-	_drive_head(detector, standing, standing, 0.0, 0.0, 0.5)
-	camera.position = standing
-	var bent := _spawn_sweep(sweep_scene, ahead)
-	var bent_log := _watch_sweep(bent)
-	_dip_under_sweep(bent, detector, camera, standing, Vector3(0.0, 1.40, -0.6), 0.0, -70.0)
-	var bent_result: Dictionary = bent_log["resolved"]
-	if bent_result.is_empty() or bent_log["hurt"] or bent_result.get("on_beat", true) or bent_result.get("form_fault", &"") == &"":
-		failures.append("A bend under the sweep kept the bonus or failed the dodge: %s" % bent_result)
-	bent.free()
+	# Four bent dips in a row: she corrects the first and the fourth, and every one still clears.
+	var corrected: Array[bool] = []
+	for attempt in 4:
+		_drive_head(detector, camera.position, standing, -10.0, 0.0, 0.6)
+		_drive_head(detector, standing, standing, 0.0, 0.0, 0.5)
+		camera.position = standing
+		_step_chen(chen, 4.0)
+		said.clear()
+		var bent := _spawn_sweep(sweep_scene, ahead)
+		var bent_log := _watch_sweep(bent)
+		_dip_under_sweep(bent, detector, camera, standing, Vector3(0.0, 1.40, -0.6), 0.0, -70.0, chen)
+		var bent_result: Dictionary = bent_log["resolved"]
+		if bent_result.is_empty() or bent_log["hurt"] or bent_result.get("on_beat", true) or bent_result.get("form_fault", &"") == &"":
+			failures.append("A bend under the sweep kept the bonus or failed the dodge: %s" % bent_result)
+		corrected.append(said.has("sweep_bend"))
+		bent.free()
+	if corrected != [true, false, false, true]:
+		failures.append("Chen's bend correction is not once every three sweeps: %s" % [corrected])
+	chen.free()
 	# The rift hands the wave's squat depth to the sweep it spawns.
 	var container := Node3D.new()
 	container.add_to_group("PhantomContainer")
@@ -1087,7 +1131,7 @@ func _run_sweep(sweep: ResonanceSweep, seconds: float) -> void:
 
 ## Dips the head from standing to the bottom while the telegraph runs, holds it there as the
 ## blade crosses, and feeds the same motion to the detector, as a headset would.
-func _dip_under_sweep(sweep: ResonanceSweep, detector: SquatDetector, camera: Node3D, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float) -> void:
+func _dip_under_sweep(sweep: ResonanceSweep, detector: SquatDetector, camera: Node3D, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float, chen: ChenComms = null) -> void:
 	var step := 1.0 / 72.0
 	for index in int(3.0 / step):
 		var t := clampf(float(index + 1) / (0.7 / step), 0.0, 1.0)
@@ -1095,6 +1139,22 @@ func _dip_under_sweep(sweep: ResonanceSweep, detector: SquatDetector, camera: No
 		detector.sample(head, lerpf(pitch_from, pitch_to, t), step)
 		camera.position = head
 		sweep.advance(step)
+		if chen:
+			_step_chen(chen, step)
+
+## Runs Chen's clock by hand. Each line ends when its time is up, as the voice player's finished would.
+func _step_chen(chen: ChenComms, seconds: float) -> void:
+	var step := 1.0 / 72.0
+	for _index in maxi(int(round(seconds / step)), 1):
+		chen._process(step)
+		if chen._playing_event != "" and chen._clock >= chen._speaking_until:
+			chen._on_line_finished()
+
+## Steps a phantom by hand inside a physics frame. Outside one, move_and_slide moves by the process
+## delta, which uncapped headless frames make arbitrarily small, so the body barely moves.
+func _physics_step(body: Node) -> void:
+	await physics_frame
+	body._physics_process(body.get_physics_process_delta_time())
 
 func _drive_head(squat: SquatDetector, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float, seconds: float) -> void:
 	var step := 1.0 / 72.0
