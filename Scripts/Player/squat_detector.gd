@@ -37,8 +37,9 @@ enum State { CALIBRATING, STANDING, DIPPING, SQUAT, HOLD }
 ## Early arc: horizontal head travel from where the player last stood tall, divided by the drop,
 ## measured once the head is `early_ratio` of standing height down. A bow pivots at the hips, so
 ## the head swings forward before it falls; a squat starts straight down. Unlike pitch, looking up
-## at an opponent while bowing does not hide it. Starting value; tune from the SQUAT path lines.
-@export var max_early_travel_per_drop: float = 0.9
+## at an opponent while bowing does not hide it. Quest 3, 2026-10-11: bows made while looking up
+## measured 0.81 to 1.01, squats 0.16 to 0.20.
+@export var max_early_travel_per_drop: float = 0.5
 @export var early_ratio: float = 0.08
 ## Head vertical speed under this counts as still, for calibration.
 @export var still_speed: float = 0.15

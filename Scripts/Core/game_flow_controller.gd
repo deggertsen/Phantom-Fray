@@ -59,13 +59,25 @@ func _ready() -> void:
 ## the debug-only ones in MissionCatalog.debug_missions(). On Quest, put it in the Quest Debug
 ## export preset's Command Line > Extra Args. --maw-breaks makes every boss Maw break.
 func _mission_from_command_line() -> String:
-	for arg in OS.get_cmdline_user_args() + OS.get_cmdline_args():
+	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args() + _debug_args_file()
+	for arg in args:
 		if arg == "--maw-breaks":
 			MawBoss.always_break = true
-	for arg in OS.get_cmdline_user_args() + OS.get_cmdline_args():
+	for arg in args:
 		if arg.begins_with("--mission="):
 			return arg.trim_prefix("--mission=")
 	return ""
+
+## Debug builds also read arguments from user://debug_args.txt, because Quest launches cannot
+## pass them: the exported launcher activity drops intent extras on its way to GodotApp, and
+## GodotApp itself is not exported. A debuggable build lets adb write the file:
+##   adb shell "run-as com.phantomfray.resonancerising sh -c 'echo --mission=sweep_drill > files/debug_args.txt'"
+## Delete the file (or write an empty one) to boot to the menu again.
+func _debug_args_file() -> PackedStringArray:
+	if not OS.is_debug_build() or not FileAccess.file_exists("user://debug_args.txt"):
+		return PackedStringArray()
+	var text := FileAccess.get_file_as_string("user://debug_args.txt")
+	return text.strip_edges().split(" ", false)
 
 func _process(delta: float) -> void:
 	if _menu_action_cooldown > 0.0:
