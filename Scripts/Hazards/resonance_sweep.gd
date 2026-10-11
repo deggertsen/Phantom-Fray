@@ -93,6 +93,9 @@ var _whoosh_player: AudioStreamPlayer3D
 ## Made once, and only when there are no recorded takes.
 static var _generated_tell: AudioStreamWAV
 static var _generated_whoosh: AudioStreamWAV
+## Generating both in GDScript took long enough on Quest 3 to drop the first sweep's frame to 66 fps,
+## so the menu builds them on a worker thread ahead of time (prepare_generated_audio).
+static var _audio_task: int = -1
 
 func _ready() -> void:
 	add_to_group("phantom")
@@ -370,6 +373,7 @@ func _build_audio() -> void:
 func _play_tell() -> void:
 	var stream := SfxVariations.pick("sweep_tell")
 	if stream == null:
+		_finish_audio_task()
 		if _generated_tell == null:
 			_generated_tell = _make_tell()
 		stream = _generated_tell
@@ -381,6 +385,7 @@ func _play_tell() -> void:
 func _play_whoosh() -> void:
 	var stream := SfxVariations.pick("sweep_whoosh")
 	if stream == null:
+		_finish_audio_task()
 		if _generated_whoosh == null:
 			_generated_whoosh = _make_whoosh()
 		stream = _generated_whoosh
@@ -388,6 +393,25 @@ func _play_whoosh() -> void:
 	_whoosh_player.stream = stream
 	_whoosh_player.pitch_scale = clampf(WHOOSH_PEAK / reach_seconds, 0.6, 2.0)
 	_whoosh_player.play()
+
+## Builds the generated tell and whoosh on a worker thread. Called from ShaderWarmup while the menu
+## is up, so the first sweep of a mission plays them without generating them on the spot.
+static func prepare_generated_audio() -> void:
+	if _audio_task != -1 or (_generated_tell != null and _generated_whoosh != null):
+		return
+	_audio_task = WorkerThreadPool.add_task(_generate_audio)
+
+static func _generate_audio() -> void:
+	var tell := _make_tell()
+	var whoosh := _make_whoosh()
+	_generated_tell = tell
+	_generated_whoosh = whoosh
+
+static func _finish_audio_task() -> void:
+	if _audio_task == -1:
+		return
+	WorkerThreadPool.wait_for_task_completion(_audio_task)
+	_audio_task = -1
 
 ## Used only when there is no sweep_tell take: a tone climbing two octaves, its tremolo
 ## quickening like the rails' flicker, cut short at the top where the blade fires.

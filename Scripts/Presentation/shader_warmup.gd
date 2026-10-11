@@ -29,6 +29,7 @@ func _ready() -> void:
 	_add_quad(_lane_material())
 	_add_quad(_veins_material())
 	_add_boss_and_hazards()
+	ResonanceSweep.prepare_generated_audio()
 
 func _process(_delta: float) -> void:
 	_frames += 1
