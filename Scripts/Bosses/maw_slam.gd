@@ -39,6 +39,11 @@ var _fade: float = 1.0
 var _ring: MeshInstance3D
 var _ring_material: StandardMaterial3D
 var _fill_material: StandardMaterial3D
+## A wall of light rising around the ring, so the target reads at eye level. On Quest 3 the
+## floor ring alone was hard to read: a player looking forward does not see the floor.
+var _wall_material: StandardMaterial3D
+var _buzz_clock: float = 0.0
+const WALL_HEIGHT := 2.3
 
 func _ready() -> void:
 	add_to_group("phantom")
@@ -89,6 +94,28 @@ func _process(delta: float) -> void:
 		if _fade <= 0.0:
 			queue_free()
 	_update_ring()
+	_buzz_while_inside(delta)
+
+## Ticks both controllers while the head is still inside the ring through the tell, quickening
+## and strengthening toward the fall, so a player looking anywhere feels that they are the target.
+func _buzz_while_inside(delta: float) -> void:
+	if _judged or not _interactions_enabled or rise() < 0.25:
+		return
+	var head := _head_position()
+	if Vector2(head.x - center.x, head.z - center.z).length() >= ring_radius:
+		return
+	_buzz_clock -= delta
+	if _buzz_clock > 0.0:
+		return
+	_buzz_clock = lerpf(0.3, 0.12, rise())
+	var interface := XRServer.primary_interface
+	if interface == null:
+		return
+	var settings := get_node_or_null("/root/XRToolsUserSettings")
+	var scale_by: float = float(settings.get("haptics_scale")) if settings else 1.0
+	var amplitude := clampf(lerpf(0.25, 0.7, rise()) * scale_by, 0.0, 1.0)
+	for hand in [&"left_hand", &"right_hand"]:
+		interface.trigger_haptic_pulse(&"haptic", hand, 0.0, amplitude, 0.05, 0.0)
 
 ## One step of the slam. Split from _physics_process so the validation runner can drive it.
 func advance(delta: float) -> void:
@@ -155,6 +182,45 @@ func _build_ring() -> void:
 	fill.material_override = _fill_material
 	fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(fill)
+	var wall := MeshInstance3D.new()
+	wall.name = "ImpactWall"
+	var tube := CylinderMesh.new()
+	tube.top_radius = ring_radius
+	tube.bottom_radius = ring_radius
+	tube.height = WALL_HEIGHT
+	tube.radial_segments = 32
+	tube.rings = 1
+	tube.cap_top = false
+	tube.cap_bottom = false
+	wall.mesh = tube
+	wall.position = Vector3.UP * WALL_HEIGHT * 0.5
+	_wall_material = wall_material()
+	wall.material_override = _wall_material
+	wall.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(wall)
+
+## Additive, seen from inside and out, bright at the floor and gone by head height and above.
+## Static so ShaderWarmup compiles the same variant during the menu.
+static func wall_material() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.disable_fog = true
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(1.0, 1.0, 1.0, 0.0))
+	gradient.set_color(1, Color(1.0, 1.0, 1.0, 1.0))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0.0, 0.0)
+	texture.fill_to = Vector2(0.0, 1.0)
+	texture.width = 4
+	texture.height = 64
+	material.albedo_texture = texture
+	material.albedo_color = Color(RING_COLOR, 0.0)
+	return material
+
 
 func _energy_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -175,3 +241,5 @@ func _update_ring() -> void:
 	var pulse := 1.0 if calm else 0.7 + 0.3 * sin(_elapsed * lerpf(8.0, 22.0, told))
 	_ring_material.albedo_color.a = clampf(0.3 + told * 0.8, 0.0, 1.0) * pulse * _fade * (0.6 if calm else 1.0)
 	_fill_material.albedo_color.a = told * told * 0.22 * _fade * (0.6 if calm else 1.0)
+	if _wall_material:
+		_wall_material.albedo_color.a = clampf(0.15 + told * 0.45, 0.0, 0.6) * pulse * _fade * (0.6 if calm else 1.0)

@@ -34,7 +34,7 @@ enum State { CALIBRATING, STANDING, DIPPING, SQUAT, HOLD }
 ## Looking further down than this (degrees) at any point in the dip reads as bending over.
 ## Quest 3: squats never went below -5, waist bends always reached -32 or lower (most -75 to -87).
 @export var min_pitch_degrees: float = -30.0
-## Early arc: horizontal head travel from where the player last stood tall, divided by the drop,
+## Early arc: horizontal head travel from where the current descent began, divided by the fall,
 ## measured once the head is `early_ratio` of standing height down. A bow pivots at the hips, so
 ## the head swings forward before it falls; a squat starts straight down. Unlike pitch, looking up
 ## at an opponent while bowing does not hide it. Quest 3, 2026-10-11: bows made while looking up
@@ -82,9 +82,12 @@ var _rise_peak: float = 0.0
 var _rise_top: float = 0.0
 var _rise_time: float = 0.0
 var _logged_standing: float = -1.0
-## Where the head was, flat, the last time the player stood tall, and which way they faced.
+## Where the current descent began, flat and its height, and which way the player faced.
 var _stand_xz: Vector2 = Vector2.ZERO
 var _stand_facing: Vector2 = Vector2.ZERO
+var _descent_y: float = 0.0
+## Falling slower than this (m/s) is not a descent; the arc reference follows the head until one starts.
+const DESCENT_SPEED := 0.15
 var _early_travel_per_drop: float = -1.0
 const PATH_DEPTHS: Array[float] = [0.05, 0.10, 0.15, 0.20, 0.30]
 var _path: PackedStringArray = PackedStringArray()
@@ -239,21 +242,27 @@ func _follow_standing(height: float, still: bool, delta: float) -> void:
 		_far_from_standing = 0.0
 		_recent_peak = -1.0
 
-## Follows the head from where the player last stood tall: records the early-arc ratio once the
-## head is `early_ratio` down, and (debug) the forward and sideways travel at each PATH_DEPTHS depth.
+## Follows the head from where the current descent began: records the early-arc ratio once the head
+## has fallen `early_ratio` of standing height from there, and (debug) the forward and sideways
+## travel at each PATH_DEPTHS share of that fall. The first version measured from where the player
+## last stood fully tall; in the boss fight on Quest 3 players side-step out of slams and hold a low
+## ready stance, so that point was metres stale and nearly every squat read as a bow.
 func _track_arc(head: Vector3, facing: Vector2) -> void:
 	var flat := Vector2(head.x, head.z)
-	if depth_ratio < 0.02:
+	if vertical_speed > -DESCENT_SPEED and state == State.STANDING:
 		_stand_xz = flat
+		_descent_y = head.y
 		if facing.length_squared() > 0.01:
 			_stand_facing = facing.normalized()
 		_early_travel_per_drop = -1.0
 		_path.clear()
 		return
+	var fall := _descent_y - head.y
+	var fall_ratio := fall / standing_height
 	var offset := flat - _stand_xz
-	if _early_travel_per_drop < 0.0 and depth_ratio >= early_ratio:
-		_early_travel_per_drop = offset.length() / maxf(depth_ratio * standing_height, 0.001)
-	if _log and _path.size() < PATH_DEPTHS.size() and depth_ratio >= PATH_DEPTHS[_path.size()]:
+	if _early_travel_per_drop < 0.0 and fall_ratio >= early_ratio:
+		_early_travel_per_drop = offset.length() / maxf(fall, 0.001)
+	if _log and _path.size() < PATH_DEPTHS.size() and fall_ratio >= PATH_DEPTHS[_path.size()]:
 		var forward := offset.dot(_stand_facing)
 		var side := offset.dot(Vector2(-_stand_facing.y, _stand_facing.x))
 		_path.append("%d%%:f%+.2f/s%+.2f" % [int(PATH_DEPTHS[_path.size()] * 100.0), forward, side])

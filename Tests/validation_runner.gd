@@ -20,6 +20,7 @@ func _run_validation() -> void:
 	await _validate_results_menu()
 	await _validate_pink_dodge()
 	_validate_squat_detector()
+	_validate_push_up_detector()
 	_validate_maw_break_odds()
 	await _validate_maw_boss()
 	await _validate_maw_glimpse()
@@ -1486,3 +1487,36 @@ func _drive_palm(probe: HandTrackingProbe, hand: HandTrackingProbe.Hand, clock: 
 		clock[0] += step
 		var palm := from.lerp(to, float(index + 1) / float(steps))
 		probe.sample_hand(hand, clock[0], step, tracked, palm, Vector3.ZERO, false)
+
+## Push-ups from head height alone: three reps in a plank count three; a deep squat with the eyes
+## level is not a plank; the head held still in a plank counts nothing.
+func _validate_push_up_detector() -> void:
+	var push := PushUpDetector.new()
+	push.log_reps = false
+	var count := [0]
+	push.push_up_completed.connect(func() -> void: count[0] += 1)
+	for _i in 30:
+		push.sample(1.62, 0.0)
+	# Down into a plank, face to the floor, then three push-ups between 45 and 22 cm.
+	for step in 20:
+		push.sample(lerpf(1.62, 0.45, step / 19.0), lerpf(0.0, -70.0, step / 19.0))
+	for _rep in 3:
+		for step in 15:
+			push.sample(lerpf(0.45, 0.22, step / 14.0), -70.0)
+		for step in 15:
+			push.sample(lerpf(0.22, 0.45, step / 14.0), -70.0)
+	if count[0] != 3 or not push.in_plank:
+		failures.append("Push-up detector counted %d of 3 push-ups (in plank: %s)" % [count[0], push.in_plank])
+	for _i in 40:
+		push.sample(0.40, -70.0)
+	if count[0] != 3:
+		failures.append("Push-up detector counted a head held still in a plank")
+	for step in 20:
+		push.sample(lerpf(0.4, 1.62, step / 19.0), 0.0)
+	for step in 20:
+		push.sample(lerpf(1.62, 0.72, step / 19.0), 5.0)
+	for step in 20:
+		push.sample(lerpf(0.72, 1.62, step / 19.0), 5.0)
+	if count[0] != 3 or push.in_plank:
+		failures.append("Push-up detector took a deep squat for a plank")
+	push.free()

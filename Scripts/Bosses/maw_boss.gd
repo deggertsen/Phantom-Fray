@@ -28,6 +28,9 @@ const BOSS_LIGHT := Color(0.85, 0.12, 0.3)
 const TURN_SECONDS := 12.0
 ## The Maw tears this much wider than its phase-one size during the turn.
 const TORN_SCALE_GAIN := 1.6
+## The escort band's floor and ceiling, in metres above the ground.
+const ESCORT_LOW := 1.4
+const ESCORT_HIGH := 3.4
 const ESCORT_ORBIT := 0.16
 ## Anchor a possession feeds back to the boss, and anchor each push-up pulse drains.
 const POSSESSION_FEED := 20
@@ -47,23 +50,27 @@ const GLIMPSE_SECONDS := 3.4
 const BREAK_ODDS := 1.0 / 3.0
 
 ## The authored pattern. The opener asks for the easiest thing first: a slow sweep with a
-## long tell. Then the cycle repeats until the anchor runs out.
+## long tell. Then the cycle repeats until the anchor runs out. On Quest 3 (2026-10-11) the first
+## tempos (2.3 to 3.5 s from tell to pass) left time to squat early and wait; a sweep now passes
+## 1.6 s after its tell starts, faster than the Sweep Drill's 1.9 s, and the opener 2.35 s. The rests
+## between attacks were 3 to 4 s and the fight felt slow overall; they are 1.6 to 2.2 s now. The
+## spent window stays as it was: it was the right length for ten push-ups.
 const OPENER := [
-	{"do": "sweep", "tell": 2.2, "speed": 3.4, "side": 1.0},
-	{"do": "rest", "seconds": 4.0},
+	{"do": "sweep", "tell": 1.6, "speed": 6.0, "side": 1.0},
+	{"do": "rest", "seconds": 2.2},
 	{"do": "volley"},
-	{"do": "rest", "seconds": 4.0},
+	{"do": "rest", "seconds": 2.2},
 ]
 const CYCLE := [
-	{"do": "sweep", "tell": 1.5, "speed": 4.6, "side": -1.0},
-	{"do": "rest", "seconds": 3.0},
+	{"do": "sweep", "tell": 1.1, "speed": 8.0, "side": -1.0},
+	{"do": "rest", "seconds": 1.6},
 	{"do": "slam"},
 	{"do": "summon"},
-	{"do": "rest", "seconds": 3.5},
-	{"do": "sweep", "tell": 1.4, "speed": 5.0, "side": 1.0},
-	{"do": "rest", "seconds": 3.0},
+	{"do": "rest", "seconds": 2.0},
+	{"do": "sweep", "tell": 1.0, "speed": 8.5, "side": 1.0},
+	{"do": "rest", "seconds": 1.6},
 	{"do": "volley"},
-	{"do": "rest", "seconds": 4.0},
+	{"do": "rest", "seconds": 2.2},
 ]
 
 ## Set by a debug key: the next boss Maw breaks whatever the odds say.
@@ -104,6 +111,7 @@ var _rumble: AudioStreamPlayer3D
 ## Built when a break is decided, in the countdown, so the turn never waits on them.
 var _rumble_stream: AudioStreamWAV
 var _roar_stream: AudioStreamWAV
+var _haptic_clock: float = 0.0
 var _stream_task: int = -1
 var _shockwave: Node3D
 var _turn_mood: float = 0.0
@@ -248,6 +256,8 @@ func register_push_up() -> void:
 	})
 	if _tentacle:
 		_tentacle.pulse = 1.0
+	# Face down, a player feels the pulse land before they see it.
+	_pulse_controllers(0.6, 0.12)
 
 # --- Wiring ------------------------------------------------------------------------
 
@@ -371,9 +381,34 @@ func _tick_turn() -> void:
 	if _beat("roar", 10.0):
 		MawTurnFX.play_at(self, _roar_stream if _roar_stream else MawTurnFX.roar_stream(), _rift.portal_center(), 4.0)
 		_shockwave = MawTurnFX.shockwave(self, _rift.global_position, _reduced_flashes())
+		_pulse_controllers(0.9, 0.8)
+	_turn_haptics()
 	# 8. The fight (12 s).
 	if _clock >= TURN_SECONDS:
 		_begin_fight()
+
+## The rumble felt in both hands through the turn: from the silence it grows with the tear, swells
+## as the tentacle rises over the player, and the roar lands as one long pulse. On Quest 3 the
+## first turn felt "ok, not amazing"; touch is the sense it had not used.
+func _turn_haptics() -> void:
+	if _clock < 0.5 or _clock >= TURN_SECONDS:
+		return
+	_haptic_clock -= get_physics_process_delta_time()
+	if _haptic_clock > 0.0:
+		return
+	_haptic_clock = 0.22
+	var swell := smoothstep(6.9, 8.0, _clock) * (1.0 - smoothstep(8.5, 9.5, _clock))
+	_pulse_controllers(lerpf(0.08, 0.32, smoothstep(0.5, 5.0, _clock)) + swell * 0.3, 0.2)
+
+func _pulse_controllers(amplitude: float, seconds: float) -> void:
+	var interface := XRServer.primary_interface
+	if interface == null:
+		return
+	var settings := get_node_or_null("/root/XRToolsUserSettings")
+	var scale_by: float = float(settings.get("haptics_scale")) if settings else 1.0
+	var strength := clampf(amplitude * scale_by, 0.0, 1.0)
+	for hand in [&"left_hand", &"right_hand"]:
+		interface.trigger_haptic_pulse(&"haptic", hand, 0.0, strength, seconds, 0.0)
 
 func _spawn_tentacle() -> void:
 	if is_instance_valid(_tentacle):
@@ -398,14 +433,16 @@ func _gather_escort(phantoms: Array[Node3D]) -> void:
 		if not _escorts.has(phantom):
 			_escorts.append(phantom)
 
-## An upright ring around the torn mouth, a little in front of it, never below the knees.
+## A wide, low band in front of the torn mouth. The first ring stood upright around the mouth and
+## reached almost 8 m up; on Quest 3 volleys from its top came in from overhead, out of view.
+## The band keeps every escort between ESCORT_LOW and ESCORT_HIGH, so volleys come from in front.
 func _escort_ring() -> Dictionary:
 	var torn := _phase_one_scale * TORN_SCALE_GAIN
 	var half := 2.0 * torn
 	var toward := _toward_player_from_rift()
 	var right := toward.cross(Vector3.UP).normalized()
-	var center := _rift.global_position + Vector3.UP * 2.0 * (torn - 1.0) + toward * 1.2
-	var radii := Vector2(half + 1.2, minf(half * 0.85, center.y - 0.9))
+	var center := _rift.global_position + Vector3.UP * (ESCORT_LOW + ESCORT_HIGH) * 0.5 + toward * 1.2
+	var radii := Vector2(half + 1.2, (ESCORT_HIGH - ESCORT_LOW) * 0.5)
 	return {"center": center, "right": right, "radii": radii}
 
 # --- The fight ---------------------------------------------------------------------
