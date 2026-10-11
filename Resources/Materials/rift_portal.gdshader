@@ -1,6 +1,9 @@
 shader_type spatial;
-render_mode unshaded, cull_disabled, depth_draw_never, depth_test_disabled;
+render_mode unshaded, cull_disabled, depth_draw_never;
 
+// Depth tested so a tentacle or phantom in front of the mouth hides it. It used to ignore depth
+// and drew over everything; once The Maw's tear stopped lifting the mouth (2026-10-11), it drew
+// straight over the boss's tentacle on Quest 3.
 // The rift: a black void with violet bands swirling into it, light leaking from the far
 // side, and a ragged white-hot edge. As it weakens it shrinks, its bands spin faster, and
 // cracks spread across its face. RiftManager drives health_ratio, damage_flash,
