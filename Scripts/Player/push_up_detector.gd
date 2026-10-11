@@ -24,8 +24,9 @@ signal plank_changed(in_plank: bool)
 @export var plank_enter_ratio: float = 0.38
 ## And rise above this share to leave it.
 @export var plank_exit_ratio: float = 0.48
-## A rep is a fall and a rise of at least this much, in metres.
-@export var rep_drop: float = 0.06
+## A rep is a fall and a rise of at least this much, in metres. Quest 3, 2026-10-11: real reps moved
+## the head 22 to 38 cm; getting into and out of the plank made 8 to 9 cm wobbles that 6 cm counted.
+@export var rep_drop: float = 0.12
 ## Debug builds print a PUSHUP line for every plank and rep, for logcat.
 @export var log_reps: bool = true
 
