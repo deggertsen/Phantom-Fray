@@ -26,7 +26,7 @@ const SweepScene := "res://Scenes/Hazards/resonance_sweep.tscn"
 const BOSS_LIGHT := Color(0.85, 0.12, 0.3)
 ## The turn, start to the first second of the fight.
 const TURN_SECONDS := 12.0
-## The Maw tears this much wider than its phase-one size during the turn.
+## The Maw tears this much wider (sideways only) than its phase-one size during the turn.
 const TORN_SCALE_GAIN := 1.6
 ## The escort band's floor and ceiling, in metres above the ground.
 const ESCORT_LOW := 1.4
@@ -360,7 +360,7 @@ func _tick_turn() -> void:
 		_gather_escort(_rift.live_phantoms())
 	# 4. It tears (3 to 5 s): wider, the sky crack, the veins to the player's feet, the pylons, the light.
 	var tear := smoothstep(3.0, 5.0, _clock)
-	_rift.set_rift_scale(_phase_one_scale * lerpf(1.0, TORN_SCALE_GAIN, tear))
+	_rift.set_tear(lerpf(1.0, TORN_SCALE_GAIN, tear))
 	_set_turn_mood(tear)
 	# 5. The first tentacle (5 to 8 s): slides out along the floor, stops short, then rises.
 	if _beat("tentacle", 5.0):
@@ -441,7 +441,9 @@ func _escort_ring() -> Dictionary:
 	var half := 2.0 * torn
 	var toward := _toward_player_from_rift()
 	var right := toward.cross(Vector3.UP).normalized()
-	var center := _rift.global_position + Vector3.UP * (ESCORT_LOW + ESCORT_HIGH) * 0.5 + toward * 1.2
+	# From the floor, not the rift: rifts float with their base 2.2 m up, so a band measured from
+	# the rift put the escort 3.6 to 5.6 m up on Quest 3, still overhead.
+	var center := Vector3(_rift.global_position.x, _floor_y(), _rift.global_position.z) + Vector3.UP * (ESCORT_LOW + ESCORT_HIGH) * 0.5 + toward * 1.2
 	var radii := Vector2(half + 1.2, (ESCORT_HIGH - ESCORT_LOW) * 0.5)
 	return {"center": center, "right": right, "radii": radii}
 
@@ -598,6 +600,7 @@ func _start_slam() -> void:
 	_slam = MawSlam.new()
 	_slam.name = "MawSlam"
 	var frame := _player_frame()
+	_slam.toward_rift = frame["f"]
 	_rift.add_attacker(_slam, frame["p"])
 	_slam.impacted.connect(_on_slam_impacted)
 	_frame = _player_frame()
@@ -748,7 +751,7 @@ func _tick_retreat() -> void:
 	if _tentacle:
 		_tentacle.writhe = 0.9
 		_tentacle.set_path(_blend(_from_pose, _collapsed(_player_frame()), smoothstep(0.0, RETREAT_SECONDS, _clock)))
-	_rift.set_rift_scale(_phase_one_scale * lerpf(TORN_SCALE_GAIN, 1.0, smoothstep(0.0, RETREAT_SECONDS, _clock)))
+	_rift.set_tear(lerpf(TORN_SCALE_GAIN, 1.0, smoothstep(0.0, RETREAT_SECONDS, _clock)))
 	if _clock >= RETREAT_SECONDS * 0.6:
 		for phantom in _rift.live_phantoms():
 			if phantom.has_method("force_cleanup"):
@@ -817,6 +820,11 @@ func _glimpse_pose(t: float) -> Array[Vector3]:
 # --- Poses ---------------------------------------------------------------------------
 # Every pose is six control points from the root in the rift to the tip. All of them keep the
 # limb at least two metres from the head except the attacks themselves, which are the point.
+
+## The floor under the player: the XROrigin3D sits on it.
+func _floor_y() -> float:
+	var player := get_tree().get_first_node_in_group("Player") as Node3D if is_inside_tree() else null
+	return player.global_position.y if player else 0.0
 
 func _player_frame() -> Dictionary:
 	var head := _head()

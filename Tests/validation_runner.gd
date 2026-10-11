@@ -1507,16 +1507,24 @@ func _validate_push_up_detector() -> void:
 			push.sample(lerpf(0.22, 0.45, step / 14.0), -70.0)
 	if count[0] != 3 or not push.in_plank:
 		failures.append("Push-up detector counted %d of 3 push-ups (in plank: %s)" % [count[0], push.in_plank])
+	# Looking forward, as David does push-ups: the face only 10 degrees down. Two more count.
+	for _rep in 2:
+		for step in 15:
+			push.sample(lerpf(0.5, 0.2, step / 14.0), -10.0)
+		for step in 15:
+			push.sample(lerpf(0.2, 0.5, step / 14.0), -10.0)
+	if count[0] != 5:
+		failures.append("Push-up detector missed push-ups done looking forward (%d of 5)" % count[0])
 	for _i in 40:
-		push.sample(0.40, -70.0)
-	if count[0] != 3:
+		push.sample(0.50, -70.0)
+	if count[0] != 5:
 		failures.append("Push-up detector counted a head held still in a plank")
 	for step in 20:
-		push.sample(lerpf(0.4, 1.62, step / 19.0), 0.0)
+		push.sample(lerpf(0.5, 1.62, step / 19.0), 0.0)
 	for step in 20:
 		push.sample(lerpf(1.62, 0.72, step / 19.0), 5.0)
 	for step in 20:
 		push.sample(lerpf(0.72, 1.62, step / 19.0), 5.0)
-	if count[0] != 3 or push.in_plank:
+	if count[0] != 5 or push.in_plank:
 		failures.append("Push-up detector took a deep squat for a plank")
 	push.free()

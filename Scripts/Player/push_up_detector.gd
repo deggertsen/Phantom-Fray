@@ -5,19 +5,25 @@ class_name PushUpDetector
 ## to push_up_completed through the "PushUpDetector" group). See
 ## development/Exercise_Mechanics_Exploration.md, section 1, "Push-up".
 ##
-## A plank is the head low and the face toward the floor. A rep is the head falling at least
-## `rep_drop` from its highest point in the plank and coming back up by the same amount. On Quest 3
-## (2026-10-11) the head sat 12 to 20 cm off the floor through a spent window's push-ups, so the
-## plank line is generous. Knee push-ups count; the game cannot tell, and does not try.
+## A plank is the head low: below `plank_enter_ratio` of standing eye height to get in, and above
+## `plank_exit_ratio` to get out, so the line cannot flicker. A rep is the head falling at least
+## `rep_drop` from its highest point in the plank and coming back up by the same amount. Knee
+## push-ups count; the game cannot tell, and does not try.
+##
+## Quest 3, 2026-10-11 (one tester, 1.57 to 1.60 m standing eye height): push-up tops 46 to 57 cm,
+## bottoms 11 to 27 cm, 20 to 42 cm of head travel; the deepest squats kept the head at 73 to 80 cm.
+## The first version also wanted the face pointed 30 degrees down. Doing push-ups while looking
+## forward held the face at 29 to 31 degrees, right on that line, and it dropped in and out of the
+## plank dozens of times and lost count; the head height alone separates them.
 ## Head pose: XRCamera3D.position is in XROrigin3D space, floor at y = 0 (Stage reference space).
 
 signal push_up_completed
 signal plank_changed(in_plank: bool)
 
-## The head must be below this share of standing eye height to be in a plank.
-@export var plank_ratio: float = 0.45
-## And the face must point at least this far down (degrees below level).
-@export var plank_pitch_degrees: float = -30.0
+## The head must fall below this share of standing eye height to enter a plank.
+@export var plank_enter_ratio: float = 0.38
+## And rise above this share to leave it.
+@export var plank_exit_ratio: float = 0.48
 ## A rep is a fall and a rise of at least this much, in metres.
 @export var rep_drop: float = 0.06
 ## Debug builds print a PUSHUP line for every plank and rep, for logcat.
@@ -50,7 +56,7 @@ func _physics_process(_delta: float) -> void:
 ## One step. Split from _physics_process so the validation runner can feed it a motion.
 func sample(head_y: float, pitch_degrees: float) -> void:
 	var standing := _standing_height(head_y)
-	var low := head_y < standing * plank_ratio and pitch_degrees < plank_pitch_degrees
+	var low := head_y < standing * (plank_exit_ratio if in_plank else plank_enter_ratio)
 	if low != in_plank:
 		in_plank = low
 		_top = head_y

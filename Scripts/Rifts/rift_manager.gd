@@ -45,6 +45,7 @@ var _wave: Dictionary = {}
 var _speed_scale: float = 1.0
 var _telegraph_scale: float = 1.0
 var _rift_scale: float = 1.0
+var _tear_gain: float = 1.0
 var _beacon: Node3D
 var _beacon_time: float = 0.0
 var _debris: MultiMeshInstance3D
@@ -268,6 +269,12 @@ func set_dissolve_override(amount: float) -> void:
 func set_rift_scale(rift_scale: float) -> void:
 	_apply_rift_scale(rift_scale)
 
+## Widens the portal sideways by `gain` without raising it: The Maw's tear. Growing it evenly
+## lifted the mouth's middle to 6.6 m on Quest 3, and the boss's phantoms with it.
+func set_tear(gain: float) -> void:
+	_tear_gain = maxf(gain, 1.0)
+	_apply_rift_scale(_rift_scale)
+
 func rift_scale() -> float:
 	return _rift_scale
 
@@ -449,11 +456,11 @@ func _apply_rift_scale(rift_scale: float) -> void:
 	if portal and portal.mesh is QuadMesh:
 		# https://docs.godotengine.org/en/stable/classes/class_quadmesh.html#class-quadmesh-property-size
 		var quad := portal.mesh as QuadMesh
-		quad.size = Vector2(4.0, 4.0) * _rift_scale
+		quad.size = Vector2(4.0 * _tear_gain, 4.0) * _rift_scale
 		portal.position.y = 2.0 * (_rift_scale - 1.0)
 		var glow := portal.get_node_or_null("PortalGlow") as Node3D
 		if glow:
-			glow.scale = Vector3.ONE * _rift_scale
+			glow.scale = Vector3(_tear_gain, 1.0, 1.0) * _rift_scale
 		if _debris:
 			_debris.scale = Vector3.ONE * _rift_scale
 			_debris.position.y = portal.position.y
