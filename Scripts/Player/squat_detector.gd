@@ -34,6 +34,12 @@ enum State { CALIBRATING, STANDING, DIPPING, SQUAT, HOLD }
 ## Looking further down than this (degrees) at any point in the dip reads as bending over.
 ## Quest 3: squats never went below -5, waist bends always reached -32 or lower (most -75 to -87).
 @export var min_pitch_degrees: float = -30.0
+## Early arc: horizontal head travel from where the player last stood tall, divided by the drop,
+## measured once the head is `early_ratio` of standing height down. A bow pivots at the hips, so
+## the head swings forward before it falls; a squat starts straight down. Unlike pitch, looking up
+## at an opponent while bowing does not hide it. Starting value; tune from the SQUAT path lines.
+@export var max_early_travel_per_drop: float = 0.9
+@export var early_ratio: float = 0.08
 ## Head vertical speed under this counts as still, for calibration.
 @export var still_speed: float = 0.15
 @export var calibration_seconds: float = 1.0
@@ -74,6 +80,12 @@ var _rise_peak: float = 0.0
 var _rise_top: float = 0.0
 var _rise_time: float = 0.0
 var _logged_standing: float = -1.0
+## Where the head was, flat, the last time the player stood tall, and which way they faced.
+var _stand_xz: Vector2 = Vector2.ZERO
+var _stand_facing: Vector2 = Vector2.ZERO
+var _early_travel_per_drop: float = -1.0
+const PATH_DEPTHS: Array[float] = [0.05, 0.10, 0.15, 0.20, 0.30]
+var _path: PackedStringArray = PackedStringArray()
 
 func _ready() -> void:
 	if not debug_enabled or not OS.is_debug_build():
@@ -98,13 +110,13 @@ func _physics_process(delta: float) -> void:
 	if camera == null:
 		return
 	var forward := -camera.transform.basis.z
-	sample(camera.position, rad_to_deg(asin(clampf(forward.y, -1.0, 1.0))), delta)
+	sample(camera.position, rad_to_deg(asin(clampf(forward.y, -1.0, 1.0))), delta, Vector2(forward.x, forward.z))
 	if _label:
 		_label.text = debug_text()
 
 ## One step of the detector. Head position is in XROrigin3D space; pitch is where the face points.
 ## Split from _physics_process so the validation runner can feed it a recorded motion.
-func sample(head: Vector3, pitch_degrees: float, delta: float) -> void:
+func sample(head: Vector3, pitch_degrees: float, delta: float, facing: Vector2 = Vector2.ZERO) -> void:
 	if delta <= 0.0:
 		return
 	_last_head = head
@@ -123,6 +135,7 @@ func sample(head: Vector3, pitch_degrees: float, delta: float) -> void:
 	var drop := standing_height - head.y
 	depth_ratio = drop / standing_height
 	_follow_standing(head.y, still, delta)
+	_track_arc(head, facing)
 	if _log:
 		_log_rise(head.y, delta)
 		if absf(standing_height - _logged_standing) > 0.02:
@@ -224,7 +237,28 @@ func _follow_standing(height: float, still: bool, delta: float) -> void:
 		_far_from_standing = 0.0
 		_recent_peak = -1.0
 
+## Follows the head from where the player last stood tall: records the early-arc ratio once the
+## head is `early_ratio` down, and (debug) the forward and sideways travel at each PATH_DEPTHS depth.
+func _track_arc(head: Vector3, facing: Vector2) -> void:
+	var flat := Vector2(head.x, head.z)
+	if depth_ratio < 0.02:
+		_stand_xz = flat
+		if facing.length_squared() > 0.01:
+			_stand_facing = facing.normalized()
+		_early_travel_per_drop = -1.0
+		_path.clear()
+		return
+	var offset := flat - _stand_xz
+	if _early_travel_per_drop < 0.0 and depth_ratio >= early_ratio:
+		_early_travel_per_drop = offset.length() / maxf(depth_ratio * standing_height, 0.001)
+	if _log and _path.size() < PATH_DEPTHS.size() and depth_ratio >= PATH_DEPTHS[_path.size()]:
+		var forward := offset.dot(_stand_facing)
+		var side := offset.dot(Vector2(-_stand_facing.y, _stand_facing.x))
+		_path.append("%d%%:f%+.2f/s%+.2f" % [int(PATH_DEPTHS[_path.size()] * 100.0), forward, side])
+
 func _squat_fault(drop: float, pitch_degrees: float) -> StringName:
+	if _early_travel_per_drop > max_early_travel_per_drop:
+		return &"bowed"
 	if drop > 0.0 and _max_travel / drop > max_travel_per_drop:
 		return &"leaned_or_stepped"
 	if pitch_degrees < min_pitch_degrees:
@@ -248,9 +282,10 @@ func _finish_dip() -> void:
 		outcome = "too_shallow"
 	if _log:
 		var drop := _max_depth * standing_height
-		print("SQUAT dip %s reps=%d depth=%.2f drop=%.3f travel=%.3f travel_per_drop=%.2f min_pitch=%.0f secs=%.2f" % [
-			outcome, rep_count, _max_depth, drop, _max_travel, _max_travel / maxf(drop, 0.001), _min_pitch, _dip_time,
+		print("SQUAT dip %s reps=%d depth=%.2f drop=%.3f travel=%.3f travel_per_drop=%.2f early=%.2f min_pitch=%.0f secs=%.2f" % [
+			outcome, rep_count, _max_depth, drop, _max_travel, _max_travel / maxf(drop, 0.001), _early_travel_per_drop, _min_pitch, _dip_time,
 		])
+		print("SQUAT path %s" % " ".join(_path))
 	state = State.STANDING
 
 ## Debug log of every rise above standing: peak upward speed, height above standing, time up.

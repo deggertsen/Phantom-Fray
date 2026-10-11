@@ -923,6 +923,22 @@ func _validate_squat_detector() -> void:
 	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5)
 	if squat.rep_count != 2:
 		failures.append("Squat detector missed a deep squat recorded on the headset")
+	# A bow while looking up at the opponent (David's cheat, 2026-10-11): the torso pivots at the
+	# hips, which shift back a little, and the eyes stay 10 degrees up. Pitch cannot see it; the
+	# early arc can, since the head swings forward before it falls.
+	var hip := 0.9
+	var torso := 1.62 - hip
+	var bow: Array[Vector3] = []
+	for step in 11:
+		var angle := deg_to_rad(80.0 * step / 10.0)
+		bow.append(Vector3(0.0, hip + torso * cos(angle), (torso - 0.15) * sin(angle)))
+	for i in range(bow.size() - 1):
+		_drive_head(squat, bow[i], bow[i + 1], 10.0, 10.0, 0.06, Vector2(0.0, 1.0))
+	_drive_head(squat, bow[bow.size() - 1], bow[bow.size() - 1], 10.0, 10.0, 0.3, Vector2(0.0, 1.0))
+	_drive_head(squat, bow[bow.size() - 1], standing, 10.0, 0.0, 0.7, Vector2(0.0, 1.0))
+	_drive_head(squat, standing, standing, 0.0, 0.0, 0.5, Vector2(0.0, 1.0))
+	if squat.rep_count != 2 or squat.last_rejection != &"bowed":
+		failures.append("Squat detector counted a bow made while looking up (%d reps, last %s)" % [squat.rep_count, squat.last_rejection])
 	squat.free()
 	var short := SquatDetector.new()
 	var short_standing := Vector3(0.0, 1.30, 0.0)
@@ -1181,12 +1197,12 @@ func _physics_step(body: Node) -> void:
 	await physics_frame
 	body._physics_process(body.get_physics_process_delta_time())
 
-func _drive_head(squat: SquatDetector, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float, seconds: float) -> void:
+func _drive_head(squat: SquatDetector, from: Vector3, to: Vector3, pitch_from: float, pitch_to: float, seconds: float, facing: Vector2 = Vector2.ZERO) -> void:
 	var step := 1.0 / 72.0
 	var steps := maxi(int(round(seconds / step)), 1)
 	for index in steps:
 		var t := float(index + 1) / float(steps)
-		squat.sample(from.lerp(to, t), lerpf(pitch_from, pitch_to, t), step)
+		squat.sample(from.lerp(to, t), lerpf(pitch_from, pitch_to, t), step, facing)
 
 func _validate_maw_break_odds() -> void:
 	if not MawBoss.decide_break(0, 0, 0.99):

@@ -240,7 +240,7 @@ func _bend_fault() -> StringName:
 func _on_squat_rejected(reason: StringName) -> void:
 	if _judged or _rest_remaining != 0.0:
 		return
-	if reason == &"leaned_or_stepped" or reason == &"looking_at_floor":
+	if reason == &"leaned_or_stepped" or reason == &"looking_at_floor" or reason == &"bowed":
 		_bent_reason = reason
 
 ## Another sweep still in flight, or only just finished: wait for it, then rest, then light.
