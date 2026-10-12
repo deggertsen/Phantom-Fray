@@ -15,6 +15,8 @@ uniform float pylon_radius = 6.5;
 uniform vec4 rifts[4];
 // The boss turn: veins racing out from a rift at (x, y) to z metres, under the player's feet.
 uniform vec3 surge = vec3(0.0);
+// The boss turn's blackout: 1 puts the floor out entirely, so only the rift is lit.
+uniform float blackout = 0.0;
 
 varying vec3 world_pos;
 
@@ -59,5 +61,5 @@ void fragment() {
 	col += rsf_color * exp(-abs(d - safe_radius) * 70.0) * 1.1;
 	float dash = step(0.35, fract(atan(p.y, p.x) * 16.0 / PI));
 	col += rsf_color * exp(-abs(d - pylon_radius) * 30.0) * 0.35 * dash;
-	ALBEDO = col;
+	ALBEDO = col * (1.0 - blackout);
 }

@@ -1331,7 +1331,7 @@ func _validate_maw_boss() -> void:
 		if phantom is Phantom and not (phantom as Phantom).is_escorting():
 			failures.append("A phantom alive at the turn did not flee to the escort ring")
 			break
-	for _i in 12:
+	for _i in int(ceil(MawBoss.TURN_SECONDS)):
 		boss._process(1.0)
 	if boss.stage != MawBoss.Stage.FIGHT or named[0] != "THE MAW":
 		failures.append("The turn did not open the fight under the boss's name")

@@ -21,6 +21,11 @@ var _sun: DirectionalLight3D
 var _ambient_color: Color
 var _sun_color: Color
 var _boss_mood: float = 0.0
+var _blackout: float = 0.0
+var _sun_energy: float = 1.0
+var _ambient_energy: float = 1.0
+var _background_energy: float = 1.0
+var _fog_energy: float = 1.0
 
 func _ready() -> void:
 	add_to_group("ArenaPresentation")
@@ -110,7 +115,7 @@ func set_boss_mood(amount: float, rift_position: Vector3, head: Vector3) -> void
 	var flicker := 1.0
 	if not calm and _boss_mood > 0.0 and _boss_mood < 1.0:
 		flicker = 0.45 + 0.55 * randf()
-	var lit := lerpf(1.0, 0.35, _boss_mood) * flicker
+	var lit := lerpf(1.0, 0.35, _boss_mood) * flicker * (1.0 - _blackout)
 	for material in _pylon_colors:
 		var base: Color = _pylon_colors[material]
 		(material as StandardMaterial3D).albedo_color = Color(base.r * lit, base.g * lit, base.b * lit, base.a * (lit if material.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED else 1.0))
@@ -119,6 +124,20 @@ func set_boss_mood(amount: float, rift_position: Vector3, head: Vector3) -> void
 		_environment.ambient_light_color = _ambient_color.lerp(BOSS_LIGHT, shift)
 	if _sun:
 		_sun.light_color = _sun_color.lerp(BOSS_LIGHT, shift)
+
+## The boss turn's blackout, 0 to 1: the sun, the ambient light, the sky, the floor, and the
+## pylons go out together, leaving only the rift (which is unshaded and keeps its own light).
+## Called every frame while it changes; set_boss_mood applies it to the pylons.
+func set_blackout(amount: float) -> void:
+	_blackout = clampf(amount, 0.0, 1.0)
+	if _floor_material:
+		_floor_material.set_shader_parameter("blackout", _blackout)
+	if _sun:
+		_sun.light_energy = _sun_energy * (1.0 - _blackout)
+	if _environment:
+		_environment.ambient_light_energy = _ambient_energy * (1.0 - _blackout)
+		_environment.background_energy_multiplier = _background_energy * (1.0 - _blackout * 0.92)
+		_environment.fog_light_energy = _fog_energy * (1.0 - _blackout * 0.9)
 
 func _cache_boss_mood_targets() -> void:
 	var emitters := _pylons.get_node_or_null("Emitters") as MeshInstance3D
@@ -134,9 +153,13 @@ func _cache_boss_mood_targets() -> void:
 	if world and world.environment:
 		_environment = world.environment
 		_ambient_color = _environment.ambient_light_color
+		_ambient_energy = _environment.ambient_light_energy
+		_background_energy = _environment.background_energy_multiplier
+		_fog_energy = _environment.fog_light_energy
 	_sun = get_node_or_null("../DirectionalLight3D") as DirectionalLight3D
 	if _sun:
 		_sun_color = _sun.light_color
+		_sun_energy = _sun.light_energy
 
 func _sky_material() -> ShaderMaterial:
 	if _environment == null or _environment.sky == null:

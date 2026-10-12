@@ -100,6 +100,9 @@ func _add_boss_and_hazards() -> void:
 	tentacle.set_shader_parameter("glow", MawTentacle.GLOW)
 	_add_quad(tentacle)
 	_add_quad(MawSlam.curtain_material())
+	var eye := ShaderMaterial.new()
+	eye.shader = MawEye.shared_shader()
+	_add_quad(eye)
 	for receives_shadows in [false, true]:
 		var energy := StandardMaterial3D.new()
 		energy.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

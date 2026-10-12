@@ -275,6 +275,9 @@ func set_tear(gain: float) -> void:
 	_tear_gain = maxf(gain, 1.0)
 	_apply_rift_scale(_rift_scale)
 
+func tear_gain() -> float:
+	return _tear_gain
+
 func rift_scale() -> float:
 	return _rift_scale
 

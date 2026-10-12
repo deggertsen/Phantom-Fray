@@ -24,16 +24,18 @@ const RING_COLOR := Color(1.0, 0.2, 0.42)
 const LANE_SHADER := preload("res://Resources/Materials/dodge_lane.gdshader")
 
 @export var variant_id: StringName = &"slam"
-## The tentacle rising overhead while the strip paints. This is the tell.
-@export var raise_seconds: float = 1.7
+## The tentacle rising overhead while the strip paints. This is the tell. 1.7 s plus a 0.4 s fall
+## felt slow next to the narrower strip; it hits 0.6 s sooner now.
+@export var raise_seconds: float = 1.3
 ## The fall itself, quick, after the tell.
-@export var fall_seconds: float = 0.4
-## Half the strip's width. The pink dodge's radius, a touch wider: one side-step clears it.
-@export var half_width: float = 0.7
+@export var fall_seconds: float = 0.3
+## Half the strip's width. 0.7 (a 1.4 m strip) was too wide to leave in a small room on Quest 3
+## (2026-10-11); at 0.35 a short side-step or a lean clears it.
+@export var half_width: float = 0.35
 ## How far the strip runs from the player toward the rift, along the fallen tentacle.
 @export var reach_toward_rift: float = 5.0
 ## And how far past the player, so stepping straight back is not a free dodge.
-@export var reach_behind: float = 1.2
+@export var reach_behind: float = 0.6
 ## The curtain's height above the floor, up toward the raised tentacle.
 @export var curtain_height: float = 4.5
 @export var base_score: int = 150

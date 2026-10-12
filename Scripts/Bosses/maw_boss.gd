@@ -25,7 +25,10 @@ enum Stage { IDLE, PHASE_ONE, TURN, FIGHT, RETREAT, GLIMPSE, DONE }
 const SweepScene := "res://Scenes/Hazards/resonance_sweep.tscn"
 const BOSS_LIGHT := Color(0.85, 0.12, 0.3)
 ## The turn, start to the first second of the fight.
-const TURN_SECONDS := 12.0
+const TURN_SECONDS := 13.5
+## How many tentacles pry the mouth open in the turn.
+const PRY_TENTACLES := 4
+const HEARTBEAT_PATH := "res://Assets/Audio/SFX/heartbeat.wav"
 ## The Maw tears this much wider (sideways only) than its phase-one size during the turn.
 const TORN_SCALE_GAIN := 1.6
 ## The escort band's floor and ceiling, in metres above the ground.
@@ -95,6 +98,10 @@ var _drain_carry: float = 0.0
 ## Anchor the refill has handed back so far.
 var _refilled: int = 0
 var _tentacle: MawTentacle
+var _pry: Array = []
+var _eye: MawEye
+var _heartbeat_player: AudioStreamPlayer
+var _blackout_amount: float = 0.0
 ## Phantoms circling the rift. Untyped: a freed one must not trip a typed assignment.
 var _escorts: Array = []
 var _steps: Array = []
@@ -199,6 +206,9 @@ func cleanup() -> void:
 	push_ups = 0
 	_paused = false
 	set_process(true)
+	_free_pry_tentacles()
+	_free_eye()
+	_set_blackout(0.0)
 	if is_instance_valid(_tentacle):
 		_tentacle.queue_free()
 	_tentacle = null
@@ -295,12 +305,15 @@ func _process(delta: float) -> void:
 		Stage.TURN:
 			_clock += delta
 			_tick_turn()
+			_tick_eye(delta)
 		Stage.FIGHT:
 			_clock += delta
 			_tick_fight(delta)
+			_tick_eye(delta)
 		Stage.RETREAT:
 			_clock += delta
 			_tick_retreat()
+			_tick_eye(delta)
 		Stage.GLIMPSE:
 			_clock += delta
 			_tick_glimpse()
@@ -358,47 +371,174 @@ func _tick_turn() -> void:
 	# 3. They run (1 s): every phantom still out turns and flees to a slow ring around the Maw.
 	if _beat("flee", 1.0):
 		_gather_escort(_rift.live_phantoms())
-	# 4. It tears (3 to 5 s): wider, the sky crack, the veins to the player's feet, the pylons, the light.
-	var tear := smoothstep(3.0, 5.0, _clock)
-	_rift.set_tear(lerpf(1.0, TORN_SCALE_GAIN, tear))
-	_set_turn_mood(tear)
-	# 5. The first tentacle (5 to 8 s): slides out along the floor, stops short, then rises.
-	if _beat("tentacle", 5.0):
+	# 4. Blackout (2 to 4 s): every light goes out but the rift, and a heartbeat in the dark.
+	_set_blackout(smoothstep(1.8, 2.3, _clock) * (1.0 - smoothstep(3.6, 4.6, _clock)))
+	if _beat("heartbeat_1", 2.3) or _beat("heartbeat_2", 3.1):
+		_play_heartbeat()
+		_pulse_controllers(0.55, 0.12)
+	# 5. They pry it open (3.6 to 7.2 s): tentacles reach out of the void, grip the rim, and tear
+	# it wider; the crimson light comes up as they pull. Then they let go and slip back.
+	if _beat("pry", 3.6):
+		_spawn_pry_tentacles()
+	var pull := smoothstep(4.4, 6.2, _clock)
+	_rift.set_tear(lerpf(1.0, TORN_SCALE_GAIN, pull))
+	_set_turn_mood(pull)
+	_pose_pry_tentacles(smoothstep(3.6, 4.4, _clock) * (1.0 - smoothstep(6.4, 7.2, _clock)))
+	if _beat("pry_done", 7.2):
+		_free_pry_tentacles()
+	# 6. The eye (6.2 s): it opens in the void and finds the player. Chen sees it.
+	if _beat("eye", 6.2):
+		_spawn_eye()
+	if _eye:
+		_eye.open = smoothstep(6.2, 6.9, _clock)
+		_eye.set_dilate(smoothstep(7.0, 7.6, _clock) * (1.0 - smoothstep(8.5, 10.0, _clock)))
+	if _beat("dread", 7.4) and comms:
+		comms.say("boss_dread")
+	# 7. The first tentacle (8.4 to 11 s): slides out of the mouth along the floor, stops short, rises.
+	if _beat("tentacle", 8.4):
 		_spawn_tentacle()
-	if _tentacle and _clock >= 5.0:
+	if _tentacle and _clock >= 8.4:
 		var frame := _player_frame()
-		if _clock < 5.5:
-			_tentacle.set_path(_blend(_collapsed(frame), _slide_pose(frame, 0.08), smoothstep(5.0, 5.5, _clock)))
-		elif _clock < 6.9:
-			_tentacle.set_path(_slide_pose(frame, lerpf(0.08, 1.0, smoothstep(5.5, 6.9, _clock))))
+		if _clock < 8.9:
+			_tentacle.set_path(_blend(_collapsed(frame), _slide_pose(frame, 0.08), smoothstep(8.4, 8.9, _clock)))
+		elif _clock < 10.0:
+			_tentacle.set_path(_slide_pose(frame, lerpf(0.08, 1.0, smoothstep(8.9, 10.0, _clock))))
 		else:
-			_tentacle.set_path(_rise_pose(frame, smoothstep(6.9, 8.0, _clock)))
-	# 6. Chen (8 to 10 s).
-	if _beat("chen", 8.0) and comms:
+			_tentacle.set_path(_rise_pose(frame, smoothstep(10.0, 11.0, _clock)))
+	# 8. Chen gathers herself (8.8 s).
+	if _beat("chen", 8.8) and comms:
 		comms.say("boss_holding_open")
 		comms.say("boss_not_a_phantom")
-	# 7. The roar (10 s): low and spatial, and a harmless ring rolls out below eye level.
-	if _beat("roar", 10.0):
+	# 9. The roar (11.6 s): low and spatial, and a harmless ring rolls out below eye level.
+	if _beat("roar", 11.6):
 		MawTurnFX.play_at(self, _roar_stream if _roar_stream else MawTurnFX.roar_stream(), _rift.portal_center(), 4.0)
 		_shockwave = MawTurnFX.shockwave(self, _rift.global_position, _reduced_flashes())
 		_pulse_controllers(0.9, 0.8)
 	_turn_haptics()
-	# 8. The fight (12 s).
+	# 10. The fight (13.5 s).
 	if _clock >= TURN_SECONDS:
 		_begin_fight()
 
-## The rumble felt in both hands through the turn: from the silence it grows with the tear, swells
-## as the tentacle rises over the player, and the roar lands as one long pulse. On Quest 3 the
-## first turn felt "ok, not amazing"; touch is the sense it had not used.
+## The rumble felt in both hands through the turn: low from the silence, gone in the blackout
+## (the heartbeat pulses carry it there), growing as the tentacles pull, swelling as the first
+## tentacle rises over the player; the roar lands as one long pulse.
 func _turn_haptics() -> void:
-	if _clock < 0.5 or _clock >= TURN_SECONDS:
+	if _clock < 0.5 or _clock >= TURN_SECONDS or (_clock > 2.0 and _clock < 3.6):
 		return
 	_haptic_clock -= get_physics_process_delta_time()
 	if _haptic_clock > 0.0:
 		return
 	_haptic_clock = 0.22
-	var swell := smoothstep(6.9, 8.0, _clock) * (1.0 - smoothstep(8.5, 9.5, _clock))
-	_pulse_controllers(lerpf(0.08, 0.32, smoothstep(0.5, 5.0, _clock)) + swell * 0.3, 0.2)
+	var swell := smoothstep(10.0, 11.0, _clock) * (1.0 - smoothstep(11.5, 12.5, _clock))
+	_pulse_controllers(lerpf(0.08, 0.32, smoothstep(3.6, 6.2, _clock)) + swell * 0.3, 0.2)
+
+# --- The turn's pieces: blackout, heartbeat, the prying tentacles, the eye -----------------
+
+func _set_blackout(amount: float) -> void:
+	if is_equal_approx(amount, _blackout_amount):
+		return
+	_blackout_amount = amount
+	var arena := get_tree().get_first_node_in_group("ArenaPresentation") if is_inside_tree() else null
+	if arena and arena.has_method("set_blackout"):
+		arena.set_blackout(amount)
+
+func _play_heartbeat() -> void:
+	if _heartbeat_player == null:
+		_heartbeat_player = AudioStreamPlayer.new()
+		_heartbeat_player.name = "TurnHeartbeat"
+		# Critical, because the turn ducks SFX.
+		_heartbeat_player.bus = &"Critical"
+		_heartbeat_player.volume_db = -2.0
+		if ResourceLoader.exists(HEARTBEAT_PATH):
+			_heartbeat_player.stream = load(HEARTBEAT_PATH)
+		add_child(_heartbeat_player)
+	if _heartbeat_player.stream:
+		_heartbeat_player.play()
+
+## The visible rim of the mouth, in metres from its middle: the portal shader draws the void out
+## to 0.48 of the quad's half size, shrunk to 0.75 of that while the rift's health is low.
+func _mouth_radius() -> Vector2:
+	var scale := _rift.rift_scale() if _rift else 2.0
+	var health := float(_rift.rift_health) / maxf(float(_rift.maximum_health), 1.0) if _rift else 1.0
+	var r := 0.48 * lerpf(0.75, 1.0, clampf(health, 0.0, 1.0)) * 2.0 * scale
+	return Vector2(r * _rift.tear_gain() if _rift else r, r)
+
+func _spawn_pry_tentacles() -> void:
+	_free_pry_tentacles()
+	for i in PRY_TENTACLES:
+		var limb := MawTentacle.new()
+		limb.name = "MawPry%d" % i
+		limb.base_radius = 0.34
+		limb.tip_radius = 0.05
+		limb.writhe = 0.1
+		add_child(limb)
+		_pry.append(limb)
+
+## `reach` 0 is coiled in the void, 1 is gripping the rim. The rim moves out as the tear widens.
+func _pose_pry_tentacles(reach: float) -> void:
+	if _pry.is_empty() or _rift == null:
+		return
+	var mouth := _rift.portal_center()
+	var to_player := _head() - mouth
+	to_player = to_player.normalized() if to_player.length_squared() > 0.01 else Vector3.BACK
+	var right := Vector3.UP.cross(to_player).normalized()
+	var up := to_player.cross(right).normalized()
+	var radius := _mouth_radius()
+	# Each limb stays close to the rim, out of the void just inside the edge and hooked over it
+	# like fingers on a door frame. Run from the middle out, they read as an X across the mouth.
+	for i in _pry.size():
+		var angle := PI * 0.25 + PI * 0.5 * i
+		var out := (right * cos(angle) + up * sin(angle)).normalized()
+		var rim := mouth + right * cos(angle) * radius.x + up * sin(angle) * radius.y + to_player * 0.15
+		var hidden := mouth.lerp(rim, 0.7) - to_player * 1.0
+		var grip: Array[Vector3] = [
+			hidden,
+			mouth.lerp(rim, 0.78) + to_player * 0.1,
+			mouth.lerp(rim, 0.95) + to_player * 0.55,
+			rim + out * 0.3 + to_player * 0.6,
+			rim + out * 0.55 + to_player * 0.3,
+			rim + out * 0.6 - to_player * 0.25,
+		]
+		var coiled: Array[Vector3] = []
+		for _p in grip.size():
+			coiled.append(hidden)
+		(_pry[i] as MawTentacle).set_path(_blend(coiled, grip, reach))
+
+func _free_pry_tentacles() -> void:
+	for limb in _pry:
+		if is_instance_valid(limb):
+			limb.queue_free()
+	_pry.clear()
+
+func _spawn_eye() -> void:
+	if is_instance_valid(_eye):
+		_eye.queue_free()
+	_eye = MawEye.new()
+	_eye.name = "MawEye"
+	_eye.radius = _mouth_radius().y * 0.42
+	add_child(_eye)
+	_place_eye()
+
+func _place_eye() -> void:
+	if _eye == null or _rift == null:
+		return
+	var mouth := _rift.portal_center()
+	var to_player := _head() - mouth
+	to_player = to_player.normalized() if to_player.length_squared() > 0.01 else Vector3.BACK
+	_eye.global_position = mouth + to_player * 0.3
+
+## Every frame the eye exists: it stays in the mouth and follows the player's head.
+func _tick_eye(delta: float) -> void:
+	if not is_instance_valid(_eye):
+		_eye = null
+		return
+	_place_eye()
+	_eye.watch(_head(), delta)
+
+func _free_eye() -> void:
+	if is_instance_valid(_eye):
+		_eye.queue_free()
+	_eye = null
 
 func _pulse_controllers(amplitude: float, seconds: float) -> void:
 	var interface := XRServer.primary_interface
@@ -453,6 +593,10 @@ func _begin_fight() -> void:
 	stage = Stage.FIGHT
 	_clock = 0.0
 	_fired.clear()
+	_free_pry_tentacles()
+	_set_blackout(0.0)
+	if _eye:
+		_eye.open = 1.0
 	_drain_carry = 0.0
 	_refilled = 0
 	_restore_audio()
@@ -748,6 +892,9 @@ func _begin_retreat() -> void:
 		comms.say("boss_retreat")
 
 func _tick_retreat() -> void:
+	if _eye:
+		# It shuts as it lets go.
+		_eye.open = 1.0 - smoothstep(0.0, 0.9, _clock)
 	if _tentacle:
 		_tentacle.writhe = 0.9
 		_tentacle.set_path(_blend(_from_pose, _collapsed(_player_frame()), smoothstep(0.0, RETREAT_SECONDS, _clock)))
@@ -760,6 +907,7 @@ func _tick_retreat() -> void:
 		if _tentacle:
 			_tentacle.queue_free()
 		_tentacle = null
+		_free_eye()
 		stage = Stage.DONE
 		_rift.release_hold()
 		retreated.emit()
@@ -837,7 +985,10 @@ func _player_frame() -> Dictionary:
 	var r := f.cross(Vector3.UP).normalized()
 	var half := 2.0 * (_rift.rift_scale() if _rift else 2.0)
 	var mouth := _rift.portal_center() if _rift else p + f * distance + Vector3.UP * 4.0
-	var root := Vector3(mouth.x, mouth.y - half * 0.55, mouth.z) - f * 0.5
+	# Out of the middle of the visible mouth, just in front of it. It came from 0.55 of the quad's
+	# half size below the middle, which once the tear stopped lifting the mouth was below the void
+	# the shader draws, so on Quest 3 it seemed to come out of nothing.
+	var root := Vector3(mouth.x, mouth.y - half * 0.12, mouth.z) - f * 0.4
 	return {"p": p, "f": f, "r": r, "distance": distance, "root": root, "head": head}
 
 func _collapsed(frame: Dictionary) -> Array[Vector3]:

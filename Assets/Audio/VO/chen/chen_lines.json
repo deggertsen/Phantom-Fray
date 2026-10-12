@@ -125,6 +125,11 @@
       "note": "The Maw's health hit zero and the seal is starting, like every seal before it. She starts her usual relief and is cut off half a second in; record the whole word, the game stops it.",
       "lines": ["That's it, it's clos—"]
     },
+    "boss_dread": {
+      "priority": 3, "cooldown": 0, "tag": "[whispered, afraid]",
+      "note": "The lights died, tentacles pried the Maw open, and an eye just opened in the void and looked at the operator. She forgets she is on comms for a second. Barely audible, then she gathers herself in the next line.",
+      "lines": ["Oh no…", "No. No, no…", "Oh god…", "That's… looking at you."]
+    },
     "boss_holding_open": {
       "priority": 3, "cooldown": 0, "tag": "[quiet, unsettled]",
       "note": "Silence after the false seal. The Maw tore wider instead of closing. A breath first, then quietly.",
