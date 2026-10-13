@@ -1,6 +1,6 @@
 # Exercise Mechanics Exploration: Squats, Jumps, Push-ups
 
-**Written:** 2026-10-09. **Updated** the same day with five rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit).
+**Written:** 2026-10-09. **Updated** through 2026-10-13 with six rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit).
 **Status:** Exploration. Nothing here is scheduled except where the roadmap links it. A squat detector prototype exists behind a debug flag (`Scripts/Player/squat_detector.gd`, off by default), the resonance sweep is built as a debug-only drill (`Scripts/Hazards/resonance_sweep.gd`, prototype plan Step 3), and The Maw's boss phase is built as a debug-only mission (`Scripts/Bosses/maw_boss.gd`, Step 6).
 **Question:** How could Phantom Fray require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
 
@@ -59,6 +59,16 @@ Fifth round:
 29. **The Maw's break odds as recommended, as a first pass:** the first Maw at the movement difficulty always breaks, then about one in three, never three in a row without a boss, with a readings hint on the war map.
 30. **The tentacle glimpse appears rarely at Assist, Standard, and Operator** as foreshadowing.
 31. **The weaker silence beat with Play My Own Music is accepted.** It is a power-user feature; by the time a player reaches a boss they have heard the game's own music through many missions.
+
+Sixth round, from the headset sessions of 2026-10-11 and 2026-10-13 (details in [Playtest_Log.md](Playtest_Log.md)):
+
+32. **Bows are caught by the head's early arc, not the eyes.** Looking up while bowing beat the pitch check; the arc (forward travel over the fall, from where the descent began) separates them. The limit sits high (0.75): David would rather let a sloppy bow through than reject a real squat.
+33. **Sweeps pass 1.6 to 1.7 s after their tell starts** ("perfect"); the rests between attacks are 1.6 to 2.2 s.
+34. **The slam paints a narrow strip, not a ring.** The pink lane's chevrons on the floor where it will land, a wall of light down each edge, 0.7 m wide (1.4 m was too wide for a small room), hitting 1.6 s after the tell starts.
+35. **Push-ups count by head height alone,** so looking forward works; a rep is 12 cm of head travel.
+36. **The entrance:** blackout with a heartbeat, tentacles prying the mouth open, Chen's whispered dread. The eye was tried and removed ("odd rather than scary"). The prying tentacles hold the rim for the whole fight and let go as it retreats.
+37. **Jumps are in the fight:** a jump pair of low sweeps along the floor ends each attack cycle, judged by takeoff speed and head rise.
+38. **Chen is voiced** for every boss and sweep line (ElevenLabs, her usual voice).
 
 ---
 
@@ -145,6 +155,8 @@ Recommended: A in every boss fight, since it is the boss's own attack, and D not
 **Length.** With no time limit, length is set by rift health, the spawn rate, `max_live`, and the anchor. On a Maw that will break, phase one's health is scaled down (the player cannot tell from the bar) so the whole mission stays inside five to ten minutes (decision 20).
 
 ### The turn: opening phase two
+
+*As built (2026-10-13), the turn runs 13.5 s: false seal, silence, the phantoms flee, a blackout with a heartbeat, tentacles prying the mouth open (they then hold the rim all fight), Chen's whispered dread, the first tentacle, the roar. See decision 36 and `Scripts/Bosses/maw_boss.gd`. The beat list below is the original design.*
 
 The turn has to land like the opening of a boss fight (decision 21). The trick is that the player thinks they have won. Phase one ends exactly the way every rift in the game has ended so far, and the boss takes that away from them. Beat by beat, about twelve seconds:
 
@@ -607,7 +619,7 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 - **Desktop stills:** `Godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/boss_capture.tscn` (`Scripts/Debug/boss_capture.gd`) presses Shift+B, cuts phase one short, and writes every beat of the turn, a sweep drawn back and crossing, a volley, a slam, a spent tentacle with push-ups, the retreat, and the bracer to `reports/boss/current/`.
 - **Not built yet:** the low sweep and real push-up detection (Step 7), feeding (decision 28), the readings hint, a war-map home. The torn Maw reads smaller than intended because the portal shader draws only the middle of its quad, and the RIFT beacon stays up through the fight. With Play My Own Music on, the silence is carried by the duck alone, as decision 31 accepts. This is the Phase 7 Maw finale.
 
-**Step 7. The rest of the tentacle attacks.** The low sweep (if test 3 passed), then push-ups on the spent tentacle with hand tracking (if tests 4, 7, and 8 passed), then the feeding escort if decision 28 lands that way.
+**Step 7. The rest of the tentacle attacks. Built (2026-10-11 to 2026-10-13).** Push-ups on the spent tentacle count from head height (`PushUpDetector`), with controllers; hand tracking (tests 7 and 8) is still to run. The low sweep is `ResonanceSweep.low`, judged by `SquatDetector` jump tracking, as a jump pair at the end of the boss cycle. Feeding stays deferred (decision 28).
 
 ---
 
