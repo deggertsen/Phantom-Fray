@@ -12,7 +12,10 @@ class_name HandTrackingProbe
 ##
 ## Left thumbstick click: pause or resume XR_META_simultaneous_hands_and_controllers.
 ## Right thumbstick click: reset the counters.
-## Every punch and every drop is also printed with a HANDTEST prefix, for `adb logcat -s godot`.
+## Every punch, drop, change of input, and change of confidence is also printed with a HANDTEST
+## prefix, for `adb logcat -s godot`. Punch and drop lines carry the finger curl and where the palm
+## was relative to the head (degrees right and up of straight ahead), to show fists and the edges
+## of the camera view without the overlay.
 ##
 ## https://docs.godotengine.org/en/4.7/classes/class_xrhandtracker.html
 ## https://github.com/GodotVR/godot_openxr_vendors/blob/5.1.0-stable/doc_classes/OpenXRMetaSimultaneousHandsAndControllersExtension.xml
@@ -69,7 +72,12 @@ class Hand:
 	var punch_peak_reported: float = 0.0
 	var punch_peak_computed: float = 0.0
 	var punch_dropped: bool = false
+	var punch_min_curl: float = 1.0
 	var lost_seconds: float = 0.0
+	## Palm direction from the head while tracked: degrees right (x) and up (y) of straight ahead.
+	var view: Vector2 = Vector2.ZERO
+	var last_input: String = ""
+	var last_confidence: int = -1
 
 	func _init(hand_side: StringName) -> void:
 		side = hand_side
@@ -163,6 +171,10 @@ func _read_hand(hand: Hand, delta: float) -> void:
 	var velocity_valid := bool(palm_flags & XRHandTracker.HAND_JOINT_FLAG_LINEAR_VELOCITY_VALID)
 	var velocity := tracker.get_hand_joint_linear_velocity(XRHandTracker.HAND_JOINT_PALM)
 	if tracked:
+		var camera := get_viewport().get_camera_3d()
+		if camera:
+			var local := camera.global_transform.affine_inverse() * (get_parent() as Node3D).global_transform * palm
+			hand.view = Vector2(rad_to_deg(atan2(local.x, -local.z)), rad_to_deg(atan2(local.y, -local.z)))
 		var curls := PackedFloat32Array()
 		for finger in FINGER_COUNT:
 			var points := PackedVector3Array()
@@ -172,6 +184,20 @@ func _read_hand(hand: Hand, delta: float) -> void:
 			curls.append(finger_curl(points))
 		set_curl(hand, curls)
 	sample_hand(hand, _time, delta, tracked, palm, velocity, velocity_valid)
+	_log_changes(hand)
+
+## Prints when a hand switches input (HAND / CONTROLLER / BOTH / NONE) or tracking confidence,
+## so the simultaneous test can be timed from logcat.
+func _log_changes(hand: Hand) -> void:
+	var input := hand.input_name()
+	if input != hand.last_input:
+		print("HANDTEST input %s t=%.2f %s -> %s source=%s" % [
+			hand.side, _time, hand.last_input if hand.last_input else "start", input, _source_name(hand.source),
+		])
+		hand.last_input = input
+	if hand.present and hand.confidence != hand.last_confidence:
+		print("HANDTEST conf %s t=%.2f %s joints=%d" % [hand.side, _time, _confidence_name(hand.confidence), hand.joints_tracked])
+		hand.last_confidence = hand.confidence
 
 ## One step of the drop, jump, punch, and peak measurement. Split from _process so the
 ## validation runner can feed it a recorded motion.
@@ -181,7 +207,9 @@ func sample_hand(hand: Hand, now: float, delta: float, tracked: bool, palm: Vect
 		hand.drops += 1
 		if hand.in_punch:
 			hand.punch_dropped = true
-		print("HANDTEST drop %s t=%.2f moving=%.2f" % [hand.side, now, hand.computed_speed])
+		print("HANDTEST drop %s t=%.2f moving=%.2f view=%+.0f,%+.0f curl=%.2f" % [
+			hand.side, now, hand.computed_speed, hand.view.x, hand.view.y, hand.curl,
+		])
 	hand.tracked = tracked
 	if not tracked:
 		hand.has_last = false
@@ -213,7 +241,9 @@ func sample_hand(hand: Hand, now: float, delta: float, tracked: bool, palm: Vect
 		hand.punch_dropped = false
 		hand.punch_peak_reported = 0.0
 		hand.punch_peak_computed = 0.0
+		hand.punch_min_curl = hand.curl
 	if hand.in_punch:
+		hand.punch_min_curl = minf(hand.punch_min_curl, hand.curl)
 		hand.punch_peak_reported = maxf(hand.punch_peak_reported, hand.reported_speed)
 		hand.punch_peak_computed = maxf(hand.punch_peak_computed, hand.computed_speed)
 		if speed < punch_end_speed:
@@ -320,8 +350,9 @@ func _end_punch(hand: Hand, now: float) -> void:
 	hand.punches += 1
 	if hand.punch_dropped:
 		hand.dropped_punches += 1
-	print("HANDTEST punch %s t=%.2f peak_rep=%.2f peak_calc=%.2f dropped=%s" % [
+	print("HANDTEST punch %s t=%.2f peak_rep=%.2f peak_calc=%.2f dropped=%s min_curl=%.2f view=%+.0f,%+.0f" % [
 		hand.side, now, hand.punch_peak_reported, hand.punch_peak_computed, hand.punch_dropped,
+		hand.punch_min_curl, hand.view.x, hand.view.y,
 	])
 
 func _palm_marker(hand: Hand) -> XRNode3D:
