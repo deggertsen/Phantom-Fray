@@ -1,9 +1,10 @@
 extends Node
 class_name SquatDetector
 
-## Prototype: reports squats from head height alone, against a calibrated standing height.
-## Off by default. Turn on `debug_enabled` on the Player's SquatDetector node in a debug build
-## to see the state, depth, and rep count on a label over the right wrist.
+## Reports squats and jumps from head height alone, against a calibrated standing height. Runs in
+## every build: the resonance sweep and the boss Maw judge squats and jumps by it. Turn on
+## `debug_enabled` on the Player's SquatDetector node in a debug build to see the state, depth,
+## and rep count on a label over the right wrist and to log SQUAT lines for logcat.
 ## See development/Exercise_Mechanics_Exploration.md for the thresholds and what to test.
 ##
 ## XRCamera3D.position is the head in XROrigin3D space. With the default Stage reference space
@@ -14,6 +15,9 @@ signal calibrated(standing_height: float)
 signal squat_reached(depth_ratio: float)
 signal squat_completed(depth_ratio: float, seconds: float)
 signal squat_rejected(reason: StringName)
+## A jump: a takeoff of at least `jump_takeoff_speed` that lifted the head `jump_height` above standing.
+signal jumped(takeoff_speed: float)
+signal landed(seconds_up: float)
 
 enum State { CALIBRATING, STANDING, DIPPING, SQUAT, HOLD }
 
@@ -42,6 +46,12 @@ enum State { CALIBRATING, STANDING, DIPPING, SQUAT, HOLD }
 ## David would rather let a sloppy bow through than reject a real squat, so the limit sits high.
 @export var max_early_travel_per_drop: float = 0.75
 @export var early_ratio: float = 0.08
+## A jump takes off at least this fast (m/s upward). Quest 3, 2026-10-09: ten jumps took off at
+## 1.89 to 2.15 m/s, ten calf raises peaked at 0.30 to 0.54 m/s.
+@export var jump_takeoff_speed: float = 1.0
+## And lifts the head at least this far above standing height (m). The jumps rose 21 to 31 cm;
+## standing up fast out of a squat or a bend can reach 1.4 m/s but overshot standing by 3 to 5 cm.
+@export var jump_height: float = 0.06
 ## Head vertical speed under this counts as still, for calibration.
 @export var still_speed: float = 0.15
 @export var calibration_seconds: float = 1.0
@@ -82,6 +92,14 @@ var _rise_peak: float = 0.0
 var _rise_top: float = 0.0
 var _rise_time: float = 0.0
 var _logged_standing: float = -1.0
+## Jump tracking, on the detector's own clock.
+var _clock: float = 0.0
+var _airborne: bool = false
+var _candidate_time: float = -1000.0
+var _candidate_speed: float = 0.0
+var _takeoff_time: float = -1000.0
+var _land_time: float = -1000.0
+var _last_above: float = 0.0
 ## Where the current descent began, flat and its height, and which way the player faced.
 var _stand_xz: Vector2 = Vector2.ZERO
 var _stand_facing: Vector2 = Vector2.ZERO
@@ -93,12 +111,11 @@ const PATH_DEPTHS: Array[float] = [0.05, 0.10, 0.15, 0.20, 0.30]
 var _path: PackedStringArray = PackedStringArray()
 
 func _ready() -> void:
-	if not debug_enabled or not OS.is_debug_build():
-		set_physics_process(false)
-		return
-	_log = true
 	var player := get_parent()
 	camera = player.get_node_or_null("XRCamera3D") as Node3D
+	if not debug_enabled or not OS.is_debug_build():
+		return
+	_log = true
 	var wrist := player.get_node_or_null("RightHandController") as Node3D
 	if wrist:
 		_label = Label3D.new()
@@ -124,6 +141,7 @@ func _physics_process(delta: float) -> void:
 func sample(head: Vector3, pitch_degrees: float, delta: float, facing: Vector2 = Vector2.ZERO) -> void:
 	if delta <= 0.0:
 		return
+	_clock += delta
 	_last_head = head
 	_last_pitch = pitch_degrees
 	if not is_nan(_previous_y):
@@ -141,6 +159,7 @@ func sample(head: Vector3, pitch_degrees: float, delta: float, facing: Vector2 =
 	depth_ratio = drop / standing_height
 	_follow_standing(head.y, still, delta)
 	_track_arc(head, facing)
+	_track_jump(head.y)
 	if _log:
 		_log_rise(head.y, delta)
 		if absf(standing_height - _logged_standing) > 0.02:
@@ -266,6 +285,42 @@ func _track_arc(head: Vector3, facing: Vector2) -> void:
 		var forward := offset.dot(_stand_facing)
 		var side := offset.dot(Vector2(-_stand_facing.y, _stand_facing.x))
 		_path.append("%d%%:f%+.2f/s%+.2f" % [int(PATH_DEPTHS[_path.size()] * 100.0), forward, side])
+
+## In the air now: a jump has taken off and the head has not come back down to standing.
+func is_airborne() -> bool:
+	return _airborne
+
+## Seconds since the last jump landed; very large if there has been none.
+func seconds_since_landing() -> float:
+	return _clock - _land_time
+
+## Leaving the ground right now: a takeoff fast enough for a jump in the last 0.2 s, with the head
+## already over standing but not yet high enough to call it a jump.
+func is_taking_off() -> bool:
+	return not _airborne and _clock - _candidate_time <= 0.2 and _last_above > 0.0
+
+func _track_jump(head_y: float) -> void:
+	var above := head_y - standing_height
+	_last_above = above
+	if not _airborne:
+		if vertical_speed >= jump_takeoff_speed and depth_ratio < 0.3:
+			if _clock - _candidate_time > 0.35:
+				_candidate_speed = 0.0
+			_candidate_time = _clock
+			_candidate_speed = maxf(_candidate_speed, vertical_speed)
+		if _clock - _candidate_time <= 0.35 and above >= jump_height:
+			_airborne = true
+			_takeoff_time = _candidate_time
+			if _log:
+				print("SQUAT jump takeoff=%.2f above=%.3f" % [_candidate_speed, above])
+			jumped.emit(_candidate_speed)
+		return
+	if (above <= 0.02 and vertical_speed <= 0.0) or _clock - _takeoff_time > 1.0:
+		_airborne = false
+		_land_time = _clock
+		if _log:
+			print("SQUAT land secs=%.2f" % (_clock - _takeoff_time))
+		landed.emit(_clock - _takeoff_time)
 
 func _squat_fault(drop: float, pitch_degrees: float) -> StringName:
 	if _early_travel_per_drop > max_early_travel_per_drop:

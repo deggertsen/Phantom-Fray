@@ -67,6 +67,7 @@ var _introduced: Dictionary = {}
 var _scan_left: float = 0.0
 ## Sweeps lit since her last bend correction; -1 until she has made one this mission.
 var _sweeps_since_bend_call: int = -1
+var _jump_called: bool = false
 
 func _ready() -> void:
 	add_to_group("ChenComms")
@@ -214,7 +215,7 @@ func _connect() -> void:
 func _on_node_added(node: Node) -> void:
 	var sweep := node as ResonanceSweep
 	if sweep:
-		sweep.telegraph_started.connect(_on_sweep_lit)
+		sweep.telegraph_started.connect(_on_sweep_lit.bind(sweep))
 		sweep.resolved.connect(_on_sweep_resolved)
 
 func _watch_round(delta: float) -> void:
@@ -237,6 +238,7 @@ func _watch_round(delta: float) -> void:
 
 func _begin_mission() -> void:
 	_queue.clear()
+	_jump_called = false
 	_rifts_this_mission = 0
 	_weakened.clear()
 	_last_multiplier = 1.0
@@ -295,7 +297,12 @@ func _on_strike_rejected(reason: StringName) -> void:
 	if reason == &"wrong_hand":
 		say("wrong_hand")
 
-func _on_sweep_lit() -> void:
+func _on_sweep_lit(sweep: ResonanceSweep) -> void:
+	if is_instance_valid(sweep) and sweep.low:
+		# A low sweep is jumped. The first one in a mission comes with the space check.
+		say("sweep_jump" if _jump_called else "sweep_jump_first")
+		_jump_called = true
+		return
 	if _sweeps_since_bend_call >= 0:
 		_sweeps_since_bend_call += 1
 	say("sweep")

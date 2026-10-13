@@ -33,6 +33,10 @@ void fragment() {
 
 @export var base_radius: float = 0.95
 @export var tip_radius: float = 0.07
+## Mesh detail. The four limbs holding the rim open through the fight use less: the mesh is
+## rebuilt every frame, on the CPU, on Quest.
+@export var segments: int = SEGMENTS
+@export var sides: int = SIDES
 
 ## How far it undulates on its own, in metres at the tip.
 var writhe: float = 0.3
@@ -94,8 +98,8 @@ func _rebuild() -> void:
 	if _points.size() < 2:
 		return
 	var centers: Array[Vector3] = []
-	for i in SEGMENTS + 1:
-		var t := float(i) / float(SEGMENTS)
+	for i in segments + 1:
+		var t := float(i) / float(segments)
 		centers.append(_sample(t) + _undulation(t))
 	# Parallel-transported frames keep the tube from twisting as it bends.
 	var tangent := (centers[1] - centers[0]).normalized()
@@ -111,16 +115,16 @@ func _rebuild() -> void:
 		normal = (normal - forward * normal.dot(forward)).normalized()
 		var binormal := forward.cross(normal)
 		tangent = forward
-		var t := float(i) / float(SEGMENTS)
+		var t := float(i) / float(segments)
 		var radius := lerpf(base_radius, tip_radius, pow(t, 0.75))
 		if i == centers.size() - 1:
 			radius = tip_radius * 0.3
 		rings.append([centers[i], normal, binormal, radius, t])
 	_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in rings.size() - 1:
-		for side in SIDES:
-			var a := float(side) / SIDES * TAU
-			var b := float(side + 1) / SIDES * TAU
+		for side in sides:
+			var a := float(side) / sides * TAU
+			var b := float(side + 1) / sides * TAU
 			_quad(rings[i], rings[i + 1], a, b)
 	_mesh.surface_end()
 

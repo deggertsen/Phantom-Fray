@@ -60,6 +60,16 @@
       "note": "Rails of rift energy just lit at head height. A blade is about to sweep through and the operator has about a second to squat under it. One or two sharp words, half a second at most. Dropped if she is mid-line, because a late call is worse than none.",
       "lines": ["Low!", "Get low!", "Down!", "Under it!"]
     },
+    "sweep_jump": {
+      "priority": 3, "cooldown": 0, "max_wait": 0.6, "tag": "[urgent]",
+      "note": "Rails just lit at shin height. A tentacle is about to sweep along the floor and the operator has about a second to jump it. One or two sharp words, half a second at most. Dropped if she is mid-line.",
+      "lines": ["Jump!", "Over it!", "Feet up!", "Jump it!"]
+    },
+    "sweep_jump_first": {
+      "priority": 3, "cooldown": 0, "max_wait": 0.6, "tag": "[urgent]",
+      "note": "The first low sweep of the mission: rails just lit at shin height. The jump call and a quick space check in one breath, under two seconds.",
+      "lines": ["It's going for your feet. Jump!", "Low one, clear space, jump!"]
+    },
     "sweep_bend": {
       "priority": 2, "cooldown": 1, "tag": "[instructive]",
       "note": "The operator got under the sweep, but by bending at the waist or dropping their head instead of squatting. It still counted. A quick form tip, coach not critic. At most once every three sweeps.",
@@ -127,8 +137,8 @@
     },
     "boss_dread": {
       "priority": 3, "cooldown": 0, "tag": "[whispered, afraid]",
-      "note": "The lights died, tentacles pried the Maw open, and an eye just opened in the void and looked at the operator. She forgets she is on comms for a second. Barely audible, then she gathers herself in the next line.",
-      "lines": ["Oh no…", "No. No, no…", "Oh god…", "That's… looking at you."]
+      "note": "The lights died and tentacles just pried the Maw open from inside. She forgets she is on comms for a second. Barely audible, then she gathers herself in the next line.",
+      "lines": ["Oh no…", "No. No, no…", "Oh god…"]
     },
     "boss_holding_open": {
       "priority": 3, "cooldown": 0, "tag": "[quiet, unsettled]",

@@ -57,6 +57,13 @@ const SAMPLE_RATE := 22050
 ## Off when something else carries the motion, such as a boss tentacle. Detection runs the same.
 @export var blade_visible: bool = true
 @export var rails_visible: bool = true
+## A low sweep runs along the floor at `jump_line` and is cleared by a jump, not a squat: the
+## player must be in the air as it passes, or have just landed, or be leaving the ground.
+@export var low: bool = false
+@export var jump_line: float = 0.28
+## How long after the blade reaches the player a takeoff still counts. Missing a real jump
+## punishes a player who did the right thing, so the window leans late.
+@export var jump_grace: float = 0.15
 
 var standing_height: float = FALLBACK_STANDING
 var sweep_height: float = FALLBACK_STANDING * (1.0 - 0.12)
@@ -196,6 +203,9 @@ func advance(delta: float) -> void:
 	# How far the blade still has to go to reach the head, along the sweep.
 	var ahead := (start_distance - _blade_travel) + (head - _center).dot(_direction)
 	var under_blade := absf((head - _center).dot(_right())) <= BLADE_WIDTH * 0.5
+	if low:
+		_judge_jump(ahead, under_blade)
+		return
 	if under_blade and head.y >= sweep_height and ahead <= contact_lead and _previous_ahead > 0.0:
 		_hit()
 		return
@@ -204,15 +214,34 @@ func advance(delta: float) -> void:
 		return
 	_previous_ahead = ahead
 
+## A low sweep's judgement: as the blade reaches the player, a jump in progress, a landing in
+## the last quarter second, or a takeoff under way clears it. Otherwise it waits jump_grace for a
+## late takeoff before it hits. Off to the side of the blade is always clear.
+func _judge_jump(ahead: float, under_blade: bool) -> void:
+	if ahead > 0.0:
+		_previous_ahead = ahead
+		return
+	if not under_blade or _jumping():
+		_clear(under_blade)
+		return
+	if -ahead / maxf(blade_speed, 0.01) >= jump_grace:
+		_hit()
+
+func _jumping() -> bool:
+	if _detector == null or _detector.standing_height <= 0.0:
+		# No calibrated detector: anything well above the head's height at spawn counts.
+		return _head_position().y > _floor_height() + standing_height + 0.06
+	return _detector.is_airborne() or _detector.seconds_since_landing() <= 0.25 or _detector.is_taking_off()
+
 func _clear(under_blade: bool) -> void:
 	_judged = true
 	crossed.emit(true)
-	var bend := _bend_fault()
+	var bend := &"" if low else _bend_fault()
 	resolved.emit({
 		"variant_id": variant_id,
 		"valid": true,
 		"sweet_spot": false,
-		"resolution_kind": &"sweep",
+		"resolution_kind": &"jump" if low else &"sweep",
 		"base_score": base_score,
 		"rift_damage": rift_damage,
 		"hit_quality": 0.0,
@@ -297,7 +326,7 @@ func _lock_height() -> void:
 		if standing_height < MIN_STANDING:
 			standing_height = FALLBACK_STANDING
 	_height_measured = true
-	sweep_height = floor_y + standing_height * (1.0 - squat_depth)
+	sweep_height = floor_y + (jump_line if low else standing_height * (1.0 - squat_depth))
 
 func _head_position() -> Vector3:
 	if _camera:

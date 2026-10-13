@@ -21,6 +21,8 @@ func _run_validation() -> void:
 	await _validate_pink_dodge()
 	_validate_squat_detector()
 	_validate_push_up_detector()
+	_validate_jump_detection()
+	await _validate_low_sweep()
 	_validate_maw_break_odds()
 	await _validate_maw_boss()
 	await _validate_maw_glimpse()
@@ -1087,6 +1089,8 @@ func _validate_resonance_sweep() -> void:
 	var detector := SquatDetector.new()
 	detector.name = "SquatDetector"
 	player.add_child(detector)
+	# It runs every physics frame now; the runner drives it by hand.
+	detector.set_physics_process(false)
 	var standing := Vector3(0.0, 1.70, 0.0)
 	_drive_head(detector, standing, standing, 0.0, 0.0, 1.5)
 	camera.position = standing
@@ -1528,3 +1532,90 @@ func _validate_push_up_detector() -> void:
 	if count[0] != 5 or push.in_plank:
 		failures.append("Push-up detector took a deep squat for a plank")
 	push.free()
+
+## Jumps from head height, shaped like the Quest 3 jump test (2026-10-09): a jump takes off near
+## 2 m/s and lifts the head well over standing; a calf raise and a fast stand-up out of a squat do not.
+func _validate_jump_detection() -> void:
+	var detector := SquatDetector.new()
+	var standing := Vector3(0.0, 1.62, 0.0)
+	_drive_head(detector, standing, standing, 0.0, 0.0, 1.5)
+	var jumps := [0]
+	detector.jumped.connect(func(_speed: float) -> void: jumps[0] += 1)
+	_drive_head(detector, standing, Vector3(0.0, 1.70, 0.0), 0.0, 0.0, 0.25)
+	_drive_head(detector, Vector3(0.0, 1.70, 0.0), standing, 0.0, 0.0, 0.25)
+	_drive_head(detector, standing, standing, 0.0, 0.0, 0.5)
+	if jumps[0] != 0:
+		failures.append("Jump detection took a calf raise for a jump")
+	var bottom := Vector3(0.0, 1.0, 0.0)
+	_drive_head(detector, standing, bottom, 0.0, 0.0, 0.6)
+	_drive_head(detector, bottom, Vector3(0.0, 1.66, 0.0), 0.0, 0.0, 0.4)
+	_drive_head(detector, Vector3(0.0, 1.66, 0.0), standing, 0.0, 0.0, 0.2)
+	_drive_head(detector, standing, standing, 0.0, 0.0, 0.5)
+	if jumps[0] != 0:
+		failures.append("Jump detection took a fast stand-up out of a squat for a jump")
+	var dip := Vector3(0.0, 1.50, 0.0)
+	var top := Vector3(0.0, 1.88, 0.0)
+	_drive_head(detector, standing, dip, 0.0, 0.0, 0.15)
+	_drive_head(detector, dip, top, 0.0, 0.0, 0.2)
+	if jumps[0] != 1 or not detector.is_airborne():
+		failures.append("Jump detection missed a jump (%d, airborne %s)" % [jumps[0], detector.is_airborne()])
+	_drive_head(detector, top, standing, 0.0, 0.0, 0.25)
+	_drive_head(detector, standing, standing, 0.0, 0.0, 0.1)
+	if detector.is_airborne() or detector.seconds_since_landing() > 0.2:
+		failures.append("Jump detection did not land the jump")
+	detector.free()
+
+## A low sweep along the floor: standing still takes the hit; a jump timed to the pass clears it.
+func _validate_low_sweep() -> void:
+	var sweep_scene := load(MissionCatalog.scene_path("sweep")) as PackedScene
+	var player := Node3D.new()
+	player.name = "LowSweepTestPlayer"
+	player.add_to_group("Player")
+	var camera := Node3D.new()
+	camera.name = "XRCamera3D"
+	player.add_child(camera)
+	root.add_child(player)
+	camera.position = Vector3(0.0, 1.62, 0.0)
+	var detector := SquatDetector.new()
+	detector.name = "SquatDetector"
+	player.add_child(detector)
+	detector.set_physics_process(false)
+	_drive_head(detector, camera.position, camera.position, 0.0, 0.0, 1.5)
+	var ahead := Vector3(0.0, 1.5, -4.0)
+	for jump in [false, true]:
+		var sweep := sweep_scene.instantiate() as ResonanceSweep
+		sweep.low = true
+		sweep.position = ahead
+		root.add_child(sweep)
+		sweep.set_physics_process(false)
+		sweep.set_process(false)
+		# Earlier tests may leave another Player in the group; judge by this one's detector and head.
+		sweep._detector = detector
+		sweep._camera = camera
+		sweep._player = player
+		if absf(sweep.sweep_height - sweep.jump_line) > 0.01:
+			failures.append("Low sweep did not run at its jump line: %.3f" % sweep.sweep_height)
+		var seen := _watch_sweep(sweep)
+		var step := 1.0 / 72.0
+		var reach := sweep.telegraph_seconds + sweep.start_distance / sweep.blade_speed
+		var t := 0.0
+		while t < reach + 1.0:
+			var y := 1.62
+			if jump:
+				# Takes off 0.2 s before the blade arrives: 0.38 m up in 0.2 s, down in 0.25 s.
+				var into := t - (reach - 0.2)
+				if into > 0.0 and into < 0.2:
+					y = 1.62 + 0.26 * into / 0.2
+				elif into >= 0.2 and into < 0.45:
+					y = 1.88 - 0.26 * (into - 0.2) / 0.25
+			camera.position = Vector3(0.0, y, 0.0)
+			detector.sample(camera.position, 0.0, step)
+			sweep.advance(step)
+			t += step
+		if jump and (seen["hurt"] or seen["resolved"].is_empty() or seen["resolved"].get("resolution_kind", &"") != &"jump"):
+			failures.append("A jump timed to the low sweep did not clear it: %s" % seen["resolved"])
+		if not jump and not seen["hurt"]:
+			failures.append("A low sweep under a standing player did not hit")
+		sweep.free()
+	player.free()
+	await process_frame

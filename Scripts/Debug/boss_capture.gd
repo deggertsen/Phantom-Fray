@@ -92,6 +92,9 @@ func _ready() -> void:
 		await _wait(0.5)
 	_capture_bracer("14-bracer-after-push-ups")
 	_camera.position = Vector3(0.0, 1.6, 0.0)
+	# The jump pair: a low sweep along the floor, captured as it crosses, the rim tentacles still holding.
+	await _until(func() -> bool: return _boss._step.get("do", "") == "low_sweep" and _boss._sweep != null and float(_boss._sweep.call("progress")) > 0.4, 60.0)
+	await _capture("14b-low-sweep-crossing")
 	# Skip to the end of the anchor. The retreat plays as the game runs it.
 	_rift.drain_health(_rift.rift_health)
 	await _wait(0.6)

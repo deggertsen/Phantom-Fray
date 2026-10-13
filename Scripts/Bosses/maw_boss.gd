@@ -73,6 +73,11 @@ const CYCLE := [
 	{"do": "sweep", "tell": 1.0, "speed": 8.5, "side": 1.0},
 	{"do": "rest", "seconds": 1.6},
 	{"do": "volley"},
+	{"do": "rest", "seconds": 1.8},
+	# The jump pair: two low sweeps along the floor from alternate sides, like a skipping rope.
+	{"do": "low_sweep", "tell": 1.2, "speed": 7.0, "side": 1.0},
+	{"do": "rest", "seconds": 0.8},
+	{"do": "low_sweep", "tell": 1.0, "speed": 7.5, "side": -1.0},
 	{"do": "rest", "seconds": 2.2},
 ]
 
@@ -99,7 +104,6 @@ var _drain_carry: float = 0.0
 var _refilled: int = 0
 var _tentacle: MawTentacle
 var _pry: Array = []
-var _eye: MawEye
 var _heartbeat_player: AudioStreamPlayer
 var _blackout_amount: float = 0.0
 ## Phantoms circling the rift. Untyped: a freed one must not trip a typed assignment.
@@ -207,7 +211,6 @@ func cleanup() -> void:
 	_paused = false
 	set_process(true)
 	_free_pry_tentacles()
-	_free_eye()
 	_set_blackout(0.0)
 	if is_instance_valid(_tentacle):
 		_tentacle.queue_free()
@@ -305,15 +308,12 @@ func _process(delta: float) -> void:
 		Stage.TURN:
 			_clock += delta
 			_tick_turn()
-			_tick_eye(delta)
 		Stage.FIGHT:
 			_clock += delta
 			_tick_fight(delta)
-			_tick_eye(delta)
 		Stage.RETREAT:
 			_clock += delta
 			_tick_retreat()
-			_tick_eye(delta)
 		Stage.GLIMPSE:
 			_clock += delta
 			_tick_glimpse()
@@ -376,22 +376,15 @@ func _tick_turn() -> void:
 	if _beat("heartbeat_1", 2.3) or _beat("heartbeat_2", 3.1):
 		_play_heartbeat()
 		_pulse_controllers(0.55, 0.12)
-	# 5. They pry it open (3.6 to 7.2 s): tentacles reach out of the void, grip the rim, and tear
-	# it wider; the crimson light comes up as they pull. Then they let go and slip back.
+	# 5. They pry it open (3.6 to 6.2 s): tentacles reach out of the void, grip the rim, and tear
+	# it wider; the crimson light comes up as they pull. They hold it open for the whole fight.
 	if _beat("pry", 3.6):
 		_spawn_pry_tentacles()
 	var pull := smoothstep(4.4, 6.2, _clock)
 	_rift.set_tear(lerpf(1.0, TORN_SCALE_GAIN, pull))
 	_set_turn_mood(pull)
-	_pose_pry_tentacles(smoothstep(3.6, 4.4, _clock) * (1.0 - smoothstep(6.4, 7.2, _clock)))
-	if _beat("pry_done", 7.2):
-		_free_pry_tentacles()
-	# 6. The eye (6.2 s): it opens in the void and finds the player. Chen sees it.
-	if _beat("eye", 6.2):
-		_spawn_eye()
-	if _eye:
-		_eye.open = smoothstep(6.2, 6.9, _clock)
-		_eye.set_dilate(smoothstep(7.0, 7.6, _clock) * (1.0 - smoothstep(8.5, 10.0, _clock)))
+	_pose_pry_tentacles(smoothstep(3.6, 4.4, _clock))
+	# 6. Chen sees what is holding it open.
 	if _beat("dread", 7.4) and comms:
 		comms.say("boss_dread")
 	# 7. The first tentacle (8.4 to 11 s): slides out of the mouth along the floor, stops short, rises.
@@ -471,6 +464,8 @@ func _spawn_pry_tentacles() -> void:
 		limb.base_radius = 0.34
 		limb.tip_radius = 0.05
 		limb.writhe = 0.1
+		limb.segments = 16
+		limb.sides = 7
 		add_child(limb)
 		_pry.append(limb)
 
@@ -509,36 +504,6 @@ func _free_pry_tentacles() -> void:
 		if is_instance_valid(limb):
 			limb.queue_free()
 	_pry.clear()
-
-func _spawn_eye() -> void:
-	if is_instance_valid(_eye):
-		_eye.queue_free()
-	_eye = MawEye.new()
-	_eye.name = "MawEye"
-	_eye.radius = _mouth_radius().y * 0.42
-	add_child(_eye)
-	_place_eye()
-
-func _place_eye() -> void:
-	if _eye == null or _rift == null:
-		return
-	var mouth := _rift.portal_center()
-	var to_player := _head() - mouth
-	to_player = to_player.normalized() if to_player.length_squared() > 0.01 else Vector3.BACK
-	_eye.global_position = mouth + to_player * 0.3
-
-## Every frame the eye exists: it stays in the mouth and follows the player's head.
-func _tick_eye(delta: float) -> void:
-	if not is_instance_valid(_eye):
-		_eye = null
-		return
-	_place_eye()
-	_eye.watch(_head(), delta)
-
-func _free_eye() -> void:
-	if is_instance_valid(_eye):
-		_eye.queue_free()
-	_eye = null
 
 func _pulse_controllers(amplitude: float, seconds: float) -> void:
 	var interface := XRServer.primary_interface
@@ -593,10 +558,7 @@ func _begin_fight() -> void:
 	stage = Stage.FIGHT
 	_clock = 0.0
 	_fired.clear()
-	_free_pry_tentacles()
 	_set_blackout(0.0)
-	if _eye:
-		_eye.open = 1.0
 	_drain_carry = 0.0
 	_refilled = 0
 	_restore_audio()
@@ -632,6 +594,8 @@ func _tick_fight(delta: float) -> void:
 		_rift.drain_health(drained)
 		if stage != Stage.FIGHT:
 			return
+	# The pry tentacles keep their grip on the rim, which closes in as the anchor drains.
+	_pose_pry_tentacles(1.0)
 	_prune_escort()
 	_step_time += delta
 	_phase_time += delta
@@ -647,7 +611,7 @@ func _next_step() -> void:
 	_step_phase = &""
 	_from_pose = _tentacle.path().duplicate() if _tentacle else []
 	match String(_step.get("do", "")):
-		"sweep":
+		"sweep", "low_sweep":
 			_start_sweep()
 		"slam":
 			_start_slam()
@@ -666,7 +630,7 @@ func _run_step(_delta: float) -> bool:
 		"rest":
 			_pose_hover()
 			return _step_time >= float(_step.get("seconds", 2.0))
-		"sweep":
+		"sweep", "low_sweep":
 			return _run_sweep()
 		"slam":
 			return _run_slam()
@@ -695,6 +659,8 @@ func _start_sweep() -> void:
 	var sweep := (load(SweepScene) as PackedScene).instantiate() as Node3D
 	var frame := _player_frame()
 	var side := float(_step.get("side", 1.0))
+	var low := String(_step.get("do", "")) == "low_sweep"
+	sweep.set("low", low)
 	sweep.set("squat_depth", float(boss_config.get("squat_depth", 0.20)))
 	sweep.set("telegraph_seconds", float(_step.get("tell", 1.5)))
 	sweep.set("blade_speed", float(_step.get("speed", 5.0)))
@@ -704,7 +670,8 @@ func _start_sweep() -> void:
 	_rift.add_attacker(sweep, frame["p"] + frame["r"] * side * 6.0)
 	_sweep = sweep
 	var comms := _comms()
-	if comms:
+	# A low sweep gets Chen's jump call from ChenComms as its rails light.
+	if comms and not low:
 		comms.say("boss_sweep")
 
 func _run_sweep() -> bool:
@@ -722,14 +689,17 @@ func _run_sweep() -> bool:
 		_tentacle.writhe = 0.7
 		var p: Vector3 = frame["p"]
 		var flat := Vector3(blade.x - p.x, 0.0, blade.z - p.z)
-		var drawn := p + flat * 1.2 + Vector3.UP * (blade.y + 0.9)
+		var low: bool = bool(_sweep.get("low"))
+		var drawn := p + flat * 1.2 + Vector3.UP * (blade.y + (0.25 if low else 0.9))
 		var back := _sweep_pose(frame, drawn)
 		_tentacle.set_path(_blend(_from_pose, back, smoothstep(0.0, 0.8, _step_time)) if _from_pose.size() == back.size() else back)
 		return false
 	# Crossing: the limb lies along the line to the rift and runs sideways with the blade.
 	# Its underside sits on the blade's line, so a head under the blade is under the limb too.
 	_tentacle.writhe = 0.08
-	_tentacle.set_path(_sweep_pose(frame, blade + Vector3.UP * 0.22))
+	# A low sweep lies along the floor instead, its top near the jump line.
+	var lift := -0.08 if bool(_sweep.get("low")) else 0.22
+	_tentacle.set_path(_sweep_pose(frame, blade + Vector3.UP * lift))
 	if not _sweep.call("is_in_flight"):
 		_sweep = null
 		_step_time = 0.0
@@ -892,9 +862,8 @@ func _begin_retreat() -> void:
 		comms.say("boss_retreat")
 
 func _tick_retreat() -> void:
-	if _eye:
-		# It shuts as it lets go.
-		_eye.open = 1.0 - smoothstep(0.0, 0.9, _clock)
+	# They let go of the rim and slip back first.
+	_pose_pry_tentacles(1.0 - smoothstep(0.0, 1.2, _clock))
 	if _tentacle:
 		_tentacle.writhe = 0.9
 		_tentacle.set_path(_blend(_from_pose, _collapsed(_player_frame()), smoothstep(0.0, RETREAT_SECONDS, _clock)))
@@ -907,7 +876,7 @@ func _tick_retreat() -> void:
 		if _tentacle:
 			_tentacle.queue_free()
 		_tentacle = null
-		_free_eye()
+		_free_pry_tentacles()
 		stage = Stage.DONE
 		_rift.release_hold()
 		retreated.emit()
