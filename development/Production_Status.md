@@ -3,7 +3,7 @@
 ## Implemented on `main`
 
 ### Combat
-- Phantom base: one continuous accelerating bezier arc into reach, lunge at the head, recover and re-approach. Strikes count once in reach. Stall and lifetime cleanup.
+- Phantom base: one continuous accelerating bezier arc into reach, lunge at the head, homing on the live head close in, an immediate turn back after a miss, recover and re-approach. Strikes count once in reach. Stall and lifetime cleanup.
 - Angler (yellow left, blue right): lure as the resonance crit in hook, uppercut, or jab position. Wrong hand rejects and breaks the chain.
 - Carapace (green): first hand is a catch, second hand inside 0.55 s is the block.
 - Spearfin (pink): telegraph, floor lane shader, charge; resolved by leaving the lane. Cannot be punched.

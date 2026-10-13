@@ -326,8 +326,58 @@ func _validate_attack_window() -> void:
 		failures.append("Yellow commit window did not score an on-beat sweet spot")
 	yellow.queue_free()
 	await _validate_arc_motion(yellow_scene)
+	await _validate_turn_back(yellow_scene)
 	await _validate_green_arrival()
 	await _validate_possession(yellow_scene)
+
+## A player who steps out of the path is still the target. A phantom that flies past the head
+## must come back for it at once, never float at the point where the head used to be.
+func _validate_turn_back(yellow_scene: PackedScene) -> void:
+	var yellow := yellow_scene.instantiate()
+	root.add_child(yellow)
+	await process_frame
+	var head := Node3D.new()
+	root.add_child(head)
+	head.global_position = Vector3(0.0, 1.6, 0.0)
+	yellow.global_position = Vector3(0.0, 1.4, 3.0)
+	yellow._player_camera = head
+	yellow.set_physics_process(false)
+	yellow._build_curve()
+	# Already past where the head was, at full lunge speed, the way a dodged phantom is.
+	yellow.global_position = Vector3(0.0, 1.38, 0.1)
+	yellow.velocity = Vector3(0.0, 0.0, -yellow.pattern_commit_speed)
+	yellow._curve_progress = 1.0
+	# The player stepped aside.
+	head.global_position = Vector3(0.7, 1.6, 0.0)
+	var closest := INF
+	var idle_frames := 0
+	var floated := false
+	var frames_to_reach := -1
+	for step in 240:
+		if yellow._terminal:
+			break
+		await _physics_step(yellow)
+		var distance: float = yellow.global_position.distance_to(head.global_position)
+		closest = minf(closest, distance)
+		if distance <= 0.34:
+			frames_to_reach = step
+			break
+		if distance < 2.5 and yellow.velocity.length() < 0.35:
+			idle_frames += 1
+			if idle_frames >= 15:
+				floated = true
+				break
+		else:
+			idle_frames = 0
+	if floated:
+		failures.append("Dodged phantom floated beside the player")
+	elif not yellow._terminal and closest > 0.34:
+		failures.append("Dodged phantom did not come back for the head (closest %.2f m)" % closest)
+	elif frames_to_reach > 120:
+		failures.append("Dodged phantom took %d frames to turn back" % frames_to_reach)
+	yellow.queue_free()
+	head.queue_free()
+	await process_frame
 
 func _validate_arc_motion(yellow_scene: PackedScene) -> void:
 	var yellow := yellow_scene.instantiate()
