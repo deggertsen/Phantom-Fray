@@ -76,8 +76,17 @@ func apply_pressure(speed_scale: float, telegraph_scale: float) -> void:
 	telegraph_seconds = maxf(telegraph_seconds * telegraph_scale, 0.45)
 	_telegraph_remaining *= telegraph_scale
 
+## A released escort paints a fresh lane from wherever it left the ring.
+func release_from_escort() -> void:
+	if not is_escorting():
+		return
+	super.release_from_escort()
+	_telegraph_remaining = telegraph_seconds
+	_charging = false
+	_lock_pink_target()
+
 func _physics_process(delta: float) -> void:
-	if _terminal:
+	if _terminal or _escorting:
 		_update_lane(0.0)
 		super(delta)
 		return

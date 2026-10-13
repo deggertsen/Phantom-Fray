@@ -60,6 +60,8 @@ adb logcat -c
 adb logcat | grep -i -E "godot|openxr|phantom"
 ```
 
+`powershell -File tools/build_quest_debug.ps1 -HandTrackingTest` builds `builds/phantom-fray-handtest.apk`, the hand tracking measurement build for tests 7 and 8 in `development/Exercise_Mechanics_Exploration.md` (section 3, "Running tests 7 and 8"). It turns hand tracking on in `project.godot` for that export only and restores the file afterwards.
+
 ## Required package checks
 
 - Immersive HMD launch intent is present.

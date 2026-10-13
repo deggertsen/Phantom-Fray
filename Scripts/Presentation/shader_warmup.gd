@@ -28,6 +28,8 @@ func _ready() -> void:
 	_add_hit_effects()
 	_add_quad(_lane_material())
 	_add_quad(_veins_material())
+	_add_boss_and_hazards()
+	ResonanceSweep.prepare_generated_audio()
 
 func _process(_delta: float) -> void:
 	_frames += 1
@@ -86,6 +88,27 @@ func _veins_material() -> ShaderMaterial:
 	material.set_shader_parameter("noise_tex", preload("res://Resources/Materials/breach_noise.tres"))
 	material.set_shader_parameter("strength", 0.5)
 	return material
+
+## The Maw's tentacle shader stalled the tutorial Maw's close to 20 fps on Quest 3 the first time
+## the glimpse drew it. The sweep's rails and blade, the slam ring, and the turn's shockwave use
+## additive unshaded materials; StandardMaterial3D compiles one shader per set of flags, so a
+## quad with the same flags warms each.
+func _add_boss_and_hazards() -> void:
+	var tentacle := ShaderMaterial.new()
+	tentacle.shader = MawTentacle.shared_shader()
+	tentacle.set_shader_parameter("skin", MawTentacle.SKIN)
+	tentacle.set_shader_parameter("glow", MawTentacle.GLOW)
+	_add_quad(tentacle)
+	_add_quad(MawSlam.curtain_material())
+	for receives_shadows in [false, true]:
+		var energy := StandardMaterial3D.new()
+		energy.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		energy.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		energy.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		energy.disable_receive_shadows = not receives_shadows
+		energy.disable_fog = true
+		energy.albedo_color = Color(1.0, 0.4, 0.6, 0.5)
+		_add_quad(energy)
 
 func _add_quad(material: Material) -> void:
 	var quad := MeshInstance3D.new()

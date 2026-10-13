@@ -16,4 +16,7 @@ if (Test-Path $buildRoot) {
 New-Item $buildRoot -ItemType Directory -Force | Out-Null
 Expand-Archive -Path $sourceArchive -DestinationPath $buildRoot -Force
 Set-Content -Path (Join-Path $androidRoot '.build_version') -Value '4.7.1.stable' -NoNewline
+# Keep Godot out of the Gradle tree. Without this the editor scans the build intermediates,
+# loads a second copy of the vendors plugin.gdextension, and dies after the first export.
+Set-Content -Path (Join-Path $androidRoot '.gdignore') -Value '' -NoNewline
 Write-Host "Installed Godot 4.7.1 Android Gradle template in $androidRoot"

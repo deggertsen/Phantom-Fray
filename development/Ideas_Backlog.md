@@ -10,9 +10,10 @@ Ideas worth keeping that are not on the roadmap yet. Nothing here is scheduled. 
 - **Projectile phantoms.** Small phantoms or phantom bolts the player punches away, from the original hazard list.
 - **Teleporting and area-of-effect phantoms.** From the enemy-system notes: reposition mid-approach, or threaten a cone the player must leave.
 - **Phantom evolution.** Phantoms that grow larger and stronger the longer a rift stays open, giving the timer teeth.
-- **Boss battles.** Larger phantoms with multiple resonance points struck in sequence, tied to story progression. The Overseer as the final boss: rotating energy rings, crown-like structure, cores targeted in order (see [Phantom_Meshy_Prompts.md](Phantom_Meshy_Prompts.md)).
+- **Boss battles.** The first boss (tentacled; drains away on its own and retreats through its rift if outlasted; attacks answered by squats, jumps, a side-step, and push-ups on a spent tentacle) is now on the roadmap in Phase 7; see [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md). Still ideas: an overhead two-hand brace for a slam too wide to dodge, a roar to brace against with a squat hold, larger phantoms with multiple resonance points struck in sequence, tied to story progression. The Overseer as the final boss: rotating energy rings, crown-like structure, cores targeted in order (see [Phantom_Meshy_Prompts.md](Phantom_Meshy_Prompts.md)).
 - **Adaptive AI.** The Overseer learns the player's habits across a session (lead hand, dodge direction) and the mix shifts to punish them. Chen's Gambit already tells this story; the system could do it.
 - **Low approaches.** Phantoms that come in at chest or waist height so uppercuts and squats are demanded, not optional.
+- **Squats, jumps, and push-ups.** Carried by boss attacks on the Full Resonance difficulty (scheduled in Phases 7 and 9). Still ideas outside the boss: a resonance sweep from ordinary rifts, a skitter swarm met low with a squat and uppercut, and a "ground the gauntlets" seal ritual. Detection from head and controller tracking, safety, tiers, and a prototype order are in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md). A squat detector prototype is in the Player scene behind a debug flag.
 
 ## Player abilities and pickups
 
@@ -46,7 +47,7 @@ Ideas worth keeping that are not on the roadmap yet. Nothing here is scheduled. 
 
 ## Platform and community
 
-- **Hand tracking as an input option.** Research gesture recognition for punches without controllers.
+- **Hand tracking as an input option.** Research gesture recognition for punches without controllers. Direction as of 2026-10-09: move off controllers; hand tracking required at Full Resonance as the first try. Tests for punch speed and simultaneous hands and controllers are on the roadmap in Phase 9.
 - **Achievements.** Flawless seals, maximum chain, all operations gold.
 - **Leaderboards.** Scheduled in Phase 7; friend leaderboards and weekly resets stay here.
 - **Mod support.** Custom wave tables and breach sites as data files, since operations are already dictionaries.

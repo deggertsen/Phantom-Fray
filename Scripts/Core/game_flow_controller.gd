@@ -47,11 +47,37 @@ func _ready() -> void:
 	if _settings:
 		pending = String(_settings.pending_mission_id)
 		_settings.pending_mission_id = ""
+	if pending == "" and OS.is_debug_build():
+		pending = _mission_from_command_line()
 	if pending != "" and not MissionCatalog.get_mission(pending).is_empty():
 		_start_mission(pending)
 	else:
 		_show_main_menu()
 		_arm_menu_input_after_release()
+
+## Debug builds: --mission=<id> skips the menu and deploys straight into that operation, including
+## the debug-only ones in MissionCatalog.debug_missions(). On Quest, put it in the Quest Debug
+## export preset's Command Line > Extra Args. --maw-breaks makes every boss Maw break.
+func _mission_from_command_line() -> String:
+	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args() + _debug_args_file()
+	for arg in args:
+		if arg == "--maw-breaks":
+			MawBoss.always_break = true
+	for arg in args:
+		if arg.begins_with("--mission="):
+			return arg.trim_prefix("--mission=")
+	return ""
+
+## Debug builds also read arguments from user://debug_args.txt, because Quest launches cannot
+## pass them: the exported launcher activity drops intent extras on its way to GodotApp, and
+## GodotApp itself is not exported. A debuggable build lets adb write the file:
+##   adb shell "run-as com.phantomfray.resonancerising sh -c 'echo --mission=sweep_drill > files/debug_args.txt'"
+## Delete the file (or write an empty one) to boot to the menu again.
+func _debug_args_file() -> PackedStringArray:
+	if not OS.is_debug_build() or not FileAccess.file_exists("user://debug_args.txt"):
+		return PackedStringArray()
+	var text := FileAccess.get_file_as_string("user://debug_args.txt")
+	return text.strip_edges().split(" ", false)
 
 func _process(delta: float) -> void:
 	if _menu_action_cooldown > 0.0:
@@ -221,6 +247,17 @@ func _unhandled_input(event: InputEvent) -> void:
 					_on_menu_action(&"resume")
 			KEY_T:
 				_on_menu_action(&"training")
+			KEY_B:
+				# Debug builds only: the boss Maw, outside the campaign. Shift forces a break.
+				if OS.is_debug_build() and _state == STATE_MENU:
+					MawBoss.force_next_break = event.shift_pressed
+					_start_mission("the_maw_boss")
+			KEY_P:
+				# Debug builds only: one push-up, until push-up detection exists.
+				if OS.is_debug_build() and _state == STATE_PLAYING:
+					var boss := get_tree().get_first_node_in_group("MawBoss") as MawBoss
+					if boss:
+						boss.register_push_up()
 			KEY_S:
 				_show_settings(_state)
 			KEY_ESCAPE:
@@ -401,7 +438,8 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 	_last_seconds = _round.elapsed_seconds if _round else 0.0
 	_previous_best_time = 0.0
 	_next_mission_title = ""
-	if outcome == &"victory" and _settings:
+	# A debug drill is not campaign progress, so it records no clear, score, or time.
+	if outcome == &"victory" and _settings and not MissionCatalog.is_debug_mission(_active_mission_id):
 		_previous_best_time = _settings.best_time(_active_mission_id)
 		_settings.mark_mission_cleared(_active_mission_id)
 		_settings.record_score(_active_mission_id, score)

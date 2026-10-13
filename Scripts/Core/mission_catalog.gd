@@ -6,6 +6,8 @@ const SCENE_BY_ID := {
 	"blue": "res://Scenes/Phantoms/blue_phantom.tscn",
 	"green": "res://Scenes/Phantoms/green_phantom.tscn",
 	"pink": "res://Scenes/Phantoms/pink_phantom.tscn",
+	# Not a phantom: a rift hazard the player squats under. It speaks the same spawn interface.
+	"sweep": "res://Scenes/Hazards/resonance_sweep.tscn",
 }
 
 static func scene_path(variant_id: String) -> String:
@@ -23,13 +25,30 @@ static func expected_minutes_text(mission: Dictionary) -> String:
 static func all_missions() -> Array[Dictionary]:
 	return [_first_light(), _widen_the_ring(), _chens_gambit(), _double_breach(), _open_arc(), _the_maw()]
 
+## Operations for testing mechanics that are not in the campaign yet. Debug builds only, and never
+## part of all_missions, so they stay out of the unlock chain and the Operations list. Start one
+## with the --mission=<id> command line argument (see GameFlowController). The boss Maw lives
+## here until the war map and its difficulties exist; B starts it from the main menu too.
+static func debug_missions() -> Array[Dictionary]:
+	if not OS.is_debug_build():
+		return []
+	return [_sweep_drill(), _the_maw_boss()]
+
+static func is_debug_mission(mission_id: String) -> bool:
+	for mission in debug_missions():
+		if mission.get("id", "") == mission_id:
+			return true
+	return false
+
 static func get_mission(mission_id: String) -> Dictionary:
-	for mission in all_missions():
+	for mission in all_missions() + debug_missions():
 		if mission.get("id", "") == mission_id:
 			return mission
 	return {}
 
 static func is_unlocked_with_clears(mission_id: String, cleared: PackedStringArray) -> bool:
+	if is_debug_mission(mission_id):
+		return true
 	var missions := all_missions()
 	for index in range(missions.size()):
 		if missions[index].get("id", "") != mission_id:
@@ -230,10 +249,56 @@ static func _the_maw() -> Dictionary:
 		"seal_lines": [],
 		"victory_line": "Chen: The Maw is shut. It will remember how long you made it chew.",
 		"defeat_line": "Chen: The Maw outpaced you. Kill faster than it can replace them.",
+		# Phase one only. As it seals, a tentacle sometimes grips the rim and is dragged back.
+		"glimpse": true,
 		# One mouth, so its length comes from health rather than a second rift.
 		"rifts": [
 			_wave(1600, 0.875, 8, 1.0, 1.0, ["yellow", "blue", "green", "pink"], 2.0),
 		],
+	}
+
+## The Maw at the movement difficulty: phase one, and on a Maw that breaks, the turn and the
+## tentacles. Debug only until the war map's difficulties exist. See MawBoss and
+## development/Exercise_Mechanics_Exploration.md, "The Maw".
+static func _the_maw_boss() -> Dictionary:
+	var mission := _the_maw()
+	mission.erase("glimpse")
+	mission["id"] = "the_maw_boss"
+	mission["title"] = "THE MAW // FULL RESONANCE"
+	mission["summary"] = "The Maw at the movement difficulty. Sometimes something comes through after it."
+	# Covers both outcomes, a seal after phase one or a shortened phase one and the tentacles.
+	mission["expected_minutes"] = [4, 7]
+	mission["boss"] = {
+		"name": "THE MAW",
+		# On a Maw that breaks, phase one runs on this share of the rift's health, so the whole
+		# mission stays inside five to ten minutes. The bar does not show it.
+		"phase_one_scale": 0.5,
+		"anchor": 840,
+		# With no hits taken and no work done, the anchor runs out in this many seconds.
+		"anchor_seconds": 210.0,
+		"squat_depth": 0.20,
+	}
+	return mission
+## Step 3 of the prototype plan in Exercise_Mechanics_Exploration.md: gold and blue lunges with a
+## resonance sweep in the pool. One spawn in three is a sweep, every 4 s, so about one sweep every
+## 12 s over roughly three minutes, which is what the Step 4 headset test asks for.
+static func _sweep_drill() -> Dictionary:
+	var drill := _wave(450, 4.0, 3, 1.0, 1.0, ["yellow", "blue", "sweep"])
+	drill["squat_depth"] = 0.12
+	return {
+		"id": "sweep_drill",
+		"codename": "DBG-S",
+		"title": "SWEEP DRILL",
+		"summary": "Debug only. Lunges, and a blade of rift energy to get under.",
+		"expected_minutes": [3, 3],
+		"objective": "SEAL THE DRILL RIFT",
+		"start_line": "CHEN: WHEN THE RAILS LIGHT, GET UNDER THE LINE.",
+		"pressure_labels": ["SWEEP DRILL"],
+		"open_barks": [""],
+		"seal_lines": [],
+		"victory_line": "Chen: Drill sealed. Note how your legs feel, then go again.",
+		"defeat_line": "Chen: The blade caught you. Watch the rails, then drop.",
+		"rifts": [drill],
 	}
 
 static func _paired_assault_waves() -> Array:
