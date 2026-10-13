@@ -44,6 +44,13 @@ var _wave_scenes: Array[PackedScene] = []
 var _wave: Dictionary = {}
 var _speed_scale: float = 1.0
 var _telegraph_scale: float = 1.0
+## The tier's multiplier on every contact this rift's phantoms and attackers deal (DifficultyTier).
+var _contact_scale: float = 1.0
+## A sweep from the pool never lights sooner than this many seconds after the last one, across
+## every rift. 0 leaves sweeps to the pool alone. Full Resonance sets it to keep the squat budget.
+var _sweep_min_gap: float = 0.0
+## When the last pool sweep came out, in Time.get_ticks_msec(). Shared by every rift.
+static var _last_sweep_msec: int = -1000000
 var _rift_scale: float = 1.0
 var _tear_gain: float = 1.0
 var _beacon: Node3D
@@ -73,6 +80,8 @@ func configure_wave(wave: Dictionary) -> void:
 	max_live_phantoms = int(wave.get("max_live", max_live_phantoms))
 	_speed_scale = float(wave.get("speed_scale", 1.0))
 	_telegraph_scale = float(wave.get("telegraph_scale", 1.0))
+	_contact_scale = float(wave.get("contact_scale", 1.0))
+	_sweep_min_gap = float(wave.get("sweep_min_gap", 0.0))
 	_apply_rift_scale(float(wave.get("scale", 1.0)))
 	var pool: Array = wave.get("pool", [])
 	if not pool.is_empty():
@@ -152,17 +161,26 @@ func _on_spawn_timer_timeout() -> void:
 		return
 	_spawn_phantom()
 
-func _spawn_phantom() -> Node3D:
+## `phantoms_only` leaves hazards such as the sweep out of the pick.
+func _spawn_phantom(phantoms_only: bool = false) -> Node3D:
 	if phantom_scenes.is_empty():
 		push_warning("RiftManager: no phantom scenes configured")
 		return null
 	var scenes: Array[PackedScene] = _wave_scenes if not _wave_scenes.is_empty() else phantom_scenes
 	var scene := scenes[randi() % scenes.size()]
+	if _is_sweep(scene) and (phantoms_only or (_sweep_min_gap > 0.0 and not _sweep_may_light())):
+		# An escort, or too soon after the last squat: this spawn is a phantom instead.
+		var without_sweeps := scenes.filter(func(candidate: PackedScene) -> bool: return not _is_sweep(candidate))
+		if without_sweeps.is_empty():
+			return null
+		scene = without_sweeps[randi() % without_sweeps.size()]
 	if scene == null:
 		return null
 	var phantom := scene.instantiate() as Node3D
 	if phantom == null:
 		return null
+	if _is_sweep(scene):
+		_last_sweep_msec = Time.get_ticks_msec()
 	var angle := randf_range(-0.65, 0.65)
 	var offset := Vector3(sin(angle), randf_range(-0.35, 0.35), cos(angle)) * randf_range(0.8 * _rift_scale, spawn_radius)
 	phantom.position = _phantom_container.to_local(global_position + offset)
@@ -172,21 +190,40 @@ func _spawn_phantom() -> Node3D:
 	# Hazards such as the resonance sweep read their own settings (squat_depth) from the wave.
 	if phantom.has_method("apply_wave"):
 		phantom.apply_wave(_wave)
+	_scale_contact(phantom)
 	_register(phantom)
 	return phantom
 
+func _is_sweep(scene: PackedScene) -> bool:
+	return scene != null and scene.resource_path == MissionCatalog.scene_path("sweep")
+
+## No pool sweep is still out anywhere, and the last one came out at least _sweep_min_gap ago.
+func _sweep_may_light() -> bool:
+	if Time.get_ticks_msec() - _last_sweep_msec < int(_sweep_min_gap * 1000.0):
+		return false
+	for node in get_tree().get_nodes_in_group("phantom"):
+		if node is ResonanceSweep and not (node as ResonanceSweep).low and (node as ResonanceSweep).is_in_flight():
+			return false
+	return true
+
+## The tier's contact multiplier, on anything with a contact_damage that attacks for this rift.
+func _scale_contact(attacker: Node) -> void:
+	if not is_equal_approx(_contact_scale, 1.0) and "contact_damage" in attacker:
+		attacker.set("contact_damage", float(attacker.get("contact_damage")) * _contact_scale)
+
 ## One phantom from this rift's pool, out of the mouth now, whatever the spawn timer says.
-## A boss calls its escort through this way.
+## A boss calls its escort through this way. An escort is always a phantom, never a sweep.
 func spawn_escort() -> Node3D:
 	if _closing:
 		return null
-	return _spawn_phantom()
+	return _spawn_phantom(true)
 
 ## Something other than a phantom that attacks for this rift, such as a boss's sweep or slam.
 ## Its resolves and contacts count exactly as a phantom's do.
 func add_attacker(attacker: Node3D, world_position: Vector3) -> void:
 	attacker.position = _phantom_container.to_local(world_position)
 	_phantom_container.add_child(attacker)
+	_scale_contact(attacker)
 	_register(attacker)
 
 ## Phantoms from this rift still in play, the ones a sealing would leave as stragglers.

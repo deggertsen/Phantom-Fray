@@ -14,6 +14,7 @@ func _run_validation() -> void:
 	_validate_life_force()
 	await _validate_attack_window()
 	await _validate_mission_catalog()
+	await _validate_difficulty_tiers()
 	await _validate_rift_stragglers()
 	await _validate_elapsed_timer()
 	await _validate_menu_surface()
@@ -568,8 +569,8 @@ func _validate_mission_catalog() -> void:
 			failures.append("%s labels, barks, or seal lines do not match its %d rifts" % [mission.get("id", ""), rift_count])
 	if MissionCatalog.expected_minutes_text({"expected_minutes": [6, 8]}) != "6 TO 8 MIN":
 		failures.append("Expected time range does not read as 6 TO 8 MIN")
-	if MissionCatalog.deploy_detail(null) != "NEXT • OP-01 FIRST LIGHT • %s" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("first_light")):
-		failures.append("Deploy button does not show the next mission's expected time: %s" % MissionCatalog.deploy_detail(null))
+	if MissionCatalog.deploy_detail(null) != "NEXT • OP-01 FIRST LIGHT • %s • STANDARD" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("first_light")):
+		failures.append("Deploy button does not show the next mission's expected time and tier: %s" % MissionCatalog.deploy_detail(null))
 	var none := PackedStringArray()
 	if not MissionCatalog.is_unlocked_with_clears("first_light", none):
 		failures.append("First Light should be available immediately")
@@ -633,6 +634,235 @@ func _validate_mission_catalog() -> void:
 	for variant_id in ["yellow", "blue", "green", "pink"]:
 		if load(MissionCatalog.scene_path(variant_id)) == null:
 			failures.append("Mission pool failed to load %s" % variant_id)
+
+## The four difficulties: Standard is the catalog exactly; every tier's multipliers reach a
+## spawned phantom, its rift, and the life force; Full Resonance adds squat-depth sweeps no closer
+## than its gap; the choice and per-tier records persist; only Full Resonance reaches the boss turn.
+func _validate_difficulty_tiers() -> void:
+	# Standard reproduces today's numbers.
+	for mission in MissionCatalog.all_missions() + MissionCatalog.debug_missions():
+		var standard := DifficultyTier.apply_mission(mission, DifficultyTier.STANDARD)
+		if standard.get("rifts", []) != mission.get("rifts", []) or standard.has("boss") or standard.get("expected_minutes") != mission.get("expected_minutes"):
+			failures.append("Standard changed %s" % mission.get("id", ""))
+	var first_wave: Dictionary = DifficultyTier.apply_mission(MissionCatalog.get_mission("first_light"), DifficultyTier.STANDARD)["rifts"][0]
+	if int(first_wave["health"]) != 70 or float(first_wave["interval"]) != 4.2 or float(first_wave["speed_scale"]) != 0.85 or float(first_wave["telegraph_scale"]) != 1.28 or first_wave.has("contact_scale") or first_wave["pool"] != ["yellow", "yellow", "blue"]:
+		failures.append("Standard First Light is not 70 health, 4.2 s, 0.85 speed, 1.28 tells: %s" % first_wave)
+	var maw_standard := DifficultyTier.apply_mission(MissionCatalog.get_mission("the_maw"), DifficultyTier.STANDARD)
+	if maw_standard.has("tier_boss") or not maw_standard.get("glimpse", false) or int(maw_standard["rifts"][0]["health"]) != 1600:
+		failures.append("The Standard Maw is not the 1600-health tutorial Maw with its glimpse")
+	if DifficultyTier.apply_mission(maw_standard, DifficultyTier.FULL_RESONANCE) != maw_standard:
+		failures.append("A tiered mission took a second tier")
+	# Below Full Resonance a sweep never asks for more than a duck; at it, always a squat.
+	var deep := {"health": 100, "interval": 3.0, "max_live": 4, "speed_scale": 1.0, "telegraph_scale": 1.0, "pool": ["yellow", "sweep"], "squat_depth": 0.2}
+	for tier in [DifficultyTier.ASSIST, DifficultyTier.STANDARD, DifficultyTier.OPERATOR]:
+		if not is_equal_approx(float(DifficultyTier.apply_wave(deep, tier)["squat_depth"]), DifficultyTier.DUCK_DEPTH):
+			failures.append("%s let a sweep ask for more than a duck" % tier)
+		if DifficultyTier.allows_bosses(tier) or DifficultyTier.asks_for_movement(tier):
+			failures.append("%s asks for movement or allows a boss" % tier)
+	if not DifficultyTier.allows_bosses(DifficultyTier.FULL_RESONANCE) or not DifficultyTier.info(DifficultyTier.FULL_RESONANCE).get("jumps", false):
+		failures.append("Full Resonance does not ask for jumps or allow bosses")
+	var base_wave := {"health": 100, "interval": 3.0, "max_live": 4, "speed_scale": 1.0, "telegraph_scale": 1.0, "pool": ["yellow"]}
+	var yellow_scene := load(MissionCatalog.scene_path("yellow")) as PackedScene
+	var reference := yellow_scene.instantiate() as Phantom
+	root.add_child(reference)
+	await process_frame
+	var base_speed := reference.move_speed
+	var base_tell := reference.pattern_telegraph_seconds
+	var base_contact := reference.contact_damage
+	reference.queue_free()
+	# Each tier on a real round: the rift, the phantom it sends, and a contact reaching life force.
+	for tier in DifficultyTier.ORDER:
+		var info := DifficultyTier.info(tier)
+		var container := Node3D.new()
+		container.add_to_group("PhantomContainer")
+		root.add_child(container)
+		var director := RiftDirector.new()
+		director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+		root.add_child(director)
+		var life := LifeForceManager.new()
+		root.add_child(life)
+		var round_controller := RoundController.new()
+		round_controller.countdown_seconds = 0
+		root.add_child(round_controller)
+		await process_frame
+		await process_frame
+		round_controller.set_process(false)
+		round_controller.begin_round({"id": "tier_check", "rifts": [base_wave]}, tier)
+		round_controller._process(0.0)
+		var rift: RiftManager = director.rift_instances[0] if not director.rift_instances.is_empty() else null
+		if round_controller.current_tier() != tier or rift == null:
+			failures.append("%s did not reach the round" % tier)
+		else:
+			var expected_health := maxi(int(round(100.0 * float(info["health"]))), 1)
+			if rift.maximum_health != expected_health or not is_equal_approx(rift.spawn_interval, 3.0 * float(info["interval"])):
+				failures.append("%s rift has %d health every %.2f s, expected %d every %.2f s" % [tier, rift.maximum_health, rift.spawn_interval, expected_health, 3.0 * float(info["interval"])])
+			var phantom: Phantom = null
+			for _try in 24:
+				var spawned := rift._spawn_phantom()
+				if spawned is Phantom:
+					phantom = spawned
+					break
+			if phantom == null:
+				failures.append("%s rift sent no phantom" % tier)
+			else:
+				var expected_tell := maxf(base_tell * float(info["telegraph"]), 0.35)
+				if not is_equal_approx(phantom.move_speed, base_speed * float(info["speed"])) or not is_equal_approx(phantom.pattern_telegraph_seconds, expected_tell) or not is_equal_approx(phantom.contact_damage, base_contact * float(info["contact"])):
+					failures.append("%s phantom moves %.2f with %.2f s tells and %.1f contact" % [tier, phantom.move_speed, phantom.pattern_telegraph_seconds, phantom.contact_damage])
+				var before := life.current_life_force
+				phantom.player_contact.emit(phantom.contact_damage)
+				if not is_equal_approx(before - life.current_life_force, base_contact * float(info["contact"])):
+					failures.append("%s contact did not reach life force at its scale: %.1f" % [tier, before - life.current_life_force])
+		round_controller.abandon_round()
+		for node in [round_controller, life, director, container]:
+			node.queue_free()
+		await process_frame
+	# Full Resonance: a squat-depth sweep joins the pool, but never sooner than its gap.
+	var resonant := DifficultyTier.apply_wave(base_wave, DifficultyTier.FULL_RESONANCE)
+	if resonant["pool"] != ["yellow", "sweep"] or not is_equal_approx(float(resonant["squat_depth"]), DifficultyTier.SQUAT_DEPTH) or float(resonant.get("sweep_min_gap", 0.0)) < 5.0:
+		failures.append("Full Resonance did not add a spaced squat-depth sweep: %s" % resonant)
+	if base_wave["pool"] != ["yellow"]:
+		failures.append("Applying a tier changed the catalog's own wave")
+	var sweep_box := Node3D.new()
+	sweep_box.add_to_group("PhantomContainer")
+	root.add_child(sweep_box)
+	var sweep_rift := RiftManager.new()
+	sweep_rift.phantom_scenes = [yellow_scene]
+	root.add_child(sweep_rift)
+	await process_frame
+	sweep_rift.configure_wave(resonant)
+	RiftManager._last_sweep_msec = -1000000
+	var sweeps: Array[ResonanceSweep] = []
+	for _i in 20:
+		var spawned := sweep_rift._spawn_phantom()
+		if spawned is ResonanceSweep:
+			sweeps.append(spawned)
+	if sweeps.size() != 1:
+		failures.append("Full Resonance lit %d sweeps at once instead of one" % sweeps.size())
+	elif not is_equal_approx(sweeps[0].squat_depth, DifficultyTier.SQUAT_DEPTH):
+		failures.append("A Full Resonance sweep asked for %.2f, not a squat" % sweeps[0].squat_depth)
+	for _i in 12:
+		if sweep_rift.spawn_escort() is ResonanceSweep:
+			failures.append("A boss escort came out as a sweep")
+			break
+	sweep_rift.force_cleanup()
+	sweep_box.queue_free()
+	await process_frame
+	# The choice persists, defaults to Standard, survives Reset Progress, and records are per tier.
+	var path := "user://validation_tier_settings.cfg"
+	var levels = load("res://Scripts/Core/game_settings.gd").new()
+	levels.settings_path = path
+	if levels.difficulty_tier != DifficultyTier.STANDARD or MissionCatalog.tier_from(levels) != DifficultyTier.STANDARD:
+		failures.append("A fresh profile does not start at Standard")
+	levels.set_difficulty_tier(DifficultyTier.FULL_RESONANCE)
+	levels.set_difficulty_tier("nightmare")
+	levels.record_time("first_light", 200.0, DifficultyTier.FULL_RESONANCE)
+	levels.record_score("first_light", 9000, DifficultyTier.FULL_RESONANCE)
+	levels.record_time("first_light", 150.0)
+	var reloaded = load("res://Scripts/Core/game_settings.gd").new()
+	reloaded.settings_path = path
+	reloaded.load_settings()
+	if reloaded.difficulty_tier != DifficultyTier.FULL_RESONANCE:
+		failures.append("The difficulty choice did not persist: %s" % reloaded.difficulty_tier)
+	if not is_equal_approx(reloaded.best_time("first_light", DifficultyTier.FULL_RESONANCE), 200.0) or not is_equal_approx(reloaded.best_time("first_light"), 150.0) or reloaded.best_score("first_light", DifficultyTier.FULL_RESONANCE) != 9000 or reloaded.best_score("first_light") != 0:
+		failures.append("Best scores and times are not kept per tier")
+	if reloaded.best_times.get("first_light", 0.0) != 150.0:
+		failures.append("Standard records moved off the bare mission id")
+	var entries := MissionCatalog.operation_entries(reloaded)
+	if not is_equal_approx(float(entries[0].get("best_seconds", 0.0)), 200.0) or entries[0].get("tier", "") != DifficultyTier.FULL_RESONANCE:
+		failures.append("Operations does not show the chosen tier's best time")
+	if not MissionCatalog.deploy_detail(reloaded).ends_with("• FULL RESONANCE"):
+		failures.append("Deploy does not show the chosen tier: %s" % MissionCatalog.deploy_detail(reloaded))
+	var maw_entry: Dictionary = entries[entries.size() - 1]
+	if maw_entry.get("expected_minutes", []) != [4, 7]:
+		failures.append("The Full Resonance Maw card does not cover the boss: %s" % [maw_entry.get("expected_minutes", [])])
+	reloaded.reset_mission_progress()
+	if reloaded.difficulty_tier != DifficultyTier.FULL_RESONANCE or reloaded.best_time("first_light", DifficultyTier.FULL_RESONANCE) != 0.0:
+		failures.append("Reset Progress dropped the difficulty or kept a tier's record")
+	levels.free()
+	reloaded.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	# The Operations screen offers all four, marks the choice, and still fits; results name the tier.
+	var menu := (load("res://Scenes/UI/vr_menu_panel.tscn") as PackedScene).instantiate() as VRMenuPanel
+	root.add_child(menu)
+	await process_frame
+	menu.show_operations(MissionCatalog.operation_entries(null), DifficultyTier.OPERATOR)
+	await process_frame
+	await process_frame
+	var tier_buttons := 0
+	for button in _buttons_under(menu):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action.begins_with("tier_"):
+			tier_buttons += 1
+			var marked := button.text.begins_with("●")
+			if marked != (action == "tier_operator"):
+				failures.append("Operations marks the wrong difficulty: %s" % button.text)
+			if not Rect2(Vector2.ZERO, Vector2(1280, 780)).encloses(button.get_global_rect()):
+				failures.append("A difficulty button sits outside the panel")
+	if tier_buttons != 4:
+		failures.append("Operations offers %d difficulties, not four" % tier_buttons)
+	var footer := _find_label(menu, "LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
+	if footer == null or footer.get_global_rect().end.y > 750.0:
+		failures.append("The difficulty row pushed the Operations footer off the panel")
+	if _find_label(menu, "OPERATOR  •  %s" % DifficultyTier.blurb(DifficultyTier.OPERATOR).to_upper()) == null:
+		failures.append("Operations does not say what the chosen difficulty asks")
+	menu.show_results(&"victory", 4000, "", "", 300.0, 0.0, DifficultyTier.label(DifficultyTier.FULL_RESONANCE))
+	await process_frame
+	if not _has_label(menu, "ALL RIFTS SEALED  •  FULL RESONANCE"):
+		failures.append("Results do not name the difficulty")
+	menu.queue_free()
+	await process_frame
+	await _validate_boss_only_at_full_resonance()
+
+## The campaign Maw, forced to break, at every tier: only Full Resonance arms the rift and plays
+## the turn at zero health; every other tier seals it, on the glimpse when it shows.
+func _validate_boss_only_at_full_resonance() -> void:
+	var saved := {}
+	_borrow_settings(true, saved)
+	var lines: Dictionary = (load("res://Assets/Audio/VO/chen/chen_lines.json") as JSON).data.get("events", {})
+	if not lines.has(DifficultyTier.deploy_event(DifficultyTier.FULL_RESONANCE)) or not lines.has("sweep_bend"):
+		failures.append("Chen has no Full Resonance deploy line or bend correction")
+	for tier in DifficultyTier.ORDER:
+		var container := Node3D.new()
+		container.add_to_group("PhantomContainer")
+		root.add_child(container)
+		var director := RiftDirector.new()
+		director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+		root.add_child(director)
+		var life := LifeForceManager.new()
+		root.add_child(life)
+		var round_controller := RoundController.new()
+		round_controller.countdown_seconds = 0
+		root.add_child(round_controller)
+		await process_frame
+		await process_frame
+		round_controller.set_process(false)
+		var boss := director.get_node("MawBoss") as MawBoss
+		var countdown := [""]
+		round_controller.countdown_started.connect(func(mission: Dictionary) -> void: countdown[0] = DifficultyTier.deploy_event(String(mission.get("tier", ""))))
+		MawBoss.force_next_break = true
+		round_controller.begin_round(MissionCatalog.get_mission("the_maw"), tier)
+		round_controller._process(0.0)
+		var resonant := tier == DifficultyTier.FULL_RESONANCE
+		if (countdown[0] != "") != resonant:
+			failures.append("%s countdown line is wrong: '%s'" % [tier, countdown[0]])
+		var rift: RiftManager = director.rift_instances[0] if not director.rift_instances.is_empty() else null
+		if rift == null:
+			failures.append("%s Maw did not open" % tier)
+		else:
+			if boss.breaks != resonant or rift.hold_open != resonant:
+				failures.append("%s Maw %s" % [tier, "did not break" if resonant else "let a boss through"])
+			rift.apply_result({"rift_damage": 100000, "base_score": 10})
+			var turned := boss.stage == MawBoss.Stage.TURN
+			if turned != resonant:
+				failures.append("%s Maw %s the boss turn" % [tier, "never reached" if resonant else "reached"])
+		if MawBoss.force_next_break:
+			failures.append("A forced break outlived the %s Maw" % tier)
+		MawBoss.force_next_break = false
+		round_controller.abandon_round()
+		for node in [round_controller, life, director, container]:
+			node.queue_free()
+		await process_frame
+	_borrow_settings(false, saved)
 
 func _validate_paired_rift_placement() -> void:
 	var director := RiftDirector.new()
@@ -1301,14 +1531,16 @@ func _validate_maw_boss() -> void:
 	var named := [""]
 	boss.phase_two_started.connect(func(boss_name: String, _rift_id: int) -> void: named[0] = boss_name)
 	MawBoss.force_next_break = true
-	round_controller.begin_round(MissionCatalog.get_mission("the_maw_boss"))
+	# The boss Maw is the campaign Maw at Full Resonance.
+	round_controller.begin_round(MissionCatalog.get_mission("the_maw"), DifficultyTier.FULL_RESONANCE)
 	round_controller._process(0.0)
 	var rift: RiftManager = director.rift_instances[0] if not director.rift_instances.is_empty() else null
 	if rift == null or not boss.breaks or not rift.hold_open:
 		failures.append("The boss Maw did not arm its rift to break")
 		await _end_boss_validation(round_controller, life, director, container, saved)
 		return
-	if rift.maximum_health != 800:
+	# 1600 at Standard, 1760 at Full Resonance, half of it on a Maw that breaks.
+	if rift.maximum_health != 880:
 		failures.append("A breaking Maw's phase one was not shortened: %d" % rift.maximum_health)
 	var closed := [false]
 	rift.closed.connect(func() -> void: closed[0] = true)
@@ -1429,8 +1661,8 @@ func _validate_maw_glimpse() -> void:
 	container.queue_free()
 	await process_frame
 	_borrow_settings(false, saved)
-	if not MissionCatalog.get_mission("the_maw_boss").has("boss") or MissionCatalog.all_missions().any(func(mission: Dictionary) -> bool: return mission.has("boss")):
-		failures.append("The boss Maw is not a debug-only mission")
+	if not MissionCatalog.get_mission("the_maw_boss").is_empty() or MissionCatalog.all_missions().any(func(mission: Dictionary) -> bool: return mission.has("boss")):
+		failures.append("A catalog mission carries a boss outside Full Resonance, or the old debug boss Maw is back")
 	var lines: Dictionary = (load("res://Assets/Audio/VO/chen/chen_lines.json") as JSON).data.get("events", {})
 	for event in ["boss_false_seal", "boss_holding_open", "boss_not_a_phantom", "boss_get_ready", "boss_sweep", "boss_slam", "boss_spent", "boss_waking", "boss_volley", "boss_retreat", "maw_glimpse"]:
 		if not lines.has(event):
