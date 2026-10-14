@@ -170,15 +170,15 @@ func _validate_menu_surface() -> void:
 		)
 		if not menu.activate_at_viewport_point(deploy.get_global_rect().get_center()) or not activated[0]:
 			failures.append("Pointing at a menu button did not activate it")
-	# A new operator: training is the highlighted button, and Deploy still works.
+	# A new recruit: training is the highlighted button, and Deploy still works.
 	menu.show_main_menu("NEXT", true)
 	await process_frame
 	var new_training := _find_button(menu, "START TRAINING")
 	var new_deploy := _find_button(menu, "DEPLOY MISSION")
 	if new_training == null or not bool(new_training.get_meta(&"primary", false)) or new_deploy == null or bool(new_deploy.get_meta(&"primary", false)) or new_deploy.disabled:
-		failures.append("A new operator's main menu does not lead with training")
+		failures.append("A new recruit's main menu does not lead with training")
 	elif not "TRAINING RECOMMENDED FIRST" in new_deploy.text:
-		failures.append("Deploy does not recommend training to a new operator")
+		failures.append("Deploy does not recommend training to a new recruit")
 	menu.show_training_complete("NEXT")
 	await process_frame
 	var complete_actions := _button_actions(menu)
@@ -1780,7 +1780,7 @@ func _committed_strike(speed: float, on_lure: bool) -> Dictionary:
 	return result
 
 ## The training run, beat by beat, on the real round, rift, and life force, with the tutorial
-## director's fast mode. The operator is played by hand: a wrong hand first on the Anglers, one
+## director's fast mode. The recruit is played by hand: a wrong hand first on the Anglers, one
 ## hand first on the green, a punch and then a side-step on the pink, hands down on the
 ## possession, a tap then a hard hit for power, and every phantom of the live wave.
 func _validate_tutorial_flow() -> void:
@@ -1819,7 +1819,7 @@ func _validate_tutorial_flow() -> void:
 	var done := [false]
 	tutorial.finished.connect(func() -> void: done[0] = true)
 	tutorial.start()
-	# What the stand-in operator has done in each beat.
+	# What the stand-in recruit has done in each beat.
 	var acted := {}
 	var drains: Array[float] = []
 	life.damage_applied.connect(func(amount: float, _current: float) -> void:
@@ -1879,7 +1879,7 @@ func _validate_tutorial_flow() -> void:
 					acted[&"floor"] = true
 					life.apply_damage(500.0)
 					if life.is_depleted() or not is_equal_approx(life.current_life_force, 20.0):
-						failures.append("Training's life floor did not hold the operator at 20: %.0f" % life.current_life_force)
+						failures.append("Training's life floor did not hold the recruit at 20: %.0f" % life.current_life_force)
 				for node in container.get_children():
 					var live := node as Phantom
 					if live == null or not live.shows_approach_cue() or not live.is_strike_window_open():
@@ -1901,7 +1901,7 @@ func _validate_tutorial_flow() -> void:
 			failures.append("A wrong hand moved training past the %s beat" % beat)
 	if drains != [20.0]:
 		failures.append("The possession beat did not drain exactly 20 once: %s" % [drains])
-	for event in ["tutorial_wrong_hand", "tutorial_green_one", "tutorial_pink_punch", "tutorial_pink_done", "tutorial_possessed", "tutorial_power_seen", "tutorial_last_one", "tutorial_straggler", "tutorial_signoff_comms"]:
+	for event in ["tutorial_wrong_hand", "tutorial_green_one", "tutorial_pink_punch", "tutorial_pink_done", "tutorial_possessed", "tutorial_glove_seen", "tutorial_power_seen", "tutorial_last_one", "tutorial_straggler", "tutorial_signoff_comms"]:
 		if not event in tutorial.spoken:
 			failures.append("Training never said %s" % event)
 	if not tutorial.spoken.has("tutorial_chain_done") and not tutorial.spoken.has("tutorial_chain_enough"):

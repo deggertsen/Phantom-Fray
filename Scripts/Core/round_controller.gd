@@ -73,7 +73,7 @@ func abandon_round() -> void:
 	if _life_force:
 		_life_force.set_process(true)
 		_life_force.reset()
-	score_changed.emit(score, 0, &"reset")
+	score_changed.emit(score, 0, &"abandoned")
 	combo_changed.emit(sweet_streak, multiplier)
 	rift_progress_changed.emit(0, _director.total_rifts if _director else 0)
 	if is_instance_valid(_message):
@@ -91,7 +91,7 @@ func begin_round(mission: Dictionary = {}) -> void:
 	_last_emitted_second = -1
 	_emit_time_if_changed()
 	_life_force.reset()
-	# Training holds the operator in: life force never drops below the mission's floor.
+	# Training holds the recruit in: life force never drops below the mission's floor.
 	_life_force.life_floor = float(mission.get("life_floor", 0.0))
 	_countdown_active = true
 	_paused = false

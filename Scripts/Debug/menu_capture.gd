@@ -40,7 +40,7 @@ func _two_cleared_profile() -> Node:
 
 func _capture_tutorial() -> void:
 	_menu.show_main_menu(MissionCatalog.deploy_detail(null), true)
-	await _capture("main-menu-new-operator.png")
+	await _capture("main-menu-new-recruit.png")
 	_menu.show_training_complete(MissionCatalog.deploy_detail(null))
 	await _capture("training-complete.png")
 	_menu.show_pause(true)

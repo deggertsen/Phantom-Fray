@@ -88,7 +88,7 @@ func _capture_sweep(camera: Node3D) -> void:
 	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
 
-## Chen's training chamber, start to finish at real speed, with a stand-in operator doing the
+## Chen's training chamber, start to finish at real speed, with a stand-in recruit doing the
 ## right thing at each paused hologram once she has finished explaining it.
 ## Run: Godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn -- --tutorial --art-label=tutorial
 func _capture_tutorial(camera: Node3D) -> void:
@@ -97,17 +97,21 @@ func _capture_tutorial(camera: Node3D) -> void:
 	var life := get_tree().get_first_node_in_group("LifeForceManager") as LifeForceManager
 	var done := [false]
 	tutorial.finished.connect(func() -> void: done[0] = true)
-	# A new operator, saved to a scratch profile so the run leaves the real one alone.
+	# A new recruit, saved to a scratch profile so the run leaves the real one alone.
 	var settings := get_node_or_null("/root/GameSettings")
 	if settings:
 		settings.settings_path = "user://play_capture_settings.cfg"
 		settings.tutorial_completed = false
 	_main.get_node("GameFlowController").restore_current_menu()
 	await _wait(0.5)
-	await _capture("t00-menu-new-operator")
+	await _capture("t00-menu-new-recruit")
 	_press(KEY_T)
 	await _wait(2.0)
 	await _capture("t01-intro")
+	_capture_bracer("t01a-intro-caption")
+	# The introduction is one long line; the wrist pages through it.
+	await _wait(12.0)
+	_capture_bracer("t01b-intro-caption-later")
 	await _until_beat(tutorial, &"play_space")
 	await _wait(1.5)
 	await _capture("t02-play-space")
@@ -154,6 +158,11 @@ func _capture_tutorial(camera: Node3D) -> void:
 					camera.position.x = 0.6
 			&"possession":
 				camera.position.x = 0.0
+				# Desktop cannot raise a glove into view: Enter stands in for the look.
+				if not taken.has(&"glove") and "tutorial_glove_check" in tutorial.spoken and not chen.is_busy():
+					taken[&"glove"] = true
+					await _capture("t09c-glove-check")
+					_press(KEY_ENTER)
 				if not taken.has(&"frost") and life.current_life_force < life.max_life_force - 10.0:
 					taken[&"frost"] = true
 					await _wait(0.35)
@@ -176,6 +185,7 @@ func _capture_tutorial(camera: Node3D) -> void:
 					taken[beat] = true
 					await _wait(4.0)
 					await _capture("t12-live-wave")
+					_watch_live_wave(tutorial)
 				if beat == &"live_wave" and not taken.has(&"seal") and "tutorial_last_one" in tutorial.spoken:
 					taken[&"seal"] = true
 					while tutorial.beat == &"live_wave" and not "tutorial_straggler" in tutorial.spoken and not "tutorial_sealed_clean" in tutorial.spoken:
@@ -188,11 +198,25 @@ func _capture_tutorial(camera: Node3D) -> void:
 	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
 
+## If the live wave has not reached its last call in 60 s, print what is in play.
+func _watch_live_wave(tutorial: TutorialDirector) -> void:
+	await _wait(60.0)
+	if tutorial.beat != &"live_wave" or "tutorial_last_one" in tutorial.spoken:
+		return
+	var round := get_tree().get_first_node_in_group("RoundController") as RoundController
+	print("LIVE WAVE STALL round_active=%s paused=%s" % [round.is_round_active(), round._paused])
+	for rift in get_tree().get_nodes_in_group("active_rift"):
+		print("  rift health=%d feed=%s spawning=%s live=%d" % [rift.rift_health, rift.feed_enabled, rift.spawning_enabled, rift.live_phantoms().size()])
+	for node in get_tree().get_nodes_in_group("phantom"):
+		var p := node as Phantom
+		if p:
+			print("  %s held=%s phase=%d pos=%s vel=%s alive=%.1f physics=%s terminal=%s" % [p.variant_id, p.is_held(), p._phase, p.global_position, p.velocity, p._alive_time, p.is_physics_processing(), p._terminal])
+
 func _until_beat(tutorial: TutorialDirector, beat: StringName) -> void:
 	while tutorial.beat != beat:
 		await get_tree().process_frame
 
-## The stand-in operator in a live beat: the matching hand on anything in reach.
+## The stand-in recruit in a live beat: the matching hand on anything in reach.
 func _strike_in_reach(_beat: StringName) -> void:
 	for node in get_tree().get_nodes_in_group("phantom"):
 		var phantom := node as Phantom

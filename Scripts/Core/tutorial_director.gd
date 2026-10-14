@@ -1,10 +1,10 @@
 extends Node
 class_name TutorialDirector
 
-## Dr. Chen's training chamber: a scripted walk through everything an operator meets in a
+## Dr. Chen's training chamber: a scripted walk through everything a recruit meets in a
 ## fight, in a simulation where every rift and phantom is a hologram. At the moment a phantom
 ## would be punched, Chen pauses its hologram (Phantom.hold_in_reach) so she can say what
-## matters, and it waits until the operator does the right thing.
+## matters, and it waits until the recruit does the right thing.
 ##
 ## The beats run on the real round, rift, life force, and comms systems, so training teaches
 ## the real rules. The plan, and why it is built this way: development/Tutorial_Plan.md.
@@ -34,8 +34,13 @@ const MAX_NUDGES := 2
 const BREATH := 0.25
 ## The head this far from a paused pink's charge line is out of its lane.
 const LANE_CLEARANCE := 0.5
-## Both grips held this long in the play-space beat says "ready".
+## Both fists held this long in the play-space beat says "ready".
 const READY_HOLD := 0.5
+## Looking at the left glove: its display within this distance and this many degrees of the
+## middle of the view, for this long.
+const GLOVE_LOOK_DISTANCE := 0.9
+const GLOVE_LOOK_DEGREES := 30.0
+const GLOVE_LOOK_HOLD := 0.4
 ## The live wave: the rift starts it with at most this much health, and once it is down to
 ## LAST_CALL_HEALTH it stops feeding, makes sure two phantoms are out, and drops to
 ## LAST_CALL_TRIM so the next resolve seals it with the other still coming.
@@ -145,7 +150,7 @@ func is_running() -> bool:
 func current_phantom() -> Phantom:
 	return _current if is_instance_valid(_current) else null
 
-## From the top, exactly as a new operator gets it.
+## From the top, exactly as a new recruit gets it.
 func start() -> void:
 	stop()
 	_running = true
@@ -188,7 +193,7 @@ func set_paused(paused: bool) -> void:
 	if _chen and _running:
 		_chen.set_paused(paused)
 
-## Desktop debug builds: Enter stands in for squeezing both grips.
+## Desktop debug builds: Enter stands in for making both fists, and for looking at the glove.
 func confirm() -> void:
 	_confirm_pressed = true
 
@@ -213,8 +218,8 @@ func _run(id: int) -> void:
 			&"rift":
 				ok = await _beat_rift()
 			&"yellow":
-				ok = await _beat_angler("yellow", LURE_JAB, "LEFT HAND", "LEFT HAND  •  GRIP, THEN PUNCH THROUGH THE LURE",
-					["tutorial_paused", "tutorial_yellow_left", "tutorial_grip_punch", "tutorial_lure", "tutorial_lure_crit"])
+				ok = await _beat_angler("yellow", LURE_JAB, "LEFT HAND", "LEFT HAND  •  MAKE A FIST, PUNCH THROUGH THE LURE",
+					["tutorial_paused", "tutorial_yellow_left", "tutorial_fist_punch", "tutorial_lure", "tutorial_lure_crit"])
 			&"blue":
 				ok = await _beat_angler("blue", LURE_HOOK, "RIGHT HAND", "RIGHT HAND  •  HOOK THE LURE",
 					["tutorial_blue_right", "tutorial_hook"])
@@ -252,18 +257,18 @@ func _run(id: int) -> void:
 
 func _beat_intro() -> bool:
 	_show_card("DR. ELARA CHEN  //  RSF SCIENCE LEAD")
-	return await _say_all(["tutorial_hello", "tutorial_gauntlets", "tutorial_life_force", "tutorial_up_close", "tutorial_chamber", "tutorial_pause_power"])
+	return await _say_all(["tutorial_hello", "tutorial_chamber", "tutorial_pause_power"])
 
 func _beat_play_space() -> bool:
-	_show_card("STAND IN THE RING  •  HOLD META TO RECENTER\nSQUEEZE BOTH GRIPS WHEN READY")
-	if not await _say_all(["tutorial_ring", "tutorial_recenter", "tutorial_grips"]):
+	_show_card("STAND IN THE RING  •  MAKE FISTS WHEN READY")
+	if not await _say_all(["tutorial_ring", "tutorial_fists"]):
 		return false
 	_confirm_pressed = false
 	var held_for := [0.0]
 	var ready := func() -> bool:
 		if fast or _confirm_pressed:
 			return true
-		held_for[0] = held_for[0] + _delta if _both_grips() else 0.0
+		held_for[0] = held_for[0] + _delta if _both_fists() else 0.0
 		return held_for[0] >= READY_HOLD
 	var nudges := 0
 	while true:
@@ -274,7 +279,7 @@ func _beat_play_space() -> bool:
 			return true
 		if nudges < MAX_NUDGES:
 			nudges += 1
-			if not await _say("tutorial_grips"):
+			if not await _say("tutorial_fists"):
 				return false
 	return false
 
@@ -396,7 +401,7 @@ func _beat_pink() -> bool:
 		return await _say("tutorial_pink_done")
 	return true
 
-## One gets through on purpose, so possession, the frost, and recovery are seen once.
+## One gets through on purpose, so a possession, the drain, and recovery are seen once.
 func _beat_possession() -> bool:
 	_show_card("HANDS DOWN  •  LET IT IN")
 	for attempt in 2:
@@ -415,8 +420,8 @@ func _beat_possession() -> bool:
 				return false
 		if _contact:
 			return await _explain_possession()
-	# Struck twice. Show the drain anyway: the bar, the frost, and the heartbeat all follow it.
-	if not await _say("tutorial_watch_wrist"):
+	# Struck twice. Show the drain anyway: the bar and the hit effects all follow it.
+	if not await _say("tutorial_watch_glove"):
 		return false
 	if _life:
 		_life.apply_damage(_life.drain_on_basic_hit)
@@ -424,14 +429,53 @@ func _beat_possession() -> bool:
 
 func _explain_possession() -> bool:
 	_highlight(&"life")
-	var ok := await _say_all(["tutorial_possessed", "tutorial_life_wrist", "tutorial_recover", "tutorial_failsafe"])
+	if not await _say("tutorial_possessed"):
+		return false
+	if not await _glove_check():
+		return false
+	var ok := await _say_all(["tutorial_recover", "tutorial_failsafe"])
 	_highlight(&"")
 	return ok
+
+## Chen asks the recruit to look at the display on their left glove, and waits until they do,
+## so they learn there is information there. Moves on after a nudge if they never look.
+func _glove_check() -> bool:
+	_show_card("LOOK AT YOUR LEFT GLOVE")
+	if not await _say("tutorial_glove_check"):
+		return false
+	_confirm_pressed = false
+	var looked_for := [0.0]
+	var looking := func() -> bool:
+		if fast or _confirm_pressed:
+			return true
+		looked_for[0] = looked_for[0] + _delta if _looking_at_glove() else 0.0
+		return looked_for[0] >= GLOVE_LOOK_HOLD
+	for attempt in 2:
+		var outcome := await _until(looking, NUDGE_SECONDS)
+		if outcome < 0:
+			return false
+		if outcome > 0:
+			_clear_card()
+			return await _say("tutorial_glove_seen")
+		if attempt == 0 and not await _say("tutorial_glove_nudge"):
+			return false
+	_clear_card()
+	return true
+
+## The left glove's display is close and near the middle of the view.
+func _looking_at_glove() -> bool:
+	var display := _hud as Node3D
+	if display == null or _camera == null or not display.is_visible_in_tree():
+		return false
+	var to_glove := display.global_position - _camera.global_position
+	if to_glove.length() > GLOVE_LOOK_DISTANCE:
+		return false
+	return (-_camera.global_transform.basis.z).dot(to_glove.normalized()) >= cos(deg_to_rad(GLOVE_LOOK_DEGREES))
 
 func _beat_rift_health() -> bool:
 	_highlight(&"rifts")
 	_show_card("EVERY HIT DRAINS THE RIFT")
-	var ok := await _say_all(["tutorial_rift_damage", "tutorial_rift_wrist", "tutorial_seal", "tutorial_stragglers"])
+	var ok := await _say_all(["tutorial_rift_damage", "tutorial_rift_glove", "tutorial_seal", "tutorial_stragglers"])
 	_highlight(&"")
 	return ok
 
@@ -572,7 +616,7 @@ func _send_held(variant: String, lure: int, distance: float, lure_visible: bool 
 		if not _result.is_empty() or (not _gone(phantom) and phantom.is_held()):
 			phantom_held.emit(phantom)
 			return phantom
-	push_warning("Training: no %s reached the operator" % variant)
+	push_warning("Training: no %s reached the recruit" % variant)
 	return null
 
 func _send_pink() -> SpearfinPhantom:
@@ -706,7 +750,7 @@ func _flat_forward() -> Vector3:
 	forward.y = 0.0
 	return forward.normalized() if forward.length_squared() > 0.001 else Vector3.FORWARD
 
-## The one thing to do, floating low in front of the operator.
+## The one thing to do, floating low in front of the recruit.
 func _show_card(text: String) -> void:
 	if _card == null:
 		_card = Label3D.new()
@@ -788,7 +832,8 @@ func _highlight(section: StringName) -> void:
 	if _hud and _hud.has_method("set_highlight"):
 		_hud.set_highlight(section)
 
-func _both_grips() -> bool:
+## On controllers a fist is the grip held.
+func _both_fists() -> bool:
 	if _player == null:
 		return false
 	for path in [NodePath("LeftHandController"), NodePath("RightHandController")]:

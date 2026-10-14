@@ -20,7 +20,7 @@ Ideas that are not scheduled live in [Ideas_Backlog.md](Ideas_Backlog.md).
 - Four phantom rules on three creature species with three body forms each: Angler (yellow left, blue right, lure is the crit), Carapace (green, two-hand block), Spearfin (pink, floor lane, dodge).
 - Phantoms arrive on one continuous accelerating arc and lunge for the head. A strike counts once the body is in reach.
 - Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift. Missions doubled in length on 2026-10-09: OP-01 to OP-05 run twice the rifts (4, 12, 12, 16, 16) and The Maw's single rift has twice the health (1600). A sealed rift's phantoms stay in play; the operation is won when the last one is dealt with.
-- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the operator out. Operators never die.
+- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the Striker out. Strikers never die.
 - Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score and fastest victory per operation are stored; results show the completion time and call a new best time. Each Operations card shows an expected time range and the best time beside it.
 - Dr. Chen on comms: 33 moments, 4 to 5 takes each, voiced with ElevenLabs. Cooldown and max-wait pacing so she never cuts herself off. Opening line knows if this is a first attempt, a retry after the failsafe, or a replay; victory line knows if it was flawless, at critical, or a new best.
 - Play My Own Music: a settings switch silences the soundtrack so any music app plays through.
@@ -80,7 +80,7 @@ Fitness is the product. The tutorial operations are the on-ramp; the world map i
 
 ## Phase 7 — Narrative hooks and the war
 
-Give the sweat a purpose. The Overseer is winning unless operators show up.
+Give the sweat a purpose. The Overseer is winning unless Strikers show up.
 
 - [ ] Campaign restructure: the current six operations become the RSF tutorial. Together they teach the combat rules the world map uses, ending with The Maw's flood and a first glimpse of the tentacle holding it open. Each clear is also a story beat with a Chen debrief that reveals one thing about the Overseer.
 - [ ] War map: a world map of breach sites with a front line. After the tutorial this is how the game is played: the player picks a breach and a difficulty, not the next operation number. Sealing rifts pushes the line. Early version is local-only; later versions aggregate across players, in the spirit of Helldivers 2's galactic war.

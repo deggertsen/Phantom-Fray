@@ -58,11 +58,11 @@ func _update_thumbstick_scroll(delta: float) -> void:
 ## training_first: training has not been finished on this profile, so it is the highlighted
 ## button and Deploy says so. Deploy still works.
 func show_main_menu(deploy_detail: String = "Seal the next live rift", training_first: bool = false) -> void:
-	_begin_view(&"DEPLOYMENT", "RSF // OPERATOR INTERFACE", "PHANTOM FRAY", "RESONANCE RISING", COLOR_CYAN)
+	_begin_view(&"DEPLOYMENT", "RSF // STRIKER INTERFACE", "PHANTOM FRAY", "RESONANCE RISING", COLOR_CYAN)
 	# The deploy, operations, and training rows plus the footer only fit the 780 px panel with tighter rows.
 	_content.add_theme_constant_override("separation", 8)
 	if training_first:
-		_add_copy("NEW OPERATOR", "Start with Dr. Chen's training chamber. About five minutes.", COLOR_MUTED)
+		_add_copy("NEW RECRUIT", "Start with Dr. Chen's training chamber. About five minutes.", COLOR_MUTED)
 	else:
 		_add_copy("THE BREACH IS ACTIVE", "Deploy the next contract, or open Operations and choose.", COLOR_MUTED)
 	var deploy_heading := "TRAINING RECOMMENDED FIRST" if training_first else "LIVE COMBAT OPERATION"
@@ -92,7 +92,7 @@ func show_main_menu(deploy_detail: String = "Seal the next live rift", training_
 	))
 	secondary.add_child(_make_action_button(
 		&"settings",
-		"⌁  OPEN SETTINGS\nAUDIO • HAPTICS • COMFORT\nCustomize your operator profile",
+		"⌁  OPEN SETTINGS\nAUDIO • HAPTICS • COMFORT\nCustomize your Striker profile",
 		COLOR_BLUE,
 		Vector2(0, 118)
 	))
@@ -140,7 +140,7 @@ func show_training_complete(deploy_detail: String) -> void:
 	_set_footer("POINT + TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
 
 func show_settings(music_text: String, effects_text: String, haptics_text: String, reduced_flashes: bool, from_pause: bool, own_music: bool = false) -> void:
-	_begin_view(&"SETTINGS", "RSF // OPERATOR PROFILE", "SETTINGS", "", COLOR_BLUE)
+	_begin_view(&"SETTINGS", "RSF // STRIKER PROFILE", "SETTINGS", "", COLOR_BLUE)
 	var scroll_hint := _label("AIM AT PANEL • USE EITHER THUMBSTICK TO SCROLL", 16, COLOR_MUTED, true)
 	scroll_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_content.add_child(scroll_hint)
@@ -202,7 +202,7 @@ func show_pause(training: bool = false) -> void:
 	_set_footer("POINT + TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
 
 func show_reset_confirmation() -> void:
-	_begin_view(&"CONFIRM", "RSF // OPERATOR PROFILE", "RESET MISSION PROGRESS?", "CLEARED CONTRACTS RETURN TO LOCKED", COLOR_RED)
+	_begin_view(&"CONFIRM", "RSF // STRIKER PROFILE", "RESET MISSION PROGRESS?", "CLEARED CONTRACTS RETURN TO LOCKED", COLOR_RED)
 	_add_copy("AUDIO AND TRAINING STAY", "Music, effects, haptics, and the training record are left alone.", COLOR_MUTED)
 	_content.add_child(_make_action_button(&"reset_cancel", "KEEP PROGRESS", COLOR_GREEN, Vector2(0, 92), true))
 	_content.add_child(_make_action_button(&"reset_confirm", "RESET PROGRESS", COLOR_RED, Vector2(0, 92)))
@@ -243,7 +243,7 @@ func _closest_button(node: Node, point: Vector2, best: Array) -> void:
 		_closest_button(child, point, best)
 
 ## seconds is the live round time; previous_best is the stored fastest victory before this one (0 when none).
-## offer_training adds REVIEW TRAINING, for an operator the failsafe just pulled out.
+## offer_training adds REVIEW TRAINING, for a Striker the failsafe just pulled out.
 func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0, offer_training: bool = false) -> void:
 	var victory := outcome == &"victory"
 	var title := "MISSION COMPLETE" if victory else "OPERATION ENDED"

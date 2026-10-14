@@ -18,7 +18,7 @@
 - [ ] Pink cannot be punched and resolves on a successful dodge.
 - [ ] Rift shader health, damage flash, beacon, and dissolve visibly change.
 - [ ] Chen captions appear on the wrist panel for mission start (first, retry, replay), rift bearings, first contact per species, wrong hand, chain, life force, possession, and outcome.
-- [ ] Training runs start to finish: every beat advances only on the right action, a wrong hand or one-hand catch or punched pink gets a correction and does not advance, the possession beat drains 20, life never drops below 20, the live wave ends on a seal and its straggler, and Training Complete appears. End Training from pause marks training done. Training records no clear, score, or time.
+- [ ] Training runs start to finish: every beat advances only on the right action, a wrong hand or one-hand catch or punched pink gets a correction and does not advance, the possession beat drains 20 and waits for the recruit to look at their left glove, life never drops below 20, the live wave ends on a seal and its straggler, and Training Complete appears. End Training from pause marks training done. Training records no clear, score, or time.
 - [ ] `tools/check_vo.ps1` reports no clips needing a listen.
 - [ ] `art_capture.tscn` and `play_capture.tscn` (including `-- --tutorial`) produce stills without errors.
 
@@ -33,7 +33,7 @@
 - [ ] Chen's voice is audible over music at default settings and ducks the music while speaking.
 - [ ] Standing-height sanity check.
 - [ ] Physical side-step and duck both resolve pink.
-- [ ] In training, a paused Angler's lure sits inside a comfortable jab, the paused green inside a two-hand catch, and the floating cards and tags are readable without blocking the phantom.
+- [ ] In training, raising the left hand to look at the glove passes the glove check without straining, and a paused Angler's lure sits inside a comfortable jab, the paused green inside a two-hand catch, and the floating cards and tags are readable without blocking the phantom.
 - [ ] A tap and a full-power punch land at opposite ends of the punch power band on Quest controllers.
 - [ ] Possession tint and distortion are strong but comfortable; Reduced Flashes visibly reduces them.
 - [ ] Headset removal pauses timers, spawning, damage, and haptics.

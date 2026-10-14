@@ -27,6 +27,8 @@ const FOLDER := "res://Assets/Audio/VO/chen/"
 const SCRIPT := preload("res://Assets/Audio/VO/chen/chen_lines.json")
 const DEFAULT_MAX_WAIT := 3.0
 const MAX_QUEUE := 3
+## A captioned line with no recording holds this long per word, and never less than 2.2 s.
+const CAPTION_SECONDS_PER_WORD := 0.36
 ## Rifts this close to where the player is looking are "dead ahead"; wider ones get a clock bearing.
 const IN_VIEW_DEGREES := 50.0
 const LIFE_ORDER := {&"healthy": 0, &"caution": 1, &"danger": 2, &"critical": 3, &"depleted": 4}
@@ -177,6 +179,8 @@ func _play(event: String) -> void:
 		# No recording yet: caption it and hold the line's time as if it were spoken. _process
 		# ends it on her clock, so a pause holds the caption too.
 		_player.stream = null
+		# About as long as she would take to say it: her introduction is a paragraph.
+		seconds = maxf(seconds, String(lines[take]).split(" ", false).size() * CAPTION_SECONDS_PER_WORD)
 	_speaking_until = _clock + seconds
 	line_started.emit(_speaker, String(lines[take]), seconds)
 
@@ -281,7 +285,7 @@ func _begin_mission() -> void:
 	_best_before = settings.best_score(_mission_id) if settings else 0
 	say(_mission_start_event(cleared))
 
-## The opening line knows the operator's history with this breach.
+## The opening line knows the Striker's history with this breach.
 func _mission_start_event(cleared: bool) -> String:
 	if _last_outcome.get(_mission_id, &"") == &"defeat":
 		return "mission_start_retry"
@@ -372,7 +376,7 @@ func _on_damage_applied(_amount: float, _current: float) -> void:
 		say("possessed")
 
 ## Victory lines react to how it went: untouched, at critical, a new best, or simply sealed.
-## A defeat means the gauntlets' failsafe fired and the recovery team is pulling the operator out.
+## A defeat means the gauntlets' failsafe fired and the recovery team is pulling the Striker out.
 func _on_round_finished(outcome: StringName, score: int) -> void:
 	if _training:
 		_training = false

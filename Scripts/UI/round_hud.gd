@@ -65,6 +65,11 @@ var _boss_slot: int = -1
 var _caption: String = ""
 var _caption_speaker: String = ""
 var _caption_left: float = 0.0
+## A line too long for the caption row is shown two lines at a time, each page held for its
+## share of the line's length, so it keeps pace with her voice.
+var _caption_pages: Array[String] = []
+var _page_ends: Array[float] = []
+var _caption_age: float = 0.0
 ## Training points at one part of the panel: &"life", &"rifts", &"chain", or nothing.
 var _highlight: StringName = &""
 
@@ -93,6 +98,8 @@ func _process(delta: float) -> void:
 		animating = true
 	if _caption_left > 0.0:
 		_caption_left = maxf(_caption_left - delta, 0.0)
+		_caption_age += delta
+		_turn_caption_page()
 		animating = true
 		if _caption_left <= 0.0:
 			_mark_dirty()
@@ -168,13 +175,62 @@ func _on_comms_cut() -> void:
 
 func _on_comms_line(speaker: String, text: String, seconds: float) -> void:
 	_caption_speaker = speaker
-	_caption = text
+	_caption_pages = _paginate(speaker, text)
+	_page_ends.clear()
+	var total := maxf(float(text.length()), 1.0)
+	var said := 0.0
+	for page in _caption_pages:
+		said += float(page.length())
+		_page_ends.append(seconds * said / total)
+	_caption = _caption_pages[0]
+	_caption_age = 0.0
 	_caption_left = seconds + 0.8
 	_mark_dirty()
+
+func _turn_caption_page() -> void:
+	for i in _page_ends.size():
+		if _caption_age < _page_ends[i] or i == _page_ends.size() - 1:
+			if _caption != _caption_pages[i]:
+				_caption = _caption_pages[i]
+				_mark_dirty()
+			return
+
+## The line in pages that each fit the caption row's two lines.
+func _paginate(speaker: String, text: String) -> Array[String]:
+	var w := float(CANVAS.x)
+	var label_width := _bold.get_string_size(speaker + "  ", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 20).x
+	var pages: Array[String] = []
+	var current := ""
+	for word in text.split(" ", false):
+		var trial := word if current == "" else current + " " + word
+		if current == "" or _line_count(trial, w - 72.0 - label_width, w - 72.0, 22) <= 2:
+			current = trial
+		else:
+			pages.append(current)
+			current = word
+	pages.append(current)
+	return pages
+
+func _line_count(text: String, first_width: float, width: float, size: int) -> int:
+	var count := 1
+	var line := ""
+	for word in text.split(" ", false):
+		var limit := first_width if count == 1 else width
+		var trial := word if line == "" else line + " " + word
+		if line == "" or _font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x <= limit:
+			line = trial
+		else:
+			count += 1
+			line = word
+	return count
 
 func _on_score_changed(total: int, delta: int, reason: StringName) -> void:
 	if reason == &"reset":
 		_in_mission = true
+		_delta_age = 99.0
+	elif reason == &"abandoned":
+		# The round was torn down (menu, retry, training): back to standby until the next one.
+		_in_mission = false
 		_delta_age = 99.0
 	elif delta > 0:
 		_delta = delta

@@ -1,9 +1,9 @@
 # Tutorial Plan: Dr. Chen's Training Chamber
 
-**Status:** approved by David on 2026-10-13 with the decisions below, and built (see Production_Status.md). Chen's line drafts in section 5 are waiting on his review before they are voiced; until then training runs on captions.
+**Status:** approved by David on 2026-10-13, built, and voiced (see Production_Status.md). His second review renamed the player (Recruit, then Striker), added the glove check, and set the line style below.
 **Written:** 2026-10-13, against the code on `main` at ffe1477.
 
-Today's Training is six text pages on the menu panel (`_tutorial_pages` in `Scripts/Core/game_flow_controller.gd`, `show_tutorial` in `Scripts/UI/vr_menu_panel.gd`). This plan replaces it with a played scenario. Dr. Chen introduces herself over comms. The operator stands in an RSF training chamber where every rift and phantom is a hologram. Chen walks them through everything they meet in a fight, and at the moment a phantom would be punched she pauses the hologram so she can say what matters. It waits there until the operator does the right thing.
+Today's Training is six text pages on the menu panel (`_tutorial_pages` in `Scripts/Core/game_flow_controller.gd`, `show_tutorial` in `Scripts/UI/vr_menu_panel.gd`). This plan replaces it with a played scenario. Dr. Chen introduces herself over comms. The recruit stands in an RSF training chamber where every rift and phantom is a hologram. Chen walks them through everything they meet in a fight, and at the moment a phantom would be punched she pauses the hologram so she can say what matters. It waits there until the recruit does the right thing.
 
 The six campaign operations stay as they are. They remain the extended on-ramp described in the roadmap; this is the first five minutes before them.
 
@@ -13,13 +13,16 @@ The six campaign operations stay as they are. They remain the extended on-ramp d
 2. **The six pages go.** The tutorial replaces them. Menu changes are at my discretion; a full menu revamp is coming, so the menu work here stays small.
 3. **Possession on purpose.** Chen lets one through so life force, the drain, and recovery are seen.
 4. **Punch power ships.** Players need to be taught the difference a harder punch makes, so it is taught with a hands-on demonstration, not just a line.
-5. **Training cannot fail.** A life force floor keeps the operator in.
+5. **Training cannot fail.** A life force floor keeps the recruit in.
 6. **No deliberate wrong hand.** Teach the right way; correct a wrong hand only when it happens.
-7. **A training facility of holograms.** The operator should feel they are in a simulation, seeing holograms rather than the real thing. A freeze is the hologram pausing.
+7. **A training facility of holograms.** The recruit should feel they are in a simulation, seeing holograms rather than the real thing. A freeze is the hologram pausing.
 8. **Replay is the whole thing.** A replay plays exactly as for a new player. Ending training from the pause menu marks it complete; nobody is forced through the full tutorial.
-9. **Review Training on results:** David asked what "results" means (answered in chat; see open question below).
+9. **Review Training on results** (the after-action report when an operation ends): yes, after a failed operation.
 10. **Voice:** David reviews the line drafts first, then all of them are generated with ElevenLabs.
 11. **Where it sits:** try something; adjust later if it does not land.
+12. **Recruit, then Striker** (second review). Chen no longer says "operator". She calls the player "Recruit" in training and "Striker", a member of the Resonance Strike Force, from the first operation on; her sign-off makes sealing First Light the promotion. Menus and docs follow. The "Operator" difficulty tier keeps its name for now.
+13. **The glove check** (second review). After the possession, Chen asks the recruit to look at their left glove and waits until they do, so they learn the display there carries information.
+14. **Line style** (second review). No mention of recentering. "Fist", never "grip" or a button, so the script works with hand tracking. Fuller sentences that say why ("Different energy signatures in each hand", "No real phantoms here"). The introduction is a full paragraph on who Chen is and what the world faces.
 
 ---
 
@@ -32,7 +35,7 @@ Conventions:
 - **Paused** means the per-phantom hold in section 3: the hologram stops mid-motion, in reach and punchable, unable to possess.
 - **Card** is a floating text card about 2 m ahead and below eye line naming the one thing to do.
 - **Tag** is a floating label beside a paused phantom ("LURE", "LEFT HAND", "BOTH HANDS"), pointing at the part that matters.
-- **Nudge**: if the operator does nothing useful for 8 seconds, Chen repeats the instruction with another take, again at 16 s.
+- **Nudge**: if the recruit does nothing useful for 8 seconds, Chen repeats the instruction with another take, again at 16 s.
 - Chen's lines are listed by event name; the text is in section 5.
 
 ### The chamber
@@ -42,14 +45,14 @@ While training runs, the breach site is replaced by the training chamber: a dark
 ### Beat 1: Chen introduces herself
 
 - **On screen:** the chamber, empty. Menu hidden. Bracer reads "TRAINING", full life force. Card: "DR. ELARA CHEN // RSF SCIENCE LEAD".
-- **Chen:** `tutorial_hello`, `tutorial_gauntlets`, `tutorial_life_force`, `tutorial_up_close`, `tutorial_chamber`, `tutorial_pause_power`.
+- **Chen:** `tutorial_hello` (one long speech: who she is, the Breach, the phantoms, the Overseer, the gauntlets, why it is up close and personal, and that Strikers close the rifts; the wrist caption pages through it), `tutorial_chamber`, `tutorial_pause_power`.
 - **To advance:** runs on. Pause works throughout (section 4).
 
-### Beat 2: Play space and recenter
+### Beat 2: Play space
 
-- **On screen:** the floor's safe ring pulses. Card: "STAND IN THE RING • HOLD META TO RECENTER • SQUEEZE BOTH GRIPS".
-- **Chen:** `tutorial_ring`, `tutorial_recenter`, `tutorial_grips` (also the nudge).
-- **To advance:** both grips held together for half a second. Desktop debug builds: Enter.
+- **On screen:** the floor's safe ring pulses. Card: "STAND IN THE RING • MAKE FISTS WHEN READY". Nothing mentions recentering.
+- **Chen:** `tutorial_ring`, `tutorial_fists` (also the nudge).
+- **To advance:** both fists made (on controllers, both grips held) for half a second. Desktop debug builds: Enter. Every line and card talks about fists, not controller buttons, so hand tracking can use the same script.
 - **Wrong:** nothing happens; nudge.
 
 ### Beat 3: The rift loads
@@ -61,7 +64,7 @@ While training runs, the breach site is replaced by the training chamber: a dark
 ### Beat 4: Grip and strike, the yellow Angler, the lure
 
 - **On screen:** one yellow Angler comes out of the rift, slow and with a long tell, and arcs in from the left. About 0.95 m from the face it pauses mid-flap, the hologram frozen and tinted. Its lure sits in front of its mouth (the jab spot). Tags: "LEFT HAND", "LURE". Card: "LEFT HAND • GRIP, THEN PUNCH THROUGH THE LURE".
-- **Chen:** `tutorial_paused`, `tutorial_yellow_left`, `tutorial_grip_punch`, `tutorial_lure`, `tutorial_lure_crit`.
+- **Chen:** `tutorial_paused`, `tutorial_yellow_left`, `tutorial_fist_punch`, `tutorial_lure`, `tutorial_lure_crit`.
 - **To advance:** a valid left-hand strike. `tutorial_crit_landed` on a lure hit, `tutorial_plain_landed` otherwise.
 - **Wrong:** right hand: the lure flashes red, the hand buzzes, it stays paused, `tutorial_wrong_hand`. Grip without a punch or a slow push registers nothing; nudge `tutorial_strike_nudge`.
 
@@ -89,22 +92,22 @@ While training runs, the breach site is replaced by the training chamber: a dark
 
 ### Beat 8: Pink Spearfin, the lane, the dodge
 
-- **On screen:** a pink paints its chevron lane toward the operator and pauses at the moment the lane locks, just before the charge. The lane stays at full strength. Tag: "CAN'T BE PUNCHED". Card: "STEP OUT OF THE LANE, OR DUCK".
+- **On screen:** a pink paints its chevron lane toward the recruit and pauses at the moment the lane locks, just before the charge. The lane stays at full strength. Tag: "CAN'T BE PUNCHED". Card: "STEP OUT OF THE LANE, OR DUCK".
 - **Chen:** `tutorial_pink`, `tutorial_pink_lane`, `tutorial_pink_move`.
-- **To advance:** the operator's head moves more than 0.5 m from the charge line. The hologram resumes, charges down the empty lane, and resolves as a dodge: `tutorial_pink_done`.
+- **To advance:** the recruit's head moves more than 0.5 m from the charge line. The hologram resumes, charges down the empty lane, and resolves as a dodge: `tutorial_pink_done`.
 - **Wrong:** a punch passes through with the rejected buzz, `tutorial_pink_punch`. It stays paused until they leave the lane.
 
 ### Beat 9: A possession, on purpose
 
 - **On screen:** a yellow arcs in and pauses. Card: "HANDS DOWN • LET IT IN".
-- **Chen:** `tutorial_let_in`, `tutorial_hands_down`. The hologram resumes and lunges into the head: the impact distortion and possession flash, the siphon sound, life force 100 to 80 with the bracer's life bar framed. (Frost and veins only close in below 70, so a single possession does not bring them; Chen's failsafe line covers what comes after.) Then `tutorial_possessed`, `tutorial_life_wrist`, `tutorial_recover`, `tutorial_failsafe`.
-- **To advance:** runs on; the operator sees the bar start to climb.
-- **Wrong:** if they punch it first, `tutorial_let_in_again` and another comes. If they punch that too, `tutorial_watch_wrist` and the drain is applied directly (`LifeForceManager.apply_damage(20)`), which still drives the distortion, the drain blip, and the bar.
+- **Chen:** `tutorial_let_in`, `tutorial_hands_down`. The hologram resumes and lunges into the head: the impact distortion and possession flash, the siphon sound, life force 100 to 80 with the bracer's life bar framed. (Frost and veins only close in below 70, so a single possession does not bring them; Chen's failsafe line covers what comes after.) Then `tutorial_possessed`, and the glove check: card "LOOK AT YOUR LEFT GLOVE", `tutorial_glove_check`, and Chen waits until the recruit looks at the display on their left glove (within 0.9 m and 30 degrees of the middle of their view, for 0.4 s), then `tutorial_glove_seen`. If they have not looked after 8 s, `tutorial_glove_nudge`; after another 8 s she moves on. Then `tutorial_recover` and `tutorial_failsafe`.
+- **To advance:** runs on; the recruit sees the bar start to climb.
+- **Wrong:** if they punch it first, `tutorial_let_in_again` and another comes. If they punch that too, `tutorial_watch_glove` and the drain is applied directly (`LifeForceManager.apply_damage(20)`), which still drives the distortion, the drain blip, and the bar.
 
 ### Beat 10: The rift and its health
 
 - **On screen:** card: "EVERY HIT DRAINS THE RIFT". The bracer's rift hex gets a pulsing frame.
-- **Chen:** `tutorial_rift_damage`, `tutorial_rift_wrist`, `tutorial_seal`, `tutorial_stragglers`.
+- **Chen:** `tutorial_rift_damage`, `tutorial_rift_glove`, `tutorial_seal`, `tutorial_stragglers`.
 
 ### Beat 11: Punch power
 
@@ -170,7 +173,7 @@ The hands-on lesson David asked for.
 
 ## 4. Structure
 
-**A tutorial director, not a catalog mission.** A new `Scripts/Core/tutorial_director.gd` (`TutorialDirector`, a node in `main.tscn`) runs the beats: one coroutine per beat, awaiting Chen's lines and the operator's actions through signals, with nudge timers and the exits above. The catalog's wave tables cannot say "send this one phantom, pause it, wait for the left hand", and overloading them would leak tutorial logic into every operation.
+**A tutorial director, not a catalog mission.** A new `Scripts/Core/tutorial_director.gd` (`TutorialDirector`, a node in `main.tscn`) runs the beats: one coroutine per beat, awaiting Chen's lines and the recruit's actions through signals, with nudge timers and the exits above. The catalog's wave tables cannot say "send this one phantom, pause it, wait for the left hand", and overloading them would leak tutorial logic into every operation.
 
 The director drives the real systems so the tutorial teaches the real rules:
 
@@ -194,79 +197,77 @@ The director drives the real systems so the tutorial teaches the real rules:
 - **Results (the after-action report shown when an operation ends):** the `results_training` action is wired in `_on_menu_action`, but no button sends it and `_action_belongs_to_state` rejects it in `STATE_RESULTS`, so it is dead code. Pending David's answer, the default is a REVIEW TRAINING button after a **defeat** only.
 - **Replay** plays the whole tutorial, identical to a first run.
 - **Gating:** none. Reset Progress keeps leaving the training record alone.
-- **Desktop:** debug builds accept Enter for the grip check in beat 2. Strike beats cannot be played with a keyboard; the play capture drives them (section 6).
+- **Desktop:** debug builds accept Enter for the fists check in beat 2. Strike beats cannot be played with a keyboard; the play capture drives them (section 6).
 
 ---
 
 ## 5. Chen's lines
 
-Every line is its own event in `Assets/Audio/VO/chen/chen_lines.json`, priority 3, cooldown 0, with a tag and a note for ElevenLabs. Lines marked with two or more are takes for repeats. Every line is eight words or fewer, under three seconds.
+Every line is its own event in `Assets/Audio/VO/chen/chen_lines.json`, priority 3, cooldown 0, with a tag and a note for ElevenLabs. Lines marked with two or more are takes for repeats. Chen calls the player "Recruit" throughout training; from the first operation on she calls them "Striker". The lines say "fist", never "grip" or a button, so hand tracking can use the same script. Combat lines stay under three seconds; training lines run longer where they explain something, because the action is paused while she talks, and the introduction is one long speech the wrist caption pages through.
 
 | Event | Line(s) |
 |---|---|
-| `tutorial_hello` | Operator, this is Dr. Chen. You hear me? |
-| `tutorial_gauntlets` | I built the gauntlets on your hands. |
-| `tutorial_life_force` | ERM gauntlets. They run on your life force. |
-| `tutorial_up_close` | Nothing else touches phantoms. So, up close. |
-| `tutorial_chamber` | This is the training chamber. All holograms. |
-| `tutorial_pause_power` | I can pause them. Real ones won't wait. |
-| `tutorial_ring` | Stand in the ring. Clear room to swing. |
-| `tutorial_recenter` | Facing the wrong way? Hold the Meta button. |
-| `tutorial_grips` | Squeeze both grips when you're ready. / Both grips, operator. Whenever you're set. |
-| `tutorial_rift_open` | Loading a rift. They come through these. |
-| `tutorial_paused` | Paused. Take a good look at it. |
-| `tutorial_yellow_left` | Yellow takes your left hand. |
-| `tutorial_grip_punch` | Hold grip, then punch. Through it. |
-| `tutorial_lure` | That light is the lure. Hit it. |
-| `tutorial_lure_crit` | Lure hits are resonance crits. |
+| `tutorial_hello` | Recruit, this is Dr. Elara Chen, science lead for the Resonance Strike Force. Years ago, my experiments tore the first holes between our world and another. We call that day the Breach. Phantoms have poured through the rifts ever since. They feed on life force, and our weapons pass straight through them. Whole cities have gone cold, and something on the other side is aiming them. We call it the Overseer. The gauntlets on your hands are my answer. They turn your own life force into a weapon, so this fight is up close and personal. Strikers close the rifts. I'll be in your ear the whole way. |
+| `tutorial_chamber` | This is the training chamber. All holograms. No real phantoms here. |
+| `tutorial_pause_power` | I can pause them mid-strike. Real phantoms won't wait for you. |
+| `tutorial_ring` | Stand in the ring, and give yourself room to swing. |
+| `tutorial_fists` | Make fists when you're ready. / Show me your fists when you're ready. |
+| `tutorial_rift_open` | Loading a rift. Phantoms come through these. |
+| `tutorial_paused` | There. Paused. Take a good look at it. |
+| `tutorial_yellow_left` | Yellow requires your left gauntlet. Different energy signatures in each hand. |
+| `tutorial_fist_punch` | Hold a fist, then punch through it. |
+| `tutorial_lure` | See the light on its stalk? That's the lure. Aim for it. |
+| `tutorial_lure_crit` | Hit the lure and you land a resonance crit. It does far more damage. |
 | `tutorial_crit_landed` | Crit. That's the one you want. / Right on the lure. Good. |
-| `tutorial_plain_landed` | It's down. Next time, the lure. / Good. Aim for the light next time. |
-| `tutorial_wrong_hand` | Other hand. Match the color. / Wrong gauntlet. Match the color. |
-| `tutorial_strike_nudge` | Grip, and snap it. Through. / Harder. Punch right through it. / Squeeze the grip, then swing. |
-| `tutorial_blue_right` | Blue takes your right. |
-| `tutorial_hook` | Lure's out on the side. Hook it. |
+| `tutorial_plain_landed` | It's down. Next time, aim for the lure. / Good. Go for the light next time. |
+| `tutorial_wrong_hand` | Wrong gauntlet. Match the color to the hand. / Wrong energy signature. Use the other hand. |
+| `tutorial_strike_nudge` | Make a fist, and snap it through. / Harder. Punch right through it. / Close your fist, then swing. |
+| `tutorial_blue_right` | Blue requires your right gauntlet. |
+| `tutorial_hook` | This lure hangs out to the side. Hook it. |
 | `tutorial_chain` | Every clean hit builds your chain. |
-| `tutorial_chain_live` | Running it live. Three in a row. |
-| `tutorial_chain_broke` | Chain's broken. Again. / That breaks it. Start over. |
+| `tutorial_chain_live` | Now I'll run them live. Three clean hits in a row. |
+| `tutorial_chain_broke` | Chain's broken. Again. / That breaks the chain. Start over. |
 | `tutorial_chain_done` | That's a chain. It multiplies your score. |
 | `tutorial_chain_enough` | Close enough. You'll build it out there. |
-| `tutorial_green` | Green's armored. One fist won't crack it. |
-| `tutorial_green_both` | Both hands, together. Catch it. |
-| `tutorial_green_one` | Together. Both fists at once. / Both at the same time. |
+| `tutorial_green` | Green is armored. You need energy from both gauntlets to crack it. |
+| `tutorial_green_both` | Use both fists, together. Catch it. |
+| `tutorial_green_one` | Together. Both fists at the same time. / One fist isn't enough. Both at once. |
 | `tutorial_green_done` | That's the catch. |
-| `tutorial_pink` | Pink can't be punched. |
-| `tutorial_pink_lane` | That line is its charge. |
-| `tutorial_pink_move` | Step out of the lane. Or duck. |
-| `tutorial_pink_punch` | Fists go through it. Move. / Don't punch it. Get out of the line. |
-| `tutorial_pink_done` | Clean dodge. It still hurts the rift. |
-| `tutorial_let_in` | This one I'm letting through. |
-| `tutorial_hands_down` | Hands down. The gauntlets will simulate it. |
-| `tutorial_possessed` | That's possession. It fed on you. |
-| `tutorial_life_wrist` | Your life force is on your wrist. |
-| `tutorial_recover` | Three clear seconds, and it climbs back. |
-| `tutorial_failsafe` | At zero, the failsafe fires. We pull you out. |
+| `tutorial_pink` | Pink can't be punched, but their energy in our world fades quickly. Just dodge them. |
+| `tutorial_pink_lane` | That line on the floor is its charge path. |
+| `tutorial_pink_move` | Step out of the lane, or duck under it. |
+| `tutorial_pink_punch` | Your fists go right through it. Move. / Don't punch it. Get out of the line. |
+| `tutorial_pink_done` | Clean dodge. That still drains the rift. |
+| `tutorial_let_in` | This next one, I'm letting through. |
+| `tutorial_hands_down` | Hands down. The gauntlets will simulate the hit. |
+| `tutorial_possessed` | That's a possession. It fed on your life force. |
+| `tutorial_glove_check` | Look at your left glove. That's your life force. |
+| `tutorial_glove_nudge` | Raise your left hand and look at the glove. |
+| `tutorial_glove_seen` | That's it. Check it whenever you can in a fight. |
+| `tutorial_recover` | Stay clear for three seconds, and it climbs back. |
+| `tutorial_failsafe` | If it hits zero, the failsafe fires and we pull you out. |
 | `tutorial_let_in_again` | Good instinct. Hands down this time. / I said let it in. Hands down. |
-| `tutorial_watch_wrist` | Fine. Just watch your wrist. |
-| `tutorial_rift_damage` | Every one you break drains the rift. |
-| `tutorial_rift_wrist` | Its strength is on your wrist too. |
-| `tutorial_seal` | Drain it, and the rift seals. |
-| `tutorial_stragglers` | Whatever's already out still comes for you. |
+| `tutorial_watch_glove` | Fine. I'll simulate it myself. Watch your left glove. |
+| `tutorial_rift_damage` | Every phantom you break drains the rift. |
+| `tutorial_rift_glove` | Its strength is on your left glove too, under your life force. |
+| `tutorial_seal` | Drain it completely, and the rift seals. |
+| `tutorial_stragglers` | But whatever's already come through still comes for you. |
 | `tutorial_power_intro` | How hard you hit matters. |
 | `tutorial_power_soft` | Tap this one. Lightly. |
 | `tutorial_power_lighter` | Lighter than that. Just a tap. |
 | `tutorial_power_hard` | Now hit it like you mean it. |
-| `tutorial_power_seen` | See that? Harder hits drain it faster. |
-| `tutorial_power_again` | Harder than that. Again. / Put your weight into it. |
+| `tutorial_power_again` | Harder than that. Again. / Put your whole body into it. |
+| `tutorial_power_seen` | See the difference? Harder hits drain the rift faster. |
 | `tutorial_power_lure` | And a lure hit beats them all. |
-| `tutorial_live` | Unpausing everything. Seal it, operator. |
+| `tutorial_live` | Unpausing everything. Seal that rift, recruit. |
 | `tutorial_last_one` | It's nearly shut. One more seals it. |
-| `tutorial_straggler` | Sealed. That one's still coming. Finish it. |
-| `tutorial_sealed_clean` | Sealed. Nothing left out. Clean. |
-| `tutorial_signoff_job` | That's the job, operator. |
-| `tutorial_signoff_real` | First Light is real. No pausing out there. |
-| `tutorial_signoff_comms` | I'll be on comms. Go when you're ready. |
+| `tutorial_straggler` | Sealed. But that one's still coming. Finish it. |
+| `tutorial_sealed_clean` | Sealed, and nothing left out. Clean. |
+| `tutorial_signoff_job` | That's the job, recruit. |
+| `tutorial_signoff_real` | First Light is a real breach. No pausing out there. |
+| `tutorial_signoff_comms` | Seal it, and you're a Striker. I'll be on comms the whole way. |
 
-61 events, 72 clips. After David's review: voiced with `tools/generate_elevenlabs_vo.ps1 -VoiceId wa4sQVgbDDzUDEzJwch3` (only new lines are generated), checked with `tools/check_vo.ps1 -Only <event>`, flagged clips regenerated, and `development/Chen_VO_Script.md` rewritten by `tools/generate_placeholder_vo.ps1`, which only fills missing files and so just rewrites the sheet. The sheet in the repo is stale (no sweep, jump, or boss lines); this fixes that too.
+59 events, 70 clips. Voiced on 2026-10-13 with `tools/generate_elevenlabs_vo.ps1 -VoiceId wa4sQVgbDDzUDEzJwch3` (only new lines are generated), checked with `tools/check_vo.ps1 -Only <event>`, flagged clips regenerated, and `development/Chen_VO_Script.md` rewritten by `tools/generate_placeholder_vo.ps1`, which only fills missing files and so just rewrites the sheet. The sheet in the repo is stale (no sweep, jump, or boss lines); this fixes that too.
 
 Until the clips exist, ChenComms already captions a missing clip and holds its time, so the tutorial runs captioned.
 
@@ -282,7 +283,7 @@ Until the clips exist, ChenComms already captions a missing clip and holds its t
 - Menu checks move from the six pages to the Training Complete panel, the training pause panel, and REVIEW TRAINING on defeat results.
 - Every `tutorial_` event the director uses exists in the JSON.
 
-**Desktop play capture.** `Scripts/Debug/play_capture.gd` gets a `--tutorial` mode. It presses T and Enter (the grip check), then for each beat waits for the director's `held` signal, saves a still, and lands the right strike by calling `receive_strike` on the held phantom with a scripted speed (soft then hard in the power beat). For pink it moves the camera 0.6 m sideways. Stills go to `reports/play/tutorial/`.
+**Desktop play capture.** `Scripts/Debug/play_capture.gd` gets a `--tutorial` mode. It presses T and Enter (the fists check), then for each beat waits for the director's `held` signal, saves a still, and lands the right strike by calling `receive_strike` on the held phantom with a scripted speed (soft then hard in the power beat). For pink it moves the camera 0.6 m sideways. Stills go to `reports/play/tutorial/`.
 
 ```bash
 godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn -- --tutorial --art-label=tutorial
@@ -292,5 +293,4 @@ godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_captu
 
 ## 7. Still open
 
-- **REVIEW TRAINING on results.** "Results" is the after-action report that appears when an operation ends: final score, completion time, Chen's debrief, and Next Operation / Retry / Main Menu. The code has a half-built "Review Training" action meant for it with no button. Default: show it after a failed operation only.
-- **Line drafts** in section 5, before voicing.
+- Nothing blocking. The headset checks are in Known_Issues.md item 7.

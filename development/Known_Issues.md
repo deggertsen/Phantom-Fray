@@ -16,7 +16,7 @@ Updated 2026-10-13.
 ## Audio
 
 - Chen's clips are generated; listen through once in headset and run `tools/check_vo.ps1` after any script change. Any clip the check flags gets regenerated with `-Only <event>`.
-- Training's `tutorial_` lines play as captions until they are voiced; generation waits on David's review of the drafts in [Tutorial_Plan.md](Tutorial_Plan.md).
+- Training's 59 `tutorial_` events (70 clips) and the 12 lines that changed "operator" to "Striker" were voiced on 2026-10-13 and pass `check_vo.ps1`. Not yet heard in headset; listen to the introduction especially, the one long speech.
 - Missions have no time limit and no timeout outcome, so Chen has no clock lines. If completion time later feeds medals or a race mode, decide whether she should call a pace.
 - Impact, UI, and proximity audio have not had a final mix on headset speakers.
 
