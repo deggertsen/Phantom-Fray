@@ -636,8 +636,9 @@ func _validate_mission_catalog() -> void:
 			failures.append("Mission pool failed to load %s" % variant_id)
 
 ## The four difficulties: Standard is the catalog exactly; every tier's multipliers reach a
-## spawned phantom, its rift, and the life force; Full Resonance adds squat-depth sweeps no closer
-## than its gap; the choice and per-tier records persist; only Full Resonance reaches the boss turn.
+## spawned phantom, its rift, and the life force; Full Resonance adds no sweeps to ordinary rifts
+## (bosses carry the movements); the choice and per-tier records persist; only Full Resonance
+## reaches the boss turn.
 func _validate_difficulty_tiers() -> void:
 	# Standard reproduces today's numbers.
 	for mission in MissionCatalog.all_missions() + MissionCatalog.debug_missions():
@@ -716,11 +717,18 @@ func _validate_difficulty_tiers() -> void:
 		for node in [round_controller, life, director, container]:
 			node.queue_free()
 		await process_frame
-	# Full Resonance: a squat-depth sweep joins the pool, but never sooner than its gap.
-	var resonant := DifficultyTier.apply_wave(base_wave, DifficultyTier.FULL_RESONANCE)
-	if resonant["pool"] != ["yellow", "sweep"] or not is_equal_approx(float(resonant["squat_depth"]), DifficultyTier.SQUAT_DEPTH) or float(resonant.get("sweep_min_gap", 0.0)) < 5.0:
-		failures.append("Full Resonance did not add a spaced squat-depth sweep: %s" % resonant)
-	if base_wave["pool"] != ["yellow"]:
+	# Full Resonance leaves ordinary rifts' pools alone: bosses carry the movements. A wave that
+	# already has a sweep (the Sweep Drill) asks for a real squat there.
+	for mission in MissionCatalog.all_missions():
+		for wave in DifficultyTier.apply_mission(mission, DifficultyTier.FULL_RESONANCE).get("rifts", []):
+			if "sweep" in wave.get("pool", []) or wave.has("squat_depth"):
+				failures.append("Full Resonance put a sweep in %s" % mission.get("id", ""))
+				break
+	var drill_wave := {"health": 100, "interval": 3.0, "max_live": 4, "speed_scale": 1.0, "telegraph_scale": 1.0, "pool": ["yellow", "sweep"], "squat_depth": DifficultyTier.DUCK_DEPTH}
+	var resonant := DifficultyTier.apply_wave(drill_wave, DifficultyTier.FULL_RESONANCE)
+	if resonant["pool"] != ["yellow", "sweep"] or not is_equal_approx(float(resonant["squat_depth"]), DifficultyTier.SQUAT_DEPTH):
+		failures.append("Full Resonance did not deepen an existing sweep to a squat: %s" % resonant)
+	if base_wave["pool"] != ["yellow"] or drill_wave["pool"] != ["yellow", "sweep"]:
 		failures.append("Applying a tier changed the catalog's own wave")
 	var sweep_box := Node3D.new()
 	sweep_box.add_to_group("PhantomContainer")
@@ -730,16 +738,14 @@ func _validate_difficulty_tiers() -> void:
 	root.add_child(sweep_rift)
 	await process_frame
 	sweep_rift.configure_wave(resonant)
-	RiftManager._last_sweep_msec = -1000000
-	var sweeps: Array[ResonanceSweep] = []
-	for _i in 20:
+	var sweep: ResonanceSweep = null
+	for _i in 24:
 		var spawned := sweep_rift._spawn_phantom()
 		if spawned is ResonanceSweep:
-			sweeps.append(spawned)
-	if sweeps.size() != 1:
-		failures.append("Full Resonance lit %d sweeps at once instead of one" % sweeps.size())
-	elif not is_equal_approx(sweeps[0].squat_depth, DifficultyTier.SQUAT_DEPTH):
-		failures.append("A Full Resonance sweep asked for %.2f, not a squat" % sweeps[0].squat_depth)
+			sweep = spawned
+			break
+	if sweep == null or not is_equal_approx(sweep.squat_depth, DifficultyTier.SQUAT_DEPTH):
+		failures.append("A Full Resonance sweep did not ask for a squat")
 	for _i in 12:
 		if sweep_rift.spawn_escort() is ResonanceSweep:
 			failures.append("A boss escort came out as a sweep")

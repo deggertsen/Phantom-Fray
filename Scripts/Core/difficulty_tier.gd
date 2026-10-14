@@ -8,7 +8,8 @@ class_name DifficultyTier
 ## Each tier multiplies the wave fields (speed_scale, telegraph_scale, health, interval) and sets
 ## contact_scale, which RiftManager applies to every phantom's and hazard's contact damage. Flags
 ## say what the tier asks of the body: sweeps at duck depth only, or squats, jumps, and push-ups,
-## and whether a boss can come through. Only Full Resonance has bosses (decision 17).
+## and whether a boss can come through. Only Full Resonance has bosses (decision 17), and at
+## Full Resonance the boss carries the movements.
 ## The war map will take the choice over from the Operations screen; nothing here assumes a menu.
 ## See development/Exercise_Mechanics_Exploration.md, section 4.
 
@@ -67,9 +68,11 @@ const TIERS := {
 	},
 	# The movement difficulty: an intensity, not a harder Operator. Speed and tells stay at
 	# Standard so the extra work is the body, not reaction time. Assumes the player can jump.
+	# The movements come from bosses ("bosses carry the movements"); ordinary rifts have no sweep,
+	# because nothing in the fiction would be swinging it.
 	FULL_RESONANCE: {
 		"label": "FULL RESONANCE",
-		"blurb": "Squats, jumps, and push-ups. Clear your space; you will jump.",
+		"blurb": "Bosses that demand squats, jumps, and push-ups. Clear room to jump.",
 		"speed": 1.0,
 		"telegraph": 1.0,
 		"health": 1.1,
@@ -80,10 +83,6 @@ const TIERS := {
 		"jumps": true,
 		"push_ups": true,
 		"bosses": true,
-		# A squat-depth sweep joins every wave's pool, and the rift never lights one sooner than
-		# this many seconds after its last: at most 7.5 squat demands a minute, inside the budget
-		# of about 12 with rests (section 3, "Squats").
-		"sweep_min_gap": 8.0,
 		# Chen's line in the countdown.
 		"deploy_event": "deploy_full_resonance",
 	},
@@ -163,11 +162,6 @@ static func apply_wave(wave: Dictionary, tier_id: String) -> Dictionary:
 		# Decision 2: below the movement difficulty, a sweep never asks for more than a duck.
 		if wave.has("squat_depth"):
 			out["squat_depth"] = minf(float(wave["squat_depth"]), DUCK_DEPTH)
-	else:
-		out["squat_depth"] = maxf(float(wave.get("squat_depth", SQUAT_DEPTH)), SQUAT_DEPTH)
-	if bool(tier["squats"]):
-		var pool: Array = out.get("pool", [])
-		if not pool.is_empty() and not pool.has("sweep"):
-			pool.append("sweep")
-		out["sweep_min_gap"] = float(tier.get("sweep_min_gap", 0.0))
+	elif wave.has("squat_depth"):
+		out["squat_depth"] = maxf(float(wave["squat_depth"]), SQUAT_DEPTH)
 	return out

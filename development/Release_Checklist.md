@@ -14,7 +14,7 @@
 - [ ] Clearing an operation at any difficulty unlocks the next and records a best score and time for that difficulty; Reset Progress relocks them, clears best scores and times, and leaves audio, training, and the difficulty choice alone.
 - [ ] Operations offers Assist, Standard, Operator, and Full Resonance; the choice is marked, persists across restarts, defaults to Standard, and shows on Deploy, the Operations cards' best times, and results. Retry and Next Operation keep it.
 - [ ] Standard plays every operation exactly as the catalog tunes it; Assist and Operator change phantom speed, tells, rift health, spawn rate, and contact damage.
-- [ ] Full Resonance: squat-depth sweeps appear in every operation, never back to back; Chen's Full Resonance line plays in the countdown; The Maw breaks on a fresh profile's first Full Resonance attempt and plays the turn, the fight, and the retreat to a victory. No other difficulty ever reaches the boss.
+- [ ] Full Resonance: no sweeps in OP-01 to OP-05; Chen's Full Resonance line plays in the countdown; The Maw breaks on a fresh profile's first Full Resonance attempt and plays the turn, the fight, and the retreat to a victory. No other difficulty ever reaches the boss.
 - [ ] Yellow rejects the right hand; blue rejects the left. The lure grants the crit score and rift damage.
 - [ ] Green needs both hands inside its block window; the first hand reads as a catch.
 - [ ] Pink cannot be punched and resolves on a successful dodge.
@@ -34,7 +34,7 @@
 - [ ] Chen's voice is audible over music at default settings and ducks the music while speaking.
 - [ ] Standing-height sanity check.
 - [ ] Physical side-step and duck both resolve pink.
-- [ ] Full Resonance on headset: sweeps read and clear with a real squat, a bend clears without the bonus and draws Chen's correction, low sweeps clear with a jump, push-ups on a spent tentacle count, and the whole Maw (phase one, turn, fight) lands inside five to ten minutes without dizziness.
+- [ ] Full Resonance on headset: the boss's high sweeps read and clear with a real squat, a bend clears without the bonus and draws Chen's correction, low sweeps clear with a jump, push-ups on a spent tentacle count, and the whole Maw (phase one, turn, fight) lands inside five to ten minutes without dizziness.
 - [ ] Possession tint and distortion are strong but comfortable; Reduced Flashes visibly reduces them.
 - [ ] Headset removal pauses timers, spawning, damage, and haptics.
 - [ ] Resume requires an explicit player action.
