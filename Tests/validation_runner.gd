@@ -69,21 +69,21 @@ func _validate_resources() -> void:
 func _validate_sfx_variations() -> void:
 	var expected := {
 		"phantom_death": 4,
-		"phantom_possess": 2,
+		"bones_cracking": 8,
 		"rift_close_sound": 3,
 		"rift_open_sound": 1,
 	}
 	for stem in expected:
 		if SfxVariations.variation_count(stem) != int(expected[stem]):
 			failures.append("%s has %d takes, expected %d" % [stem, SfxVariations.variation_count(stem), int(expected[stem])])
-	var first := SfxVariations.pick("phantom_possess")
+	var first := SfxVariations.pick("bones_cracking")
 	var varied := false
 	for _i in 6:
-		if SfxVariations.pick("phantom_possess") != first:
+		if SfxVariations.pick("bones_cracking") != first:
 			varied = true
 			break
 	if first == null or not varied:
-		failures.append("Possession takes did not vary")
+		failures.append("Hit takes did not vary")
 	for stem in expected:
 		var stream := SfxVariations.pick(stem)
 		if stream == null:
