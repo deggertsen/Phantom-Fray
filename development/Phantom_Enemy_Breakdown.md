@@ -1,6 +1,6 @@
 # Phantom Enemy System
 
-How phantoms work in the code today, and what is still planned. Updated 2026-10-08.
+How phantoms work in the code today, and what is still planned. Updated 2026-10-13.
 
 ## Species and rules
 
@@ -13,6 +13,8 @@ How phantoms work in the code today, and what is still planned. Updated 2026-10-
 | none | Drifter | `phantom.gd` base | Any hand. Not in any wave pool today. | 100 | 10 |
 
 A valid strike during the phantom's commit phase is "on beat": score times 1.25, rift damage times 1.15. Because strikes only count in reach, nearly every valid hit is on beat. Pink's dodge is always on beat.
+
+**Punch power.** A valid strike's rift damage is also scaled by how fast the fist was moving (`Phantom.strike_power`): 0.85x at 2 m/s or slower, rising to 1.3x at 6 m/s or faster, applied with the on-beat bonus and rounded once. A yellow's plain on-beat hit does 10 soft to 15 hard; a lure crit does 20 soft to 30 hard, so a soft crit still beats the hardest plain hit. Score is unchanged. The result carries `power` (0 to 1); the rift's damage flash and the hand haptic scale with it. Green's block uses the second hand's speed. Pink's dodge has no punch and does its full 18.
 
 Every phantom that reaches the player drains 20 life force (`contact_damage`).
 
@@ -46,6 +48,10 @@ Approaches lower and faster, widens its body in the commit phase. The first hand
 
 ### Spearfin specifics
 Does not use the arc. It telegraphs for `telegraph_seconds` (1.15 s) while a chevron lane shader draws on the floor from the fish to the player and a little past. The aim starts bowed to one side and straightens as the telegraph completes, then it charges at `charge_speed` (7 m/s). Passing its locked target without possessing resolves it as a dodge.
+
+## Training hold
+
+Training pauses phantoms so Chen can teach them (`Scripts/Core/tutorial_director.gd`). `hold_in_reach(distance)` lets the phantom fly its arc and stop on the first frame within `distance` of the head (0.95 m for an Angler, 0.9 m for a Carapace): no movement, phase COMMIT so strikes count, facing the head, lifetime frozen, and no possession even if the head leans into it. Its hologram stops mid-motion (`frozen_time` on the creature shader) inside a cyan ring. A valid strike resolves it as usual; anything else leaves it held. `release_hold()` sends it straight in at commit speed. `SpearfinPhantom.hold_at_lane_lock()` pauses a pink the frame its telegraph ends, lane at full strength; released, it charges the lane it locked. `set_hologram(true)` gives the body the training chamber's scanlines; the training rift sets it on everything it sends.
 
 ## Pressure
 

@@ -170,8 +170,8 @@ func _reduced_flashes() -> bool:
 	var settings := get_node_or_null("/root/GameSettings")
 	return settings != null and bool(settings.get("reduced_flashes"))
 
-## The training chamber's sign, high on the dome wall ahead. Only training shows it; the breach
-## site in the operations is not a chamber.
+## The training chamber's sign, up on the dome wall ahead and to the left, clear of the rift.
+## Only training shows it; the breach site in the operations is not a chamber.
 func _build_briefing_panel() -> void:
 	var label := Label3D.new()
 	label.name = "RSFBriefing"
@@ -182,7 +182,7 @@ func _build_briefing_panel() -> void:
 	label.outline_size = 10
 	label.outline_modulate = DARK
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.position = Vector3(0.0, 5.8, -13.5)
+	label.position = Vector3(-7.5, 4.6, -10.5)
 	label.visible = false
 	add_child(label)
 

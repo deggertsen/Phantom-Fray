@@ -7,7 +7,7 @@ The goal of the project is a workout you want to come back to because the world 
 ## How it plays
 
 - **Stationary, physical.** No artificial locomotion. You turn, duck, and take a step to the side. Everything comes to you.
-- **Grip, then strike.** Hold grip and punch. A strike counts once a phantom is in reach, which is also when it lunges. Jabs, hooks, and uppercuts all work, and the Angler's glowing lure hangs where the matching punch lands.
+- **Grip, then strike.** Hold grip and punch. A strike counts once a phantom is in reach, which is also when it lunges. Jabs, hooks, and uppercuts all work, and the Angler's glowing lure hangs where the matching punch lands. Punch harder and more energy goes into the rift: rift damage runs from 0.85x for a soft punch (2 m/s) to 1.3x for a hard one (6 m/s), and the lure crit is worth more than either.
 - **Four phantom rules, each a different movement.**
 
 | Color | Species | Rule | What the body does |
@@ -20,12 +20,13 @@ The goal of the project is a workout you want to come back to because the world 
 - **Rifts are the objective.** Each phantom you resolve damages the rift it came from. Sealing a rift stops its spawning, but the phantoms it already released keep coming. The operation is won when every rift is sealed and the last straggler is dealt with. There is no time limit: the wrist clock counts up from 0:00 and your fastest victory per operation is kept.
 - **Life force is the stakes.** The gauntlets run on your own life force. A phantom that reaches your head possesses you: it vanishes, drains 20 of 100, and your vision frosts and distorts. Life force recovers after three clear seconds. At zero the gauntlets' failsafe fires, the recovery team pulls you out, and the operation is failed. Operators are never consumed; you go back in and try again.
 - **Score and chain.** Every resolve adds to a chain multiplier up to 3x. Resonance crits and on-arrival hits grow it faster. A wrong hand or a possession resets it. Your best score per operation is kept.
+- **Training with Dr. Chen.** Training is a played scenario, not a manual. Chen introduces herself and walks you through everything in a fight inside the RSF training chamber, where the rift and the phantoms are holograms she can pause: she freezes each one in reach at the moment you would punch it, explains what matters, and waits for the right move. One possession is let through on purpose, punch power is shown with damage readouts, and it ends on a short live wave. About five minutes; training cannot fail, and ending it from pause counts as done.
 - **Dr. Chen on comms.** Fully voiced callouts for rift bearings, first contact with each species, wrong-hand corrections, chain milestones, life force warnings, possession, and debriefs that know whether this is your first attempt, a retry after the failsafe, a replay, a flawless seal, or a new best. Captioned on the wrist panel.
 - **Your own music.** A settings switch silences the soundtrack so a playlist from any music app plays through the mission while Chen stays audible.
 
 ## The campaign today
 
-Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission_catalog.gd](Scripts/Core/mission_catalog.gd).
+Training comes first: Dr. Chen's training chamber, outside the operations list (see How it plays). Then six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission_catalog.gd](Scripts/Core/mission_catalog.gd).
 
 | Op | Title | Rifts | Card estimate | What it introduces |
 |---|---|---|---|---|
@@ -59,7 +60,7 @@ Godot 4.7.1 exactly. The desktop fallback runs without a headset for menu, flow,
 godot --path .
 ```
 
-Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, rift stragglers, elapsed timer and best time, expected mission times, menu surfaces and footers, own-music settings, pink dodge, squat detector prototype):
+Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, rift stragglers, elapsed timer and best time, expected mission times, menu surfaces and footers, own-music settings, pink dodge, squat detector prototype, the training hold, punch power, and a full training run):
 
 ```bash
 tools/validate_project.sh
@@ -75,17 +76,23 @@ godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/art_captur
 godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn
 ```
 
+The whole training chamber, played through by a stand-in operator, with a still at each paused hologram:
+
+```bash
+godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn -- --tutorial --art-label=tutorial
+```
+
 Chen's lines are generated from `Assets/Audio/VO/chen/chen_lines.json` with `tools/generate_elevenlabs_vo.ps1` and checked against the script with `tools/check_vo.ps1`.
 
 Quest builds: [development/Quest_Export_Guide.md](development/Quest_Export_Guide.md).
 
 ## Project layout
 
-- `Scripts/Core/` mission catalog, round controller, game flow, settings
+- `Scripts/Core/` mission catalog, round controller, game flow, settings, and the tutorial director that runs training
 - `Scripts/Phantoms/` phantom base arc, Angler (yellow, blue), Carapace (green), Spearfin (pink)
 - `Scripts/Rifts/` rift director (which rifts open where) and rift manager (spawning, health, closure, stragglers)
 - `Scripts/Player/` XR origin, hands and strike detection, life force and its feedback
-- `Scripts/Presentation/` creature meshes, breach city, arena, gauntlets, VFX, compass and bearings
+- `Scripts/Presentation/` creature meshes, breach city, arena, training chamber dome, gauntlets, VFX, compass and bearings
 - `Scripts/Audio/` Chen comms, music intensity, SFX takes
 - `Scripts/UI/` world-space menu panel and presenter, wrist HUD
 - `Scripts/Debug/` performance monitor and capture scenes

@@ -25,6 +25,9 @@ func _ready() -> void:
 		if arg == "--mission=sweep_drill":
 			await _capture_sweep(camera)
 			return
+		if arg == "--tutorial":
+			await _capture_tutorial(camera)
+			return
 	await _capture("01-menu")
 	_press(KEY_T)
 	await _wait(0.8)
@@ -84,6 +87,136 @@ func _capture_sweep(camera: Node3D) -> void:
 			await _capture(shots.pop_front())
 	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
+
+## Chen's training chamber, start to finish at real speed, with a stand-in operator doing the
+## right thing at each paused hologram once she has finished explaining it.
+## Run: Godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn -- --tutorial --art-label=tutorial
+func _capture_tutorial(camera: Node3D) -> void:
+	var tutorial := get_tree().get_first_node_in_group("TutorialDirector") as TutorialDirector
+	var chen := get_tree().get_first_node_in_group("ChenComms") as ChenComms
+	var life := get_tree().get_first_node_in_group("LifeForceManager") as LifeForceManager
+	var done := [false]
+	tutorial.finished.connect(func() -> void: done[0] = true)
+	# A new operator, saved to a scratch profile so the run leaves the real one alone.
+	var settings := get_node_or_null("/root/GameSettings")
+	if settings:
+		settings.settings_path = "user://play_capture_settings.cfg"
+		settings.tutorial_completed = false
+	_main.get_node("GameFlowController").restore_current_menu()
+	await _wait(0.5)
+	await _capture("t00-menu-new-operator")
+	_press(KEY_T)
+	await _wait(2.0)
+	await _capture("t01-intro")
+	await _until_beat(tutorial, &"play_space")
+	await _wait(1.5)
+	await _capture("t02-play-space")
+	while tutorial.beat == &"play_space":
+		_press(KEY_ENTER)
+		await _wait(0.5)
+	await _wait(1.2)
+	await _capture("t03-rift")
+	var shots := {
+		&"yellow": "t04-yellow-paused", &"blue": "t05-blue-paused", &"green": "t07-green-paused",
+		&"pink": "t08-pink-lane-locked", &"possession": "t09a-possession-paused",
+	}
+	var taken := {}
+	var tapped := false
+	var stepped := false
+	while not done[0]:
+		await get_tree().physics_frame
+		var beat := tutorial.beat
+		var phantom := tutorial.current_phantom()
+		var held := phantom != null and phantom.is_held()
+		if held and shots.has(beat) and not taken.has(beat):
+			taken[beat] = true
+			await _wait(0.6)
+			await _capture(shots[beat])
+			_capture_bracer(shots[beat] + "-bracer")
+		match beat:
+			&"yellow", &"blue", &"green", &"power":
+				if held and not chen.is_busy():
+					if beat == &"power":
+						_hit(phantom, &"left", 7.0 if tapped else 1.5)
+						var hard := tapped
+						tapped = true
+						if hard:
+							await _wait(0.35)
+							await _capture("t11-power-readout")
+					elif beat == &"green":
+						_hit(phantom, &"left", 4.0)
+						_hit(phantom, &"right", 4.0)
+					else:
+						_hit(phantom, &"left" if beat == &"yellow" else &"right", 4.0, true)
+			&"pink":
+				if held and not chen.is_busy() and not stepped:
+					stepped = true
+					camera.position.x = 0.6
+			&"possession":
+				camera.position.x = 0.0
+				if not taken.has(&"frost") and life.current_life_force < life.max_life_force - 10.0:
+					taken[&"frost"] = true
+					await _wait(0.35)
+					await _capture("t09b-possession-frost")
+					_capture_bracer("t09b-possession-bracer")
+			&"rift_health":
+				if not taken.has(beat):
+					taken[beat] = true
+					await _wait(1.5)
+					await _capture("t10-rift-health")
+					_capture_bracer("t10-rift-health-bracer")
+			&"chain", &"live_wave":
+				_strike_in_reach(beat)
+				if beat == &"chain" and not taken.has(beat):
+					taken[beat] = true
+					await _wait(3.5)
+					await _capture("t06-chain")
+					_capture_bracer("t06-chain-bracer")
+				if beat == &"live_wave" and not taken.has(beat):
+					taken[beat] = true
+					await _wait(4.0)
+					await _capture("t12-live-wave")
+				if beat == &"live_wave" and not taken.has(&"seal") and "tutorial_last_one" in tutorial.spoken:
+					taken[&"seal"] = true
+					while tutorial.beat == &"live_wave" and not "tutorial_straggler" in tutorial.spoken and not "tutorial_sealed_clean" in tutorial.spoken:
+						_strike_in_reach(beat)
+						await get_tree().physics_frame
+					await _wait(0.4)
+					await _capture("t13-after-seal")
+	await _wait(1.0)
+	await _capture("t14-training-complete")
+	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
+	get_tree().quit()
+
+func _until_beat(tutorial: TutorialDirector, beat: StringName) -> void:
+	while tutorial.beat != beat:
+		await get_tree().process_frame
+
+## The stand-in operator in a live beat: the matching hand on anything in reach.
+func _strike_in_reach(_beat: StringName) -> void:
+	for node in get_tree().get_nodes_in_group("phantom"):
+		var phantom := node as Phantom
+		if phantom == null or not phantom.shows_approach_cue() or not phantom.is_strike_window_open():
+			continue
+		match phantom.variant_id:
+			&"yellow":
+				_hit(phantom, &"left", 4.5)
+			&"blue":
+				_hit(phantom, &"right", 4.5)
+			&"green":
+				_hit(phantom, &"left", 4.5)
+				_hit(phantom, &"right", 4.5)
+
+func _hit(phantom: Phantom, hand: StringName, speed: float, on_lure: bool = false) -> void:
+	if not is_instance_valid(phantom) or not phantom.shows_approach_cue():
+		return
+	var at := phantom.global_position
+	var lure := phantom.get_node_or_null("SweetSpotVisual") as Node3D
+	if lure and on_lure:
+		at = lure.global_position
+	elif lure:
+		at += Vector3(0.0, -0.5, 0.0)
+	phantom.receive_strike({"hand_id": hand, "position": at, "direction": Vector3.FORWARD, "speed": speed})
 
 func _press(keycode: Key) -> void:
 	var event := InputEventKey.new()

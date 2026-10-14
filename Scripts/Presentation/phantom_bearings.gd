@@ -23,6 +23,9 @@ func _process(delta: float) -> void:
 			continue
 		if phantom.has_method("shows_approach_cue") and not phantom.shows_approach_cue():
 			continue
+		# A paused training hologram is right in front of the operator, with its own tags.
+		if phantom.has_method("is_held") and phantom.is_held():
+			continue
 		# A boss's escort circling its rift is not coming yet. It gets a marker once released.
 		if phantom.has_method("is_escorting") and phantom.is_escorting():
 			continue

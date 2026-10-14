@@ -1,6 +1,6 @@
 # Tutorial Plan: Dr. Chen's Training Chamber
 
-**Status:** approved by David on 2026-10-13 with the decisions below. Chen's line drafts in section 5 are waiting on his review before they are voiced.
+**Status:** approved by David on 2026-10-13 with the decisions below, and built (see Production_Status.md). Chen's line drafts in section 5 are waiting on his review before they are voiced; until then training runs on captions.
 **Written:** 2026-10-13, against the code on `main` at ffe1477.
 
 Today's Training is six text pages on the menu panel (`_tutorial_pages` in `Scripts/Core/game_flow_controller.gd`, `show_tutorial` in `Scripts/UI/vr_menu_panel.gd`). This plan replaces it with a played scenario. Dr. Chen introduces herself over comms. The operator stands in an RSF training chamber where every rift and phantom is a hologram. Chen walks them through everything they meet in a fight, and at the moment a phantom would be punched she pauses the hologram so she can say what matters. It waits there until the operator does the right thing.
@@ -11,7 +11,7 @@ The six campaign operations stay as they are. They remain the extended on-ramp d
 
 1. **No gate.** An unfinished tutorial does not block Deploy. Training is the highlighted button on a fresh profile.
 2. **The six pages go.** The tutorial replaces them. Menu changes are at my discretion; a full menu revamp is coming, so the menu work here stays small.
-3. **Possession on purpose.** Chen lets one through so life force, frost, and recovery are seen.
+3. **Possession on purpose.** Chen lets one through so life force, the drain, and recovery are seen.
 4. **Punch power ships.** Players need to be taught the difference a harder punch makes, so it is taught with a hands-on demonstration, not just a line.
 5. **Training cannot fail.** A life force floor keeps the operator in.
 6. **No deliberate wrong hand.** Teach the right way; correct a wrong hand only when it happens.
@@ -97,9 +97,9 @@ While training runs, the breach site is replaced by the training chamber: a dark
 ### Beat 9: A possession, on purpose
 
 - **On screen:** a yellow arcs in and pauses. Card: "HANDS DOWN • LET IT IN".
-- **Chen:** `tutorial_let_in`, `tutorial_hands_down`. The hologram resumes and lunges into the head: frost and veins, distortion, the siphon sound, life force 100 to 80. Then `tutorial_possessed`, `tutorial_life_wrist`, `tutorial_recover`, `tutorial_failsafe`.
+- **Chen:** `tutorial_let_in`, `tutorial_hands_down`. The hologram resumes and lunges into the head: the impact distortion and possession flash, the siphon sound, life force 100 to 80 with the bracer's life bar framed. (Frost and veins only close in below 70, so a single possession does not bring them; Chen's failsafe line covers what comes after.) Then `tutorial_possessed`, `tutorial_life_wrist`, `tutorial_recover`, `tutorial_failsafe`.
 - **To advance:** runs on; the operator sees the bar start to climb.
-- **Wrong:** if they punch it first, `tutorial_let_in_again` and another comes. If they punch that too, `tutorial_watch_wrist` and the drain is applied directly (`LifeForceManager.apply_damage(20)`), which still drives the frost, distortion, heartbeat, and bar.
+- **Wrong:** if they punch it first, `tutorial_let_in_again` and another comes. If they punch that too, `tutorial_watch_wrist` and the drain is applied directly (`LifeForceManager.apply_damage(20)`), which still drives the distortion, the drain blip, and the bar.
 
 ### Beat 10: The rift and its health
 
@@ -113,7 +113,7 @@ The hands-on lesson David asked for.
 - **On screen:** a yellow arcs in and pauses. Card: "TAP IT LIGHTLY". Every resolve in this beat pops a damage readout at the strike point ("RIFT −9") and the rift's damage flash scales with the hit.
 - **Chen:** `tutorial_power_intro`, `tutorial_power_soft`. After the tap lands: a second yellow pauses, card "NOW HIT IT HARD", `tutorial_power_hard`.
 - **To advance:** the hard hit does more rift damage than the tap. Then `tutorial_power_seen` and `tutorial_power_lure`.
-- **Wrong:** if the second hit does not beat the first, `tutorial_power_again` and a third yellow comes. After that, Chen moves on with `tutorial_power_seen` anyway (the readouts have shown the numbers).
+- **Wrong:** a tap that lands hard (power 0.5 or more) gets `tutorial_power_lighter` and another yellow, up to three. If the hard hit does not beat the tap, `tutorial_power_again` and another, up to three. After that, Chen moves on with `tutorial_power_seen` anyway (the readouts have shown the numbers).
 
 ### Beat 12: A short live wave
 
@@ -253,6 +253,7 @@ Every line is its own event in `Assets/Audio/VO/chen/chen_lines.json`, priority 
 | `tutorial_stragglers` | Whatever's already out still comes for you. |
 | `tutorial_power_intro` | How hard you hit matters. |
 | `tutorial_power_soft` | Tap this one. Lightly. |
+| `tutorial_power_lighter` | Lighter than that. Just a tap. |
 | `tutorial_power_hard` | Now hit it like you mean it. |
 | `tutorial_power_seen` | See that? Harder hits drain it faster. |
 | `tutorial_power_again` | Harder than that. Again. / Put your weight into it. |
@@ -265,7 +266,7 @@ Every line is its own event in `Assets/Audio/VO/chen/chen_lines.json`, priority 
 | `tutorial_signoff_real` | First Light is real. No pausing out there. |
 | `tutorial_signoff_comms` | I'll be on comms. Go when you're ready. |
 
-60 events, 75 clips. After David's review: voiced with `tools/generate_elevenlabs_vo.ps1 -VoiceId wa4sQVgbDDzUDEzJwch3` (only new lines are generated), checked with `tools/check_vo.ps1 -Only <event>`, flagged clips regenerated, and `development/Chen_VO_Script.md` rewritten by `tools/generate_placeholder_vo.ps1`, which only fills missing files and so just rewrites the sheet. The sheet in the repo is stale (no sweep, jump, or boss lines); this fixes that too.
+61 events, 72 clips. After David's review: voiced with `tools/generate_elevenlabs_vo.ps1 -VoiceId wa4sQVgbDDzUDEzJwch3` (only new lines are generated), checked with `tools/check_vo.ps1 -Only <event>`, flagged clips regenerated, and `development/Chen_VO_Script.md` rewritten by `tools/generate_placeholder_vo.ps1`, which only fills missing files and so just rewrites the sheet. The sheet in the repo is stale (no sweep, jump, or boss lines); this fixes that too.
 
 Until the clips exist, ChenComms already captions a missing clip and holds its time, so the tutorial runs captioned.
 

@@ -501,7 +501,11 @@ func _beat_live_wave() -> bool:
 				return false
 	if _chen:
 		_chen.lock_prefix = "tutorial_"
-	_show_card("CLEAR THE LAST ONE" if _straggler_at_seal else "SEALED")
+	# With one still out, the round's own mop-up banner says it; the card would only repeat it.
+	if _straggler_at_seal:
+		_clear_card()
+	else:
+		_show_card("SEALED")
 	if not await _say("tutorial_straggler" if _straggler_at_seal else "tutorial_sealed_clean"):
 		return false
 	return await _until(func() -> bool: return _won) > 0
@@ -738,7 +742,9 @@ func _add_tag(text: String, at: Vector3, size: int) -> void:
 	var label := Label3D.new()
 	label.text = text
 	label.font_size = size
-	label.pixel_size = 0.0016
+	# The same size on screen near or far: a pink pauses several metres out.
+	label.fixed_size = true
+	label.pixel_size = 0.0013
 	label.modulate = TAG_COLOR
 	label.outline_size = 10
 	label.outline_modulate = Color(0.01, 0.02, 0.05, 0.95)
@@ -772,7 +778,7 @@ func _readout(result: Dictionary) -> void:
 	label.render_priority = 3
 	add_child(label)
 	var at: Vector3 = result.get("world_position", Vector3.ZERO)
-	label.global_position = at + Vector3.UP * 0.15
+	label.global_position = at + Vector3.UP * 0.3
 	var tween := label.create_tween()
 	tween.tween_property(label, "global_position", label.global_position + Vector3.UP * 0.35, 1.3)
 	tween.parallel().tween_property(label, "modulate:a", 0.0, 1.3).set_delay(0.5)

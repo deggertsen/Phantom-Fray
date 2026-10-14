@@ -15,7 +15,7 @@ Player vitality and the stakes of a possession. Updated 2026-10-09 to match `Scr
 | Critical | 10% and below |
 | Depleted | 0, the failsafe fires and the operation is failed |
 
-Five possessions without recovery end a run. Recovery resets on every hit. Damage is ignored once depleted so the fail state fires once.
+Five possessions without recovery end a run. Recovery resets on every hit. Damage is ignored once depleted so the fail state fires once. In training, `life_floor` (20, from the training mission) keeps damage from taking life force any lower, so training cannot fail; `reset()` clears it.
 
 The original design had tiered drain (basic 5, elite 10, boss 20). The code settled on a flat 20 because the campaign's pressure comes from the number of phantoms, and a possession needs to hurt enough to matter. Tiers return if elite or boss phantoms arrive.
 
