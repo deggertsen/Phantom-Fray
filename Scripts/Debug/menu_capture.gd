@@ -39,14 +39,12 @@ func _two_cleared_profile() -> Node:
 	return profile
 
 func _capture_tutorial() -> void:
-	_menu.show_tutorial(0, [{
-		"eyebrow": "MODULE 01 // SAFE PLAY SPACE",
-		"title": "CENTER YOUR OPERATING AREA",
-		"body": "Phantom Fray is stationary. Stand or sit inside the cyan floor ring. Clear enough room to punch, duck, and take a small step left or right.",
-		"callout": "Hold the Meta button to recenter the world in front of you. This lesson waits until you select Continue.",
-		"color": Color("56dff5"),
-	}])
-	await _capture("tutorial.png")
+	_menu.show_main_menu(MissionCatalog.deploy_detail(null), true)
+	await _capture("main-menu-new-operator.png")
+	_menu.show_training_complete(MissionCatalog.deploy_detail(null))
+	await _capture("training-complete.png")
+	_menu.show_pause(true)
+	await _capture("training-pause.png")
 
 func _capture_settings() -> void:
 	_menu.show_settings("75%", "50%", "100%", false, false)
@@ -61,6 +59,8 @@ func _capture_pause() -> void:
 func _capture_results() -> void:
 	_menu.show_results(&"victory", 12840, "Chen: It knows your resonance now. This was the opening move. Not the end of the war.", "DOUBLE BREACH  •  %s" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("double_breach")), 252.0, 280.0)
 	await _capture("results.png")
+	_menu.show_results(&"defeat", 4120, "Chen: The matrix drank you before the seal. Learn the pattern. Then go back in.", "", 0.0, 0.0, true)
+	await _capture("results-defeat.png")
 
 func _capture(file_name: String) -> void:
 	await get_tree().process_frame

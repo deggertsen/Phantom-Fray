@@ -36,20 +36,20 @@ func _process(delta: float) -> void:
 		if material:
 			material.emission_energy_multiplier = 1.1 + sin(_holo_time * 1.8 + index) * 0.35
 
-func show_main_menu(deploy_detail: String = "") -> void:
+func show_main_menu(deploy_detail: String = "", training_first: bool = false) -> void:
 	_show()
 	if deploy_detail == "":
-		_menu.show_main_menu()
+		_menu.show_main_menu("Seal the next live rift", training_first)
 	else:
-		_menu.show_main_menu(deploy_detail)
+		_menu.show_main_menu(deploy_detail, training_first)
 
 func show_operations(entries: Array[Dictionary]) -> void:
 	_show()
 	_menu.show_operations(entries)
 
-func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
+func show_training_complete(deploy_detail: String) -> void:
 	_show()
-	_menu.show_tutorial(page_index, pages)
+	_menu.show_training_complete(deploy_detail)
 
 func show_settings(music: String, effects: String, haptics: String, reduced_flashes: bool, from_pause: bool, own_music: bool = false) -> void:
 	_show()
@@ -59,9 +59,9 @@ func show_reset_confirmation() -> void:
 	_show()
 	_menu.show_reset_confirmation()
 
-func show_pause() -> void:
+func show_pause(training: bool = false) -> void:
 	_show()
-	_menu.show_pause()
+	_menu.show_pause(training)
 
 func show_abort_confirmation() -> void:
 	_show()
@@ -71,9 +71,9 @@ func show_suspended() -> void:
 	_show()
 	_menu.show_suspended()
 
-func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0) -> void:
+func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0, offer_training: bool = false) -> void:
 	_show()
-	_menu.show_results(outcome, score, debrief, next_title, seconds, previous_best)
+	_menu.show_results(outcome, score, debrief, next_title, seconds, previous_best, offer_training)
 
 func activate_at_viewport_point(point: Vector2) -> bool:
 	if _menu == null or not _is_visible:

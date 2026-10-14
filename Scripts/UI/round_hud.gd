@@ -65,8 +65,11 @@ var _boss_slot: int = -1
 var _caption: String = ""
 var _caption_speaker: String = ""
 var _caption_left: float = 0.0
+## Training points at one part of the panel: &"life", &"rifts", &"chain", or nothing.
+var _highlight: StringName = &""
 
 func _ready() -> void:
+	add_to_group("RoundHUD")
 	transform = Transform3D(Basis.from_euler(Vector3(-deg_to_rad(tilt_degrees), 0.0, 0.0)), mount_offset)
 	_font = ThemeDB.fallback_font
 	var heavy := FontVariation.new()
@@ -96,7 +99,7 @@ func _process(delta: float) -> void:
 	if _delta_age < 0.8:
 		_delta_age += delta
 		animating = true
-	if _life_state == &"critical" or _has_open_rift():
+	if _life_state == &"critical" or _has_open_rift() or _highlight != &"":
 		animating = true
 	_since_redraw += delta
 	if (_dirty or animating) and _since_redraw >= REDRAW_INTERVAL:
@@ -336,6 +339,30 @@ func _draw_panel() -> void:
 		c.draw_rect(Rect2(chip.position.x, chip.end.y + 6.0, chip.size.x * left, 5.0), GOLD)
 	else:
 		_text_right(c, "×1.0", Vector2(w - 24.0, 286.0), 30, MUTED)
+	_draw_highlight(c, w)
+
+## Training: a pulsing frame round the part of the panel Chen is talking about.
+func set_highlight(section: StringName) -> void:
+	_highlight = section
+	_mark_dirty()
+
+func _draw_highlight(c: Control, w: float) -> void:
+	var rect := Rect2()
+	match _highlight:
+		&"life":
+			rect = Rect2(12.0, 88.0, w - 24.0, 80.0)
+		&"rifts":
+			rect = Rect2(12.0, 160.0, w - 24.0, 60.0)
+		&"chain":
+			rect = Rect2(w - 142.0, 230.0, 128.0, 80.0)
+		_:
+			return
+	var box := StyleBoxFlat.new()
+	box.draw_center = false
+	box.border_color = Color(INK, 0.45 + 0.55 * absf(sin(_time * 4.0)))
+	box.set_border_width_all(3)
+	box.set_corner_radius_all(10)
+	c.draw_style_box(box, rect)
 
 ## Chen's line while she speaks, with a pulsing comms light; a dim COMMS label otherwise.
 func _draw_caption(c: Control, w: float) -> void:
