@@ -7,7 +7,7 @@ The goal of the project is a workout you want to come back to because the world 
 ## How it plays
 
 - **Stationary, physical.** No artificial locomotion. You turn, duck, and take a step to the side. Everything comes to you.
-- **Grip, then strike.** Hold grip and punch. A strike counts once a phantom is in reach, which is also when it lunges. Jabs, hooks, and uppercuts all work, and the Angler's glowing lure hangs where the matching punch lands.
+- **Grip, then strike.** Hold grip and punch. Closing the grip powers the gauntlets up: a surge runs down the bracer, the knuckles light, and a tick lands in the palm. Opening it powers them down. A strike counts once a phantom is in reach, which is also when it lunges. Jabs, hooks, and uppercuts all work, and the Angler's glowing lure hangs where the matching punch lands.
 - **Four phantom rules, each a different movement.**
 
 | Color | Species | Rule | What the body does |
