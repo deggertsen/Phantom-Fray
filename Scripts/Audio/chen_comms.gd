@@ -201,6 +201,7 @@ func _connect() -> void:
 	if _round:
 		_round.combo_changed.connect(_on_combo_changed)
 		_round.round_finished.connect(_on_round_finished)
+		_round.countdown_started.connect(_on_countdown_started)
 	if _director:
 		_director.rift_spawned.connect(_on_rift_spawned)
 		_director.rift_closed.connect(_on_rift_closed)
@@ -248,8 +249,15 @@ func _begin_mission() -> void:
 	_mission_id = String(_round.current_mission().get("id", ""))
 	var settings := get_node_or_null("/root/GameSettings")
 	var cleared: bool = settings != null and settings.has_cleared_mission(_mission_id)
-	_best_before = settings.best_score(_mission_id) if settings else 0
+	_best_before = settings.best_score(_mission_id, _round.current_tier()) if settings else 0
 	say(_mission_start_event(cleared))
+
+## In the countdown, a difficulty that asks more of the body gets its own line before the mission's:
+## at Full Resonance, that the gauntlets draw on the legs too, and to clear the space.
+func _on_countdown_started(mission: Dictionary) -> void:
+	var event := DifficultyTier.deploy_event(String(mission.get("tier", DifficultyTier.STANDARD)))
+	if event != "":
+		say(event)
 
 ## The opening line knows the operator's history with this breach.
 func _mission_start_event(cleared: bool) -> String:

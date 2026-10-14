@@ -36,9 +36,10 @@ func _ready() -> void:
 	await _capture("01c-settings")
 	_press(KEY_ESCAPE)
 	await _wait(0.5)
+	await _capture_operations()
 	_press(KEY_ENTER)
 	await _wait(0.8)
-	await _capture("02-operations")
+	await _capture("02c-deploy")
 	_press(KEY_ENTER)
 	await _wait(2.0)
 	await _capture("03-countdown")
@@ -84,6 +85,27 @@ func _capture_sweep(camera: Node3D) -> void:
 			await _capture(shots.pop_front())
 	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
+
+## The Operations screen at the profile's difficulty, then at Full Resonance, then back to the
+## main menu. The tier is switched in memory only, so the real profile keeps its choice.
+func _capture_operations() -> void:
+	var flow := _main.get_node("GameFlowController")
+	var settings := get_node_or_null("/root/GameSettings")
+	flow._show_operations()
+	await _wait(0.6)
+	await _capture("02-operations")
+	if settings:
+		var chosen := String(settings.difficulty_tier)
+		settings.difficulty_tier = DifficultyTier.FULL_RESONANCE
+		flow._show_operations()
+		await _wait(0.6)
+		await _capture("02b-operations-full-resonance")
+		flow._show_main_menu()
+		await _wait(0.6)
+		await _capture("02b-menu-full-resonance")
+		settings.difficulty_tier = chosen
+	flow._show_main_menu()
+	await _wait(0.6)
 
 func _press(keycode: Key) -> void:
 	var event := InputEventKey.new()
