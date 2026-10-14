@@ -10,9 +10,16 @@ const DEATH: Array[AudioStream] = [
 	preload("res://Assets/Audio/SFX/phantom_death_3.mp3"),
 	preload("res://Assets/Audio/SFX/phantom_death_4.mp3"),
 ]
-const POSSESS: Array[AudioStream] = [
-	preload("res://Assets/Audio/SFX/phantom_possess_1.mp3"),
-	preload("res://Assets/Audio/SFX/phantom_possess_2.mp3"),
+## The player taking a hit.
+const BONES_CRACKING: Array[AudioStream] = [
+	preload("res://Assets/Audio/SFX/bones_cracking_1.mp3"),
+	preload("res://Assets/Audio/SFX/bones_cracking_2.mp3"),
+	preload("res://Assets/Audio/SFX/bones_cracking_3.mp3"),
+	preload("res://Assets/Audio/SFX/bones_cracking_4.mp3"),
+	preload("res://Assets/Audio/SFX/bones_cracking_5.mp3"),
+	preload("res://Assets/Audio/SFX/bones_cracking_6.mp3"),
+	preload("res://Assets/Audio/SFX/bones_cracking_7.mp3"),
+	preload("res://Assets/Audio/SFX/bones_cracking_8.mp3"),
 ]
 const RIFT_CLOSE: Array[AudioStream] = [
 	preload("res://Assets/Audio/SFX/rift_close_sound_1.mp3"),
@@ -51,8 +58,8 @@ static func streams_for(stem: String) -> Array[AudioStream]:
 	match stem:
 		"phantom_death":
 			return DEATH
-		"phantom_possess":
-			return POSSESS
+		"bones_cracking":
+			return BONES_CRACKING
 		"rift_close_sound":
 			return RIFT_CLOSE
 		"rift_open_sound":
