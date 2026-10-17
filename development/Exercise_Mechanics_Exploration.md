@@ -242,7 +242,7 @@ Decision 16 made hand tracking the first try at Full Resonance. Tests 7 and 8 ra
 7. **Pinch is the menu trigger on a free hand** (thumb tip to index tip under 1.5 cm, released past 3 cm). It drives `button_pressed`/`button_released` and the menu poll. Checked on the headset.
 8. **Boss fights, 2026-10-17.** First run, before the controller case in item 6: 10 push-ups counted at each of two spent tentacles, but the hands flipped back to their hanging controllers on the floor, so the palms rule never applied. Second run, with it: both planks entered `ON_FLOOR` from the hanging controllers (4 to 13 cm up), 10 of 10 push-ups twice, no script errors; "it all felt right". A crouch keeps the head above the plank line, so the hands rule never comes into play there.
 
-**Still open:** Chen's push-up call telling the player to let the gauntlets hang (new voice lines), and the anchor's few-centimetre offset, to check over a longer session.
+**Still open:** rewriting Chen's spent-tentacle lines (`boss_spent_1` to `_3`) as a plain push-up call (David, 2026-10-17: "Press your energy into the tentacle! Do some push-ups!"; today's lines never say push-ups), and the anchor's few-centimetre offset, to check over a longer session.
 
 ### Where bosses sit
 
