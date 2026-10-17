@@ -69,7 +69,7 @@ func show_main_menu(deploy_detail: String = "Seal the next live rift") -> void:
 	))
 	_content.add_child(_make_action_button(
 		&"operations",
-		"◉  OPERATIONS\nCHOOSE A CONTRACT\nSix live operations from Dr. Chen",
+		"◉  OPERATIONS\nCHOOSE A CONTRACT AND DIFFICULTY\nSix live operations from Dr. Chen",
 		COLOR_AMBER,
 		Vector2(0, 96)
 	))
@@ -91,10 +91,13 @@ func show_main_menu(deploy_detail: String = "Seal the next live rift") -> void:
 	))
 	_set_footer("POINT AT A BUTTON  •  PULL TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
 
-func show_operations(entries: Array[Dictionary]) -> void:
-	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "EACH SEAL TEACHES THE NEXT", COLOR_AMBER, 40)
-	# Six two-line cards, the back button, and the footer only fit the 780 px panel with tighter rows.
-	_content.add_theme_constant_override("separation", 8)
+func show_operations(entries: Array[Dictionary], tier_id: String = DifficultyTier.STANDARD) -> void:
+	var tier := DifficultyTier.resolve(tier_id)
+	# The subtitle says what the chosen difficulty asks for, so Full Resonance's jumps are named before Deploy.
+	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "%s  •  %s" % [DifficultyTier.label(tier), DifficultyTier.blurb(tier).to_upper()], _tier_color(tier), 36)
+	# Six two-line cards, the difficulty row, the back button, and the footer only fit the 780 px panel with tighter rows.
+	_content.add_theme_constant_override("separation", 6)
+	_content.add_child(_make_tier_row(tier))
 	for entry in entries:
 		var unlocked: bool = entry.get("unlocked", false)
 		var cleared: bool = entry.get("cleared", false)
@@ -118,10 +121,34 @@ func show_operations(entries: Array[Dictionary]) -> void:
 		button.disabled = not unlocked
 		_compact_menu_button(button, 56.0)
 		_content.add_child(button)
-	var back := _make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 52))
-	_compact_menu_button(back, 52.0)
+	var back := _make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 44))
+	_compact_menu_button(back, 44.0)
 	_content.add_child(back)
 	_set_footer("LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
+
+## One button per difficulty; the chosen one is marked and lit. Picking one sends tier_<id>.
+func _make_tier_row(selected: String) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for tier in DifficultyTier.ORDER:
+		var chosen := tier == selected
+		var text := ("● %s" if chosen else "%s") % DifficultyTier.label(tier)
+		var button := _make_action_button(StringName("tier_%s" % tier), text, _tier_color(tier), Vector2(0, 44), chosen)
+		_compact_menu_button(button, 44.0)
+		row.add_child(button)
+	return row
+
+func _tier_color(tier_id: String) -> Color:
+	match tier_id:
+		DifficultyTier.ASSIST:
+			return COLOR_GREEN
+		DifficultyTier.OPERATOR:
+			return COLOR_AMBER
+		DifficultyTier.FULL_RESONANCE:
+			return COLOR_MAGENTA
+		_:
+			return COLOR_CYAN
 
 func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
 	var page: Dictionary = pages[page_index]
@@ -255,11 +282,14 @@ func _closest_button(node: Node, point: Vector2, best: Array) -> void:
 	for child in node.get_children():
 		_closest_button(child, point, best)
 
-## seconds is the live round time; previous_best is the stored fastest victory before this one (0 when none).
-func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0) -> void:
+## seconds is the live round time; previous_best is the stored fastest victory at this tier before
+## this one (0 when none); tier_label names the difficulty it was played at.
+func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0, tier_label: String = "") -> void:
 	var victory := outcome == &"victory"
 	var title := "MISSION COMPLETE" if victory else "OPERATION ENDED"
 	var subtitle := "ALL RIFTS SEALED" if victory else "LIFE FORCE DEPLETED"
+	if tier_label != "":
+		subtitle += "  •  %s" % tier_label
 	var accent := COLOR_GREEN if victory else COLOR_RED
 	_begin_view(&"RESULTS", "RSF // AFTER-ACTION REPORT", title, subtitle, accent, 34)
 	var outcome_banner := ColorRect.new()

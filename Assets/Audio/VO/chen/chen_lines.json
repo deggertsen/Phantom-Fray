@@ -27,6 +27,11 @@
       "note": "The operator has already sealed this breach. Dry, a little challenging.",
       "lines": ["You've sealed this one before. Do it faster.", "Familiar ground. Show me a cleaner run.", "You know this breach. Let's beat your best.", "Back again? Good. Make it sharper."]
     },
+    "deploy_full_resonance": {
+      "priority": 2, "cooldown": 0, "tag": "[focused, serious]",
+      "note": "The operator deployed at Full Resonance, the top difficulty: squats, jumps, and push-ups. Said in the three-second countdown, before her mission line. She is reading their resonance through the gauntlets, never a heart rate. Calm, a little weighty, a safety reminder without fuss.",
+      "lines": ["Full resonance. The gauntlets draw on your whole body. Legs too.", "More power. More cost. Clear the space around you."]
+    },
     "rift_ahead": {
       "priority": 1, "cooldown": 6, "tag": "[alert]",
       "note": "A new rift opened in front of the operator.",

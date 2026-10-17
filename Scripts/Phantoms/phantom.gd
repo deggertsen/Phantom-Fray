@@ -560,7 +560,7 @@ func _play_death_sound() -> void:
 func _play_possession_sound() -> void:
 	if _possess_player == null:
 		return
-	var stream := SfxVariations.pick("phantom_possess")
+	var stream := SfxVariations.pick("bones_cracking")
 	if stream == null:
 		if _shared_possess_stream == null:
 			_shared_possess_stream = _make_possession_tone()
@@ -569,7 +569,7 @@ func _play_possession_sound() -> void:
 	_possess_player.play()
 
 func _make_possession_tone() -> AudioStreamWAV:
-	## Used only when no phantom_possess take is in the SFX folder.
+	## Used only when no bones_cracking take is in the SFX folder.
 	## https://docs.godotengine.org/en/stable/classes/class_audiostreamwav.html
 	var sample_rate := 22050
 	var duration := 0.72
