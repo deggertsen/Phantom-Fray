@@ -56,4 +56,8 @@ anti_aliasing/quality/msaa_3d=1
 [xr]
 
 openxr/enabled=true
+openxr/extensions/hand_tracking=true
+openxr/extensions/hand_tracking_unobstructed_data_source=true
+openxr/extensions/hand_tracking_controller_data_source=true
 shaders/enabled=true
+openxr/extensions/meta/simultaneous_hands_and_controllers=true

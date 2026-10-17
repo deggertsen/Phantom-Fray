@@ -7,7 +7,7 @@ The goal of the project is a workout you want to come back to because the world 
 ## How it plays
 
 - **Stationary, physical.** No artificial locomotion. You turn, duck, and take a step to the side. Everything comes to you.
-- **Grip, then strike.** Hold grip and punch. A strike counts once a phantom is in reach, which is also when it lunges. Jabs, hooks, and uppercuts all work, and the Angler's glowing lure hangs where the matching punch lands.
+- **Grip, then strike.** Hold grip and punch. Closing the grip powers the gauntlets up: a surge runs down the bracer, the knuckles light, and a tick lands in the palm. Opening it powers them down. A strike counts once a phantom is in reach, which is also when it lunges. Jabs, hooks, and uppercuts all work, and the Angler's glowing lure hangs where the matching punch lands. Punch harder and more energy goes into the rift: rift damage runs from 0.85x for a soft punch (2 m/s) to 1.3x for a hard one (6 m/s), and the lure crit is worth more than either.
 - **Four phantom rules, each a different movement.**
 
 | Color | Species | Rule | What the body does |
@@ -18,14 +18,16 @@ The goal of the project is a workout you want to come back to because the world 
 | Pink | Spearfin | Cannot be punched. Paints a lane on the floor, then charges it. | Side-step or duck out of the lane |
 
 - **Rifts are the objective.** Each phantom you resolve damages the rift it came from. Sealing a rift stops its spawning, but the phantoms it already released keep coming. The operation is won when every rift is sealed and the last straggler is dealt with. There is no time limit: the wrist clock counts up from 0:00 and your fastest victory per operation is kept.
-- **Life force is the stakes.** The gauntlets run on your own life force. A phantom that reaches your head possesses you: it vanishes, drains 20 of 100, and your vision frosts and distorts. Life force recovers after three clear seconds. At zero the gauntlets' failsafe fires, the recovery team pulls you out, and the operation is failed. Operators are never consumed; you go back in and try again.
-- **Score and chain.** Every resolve adds to a chain multiplier up to 3x. Resonance crits and on-arrival hits grow it faster. A wrong hand or a possession resets it. Your best score per operation is kept.
-- **Dr. Chen on comms.** Fully voiced callouts for rift bearings, first contact with each species, wrong-hand corrections, chain milestones, life force warnings, possession, and debriefs that know whether this is your first attempt, a retry after the failsafe, a replay, a flawless seal, or a new best. Captioned on the wrist panel.
+- **Life force is the stakes.** The gauntlets run on your own life force. A phantom that reaches your head possesses you: it vanishes, drains 20 of 100, and your vision frosts and distorts. Life force recovers after three clear seconds. At zero the gauntlets' failsafe fires, the recovery team pulls you out, and the operation is failed. Strikers are never consumed; you go back in and try again.
+- **Score and chain.** Every resolve adds to a chain multiplier up to 3x. Resonance crits and on-arrival hits grow it faster. A wrong hand or a possession resets it. Your best score and best time are kept per operation and difficulty.
+- **Training with Dr. Chen.** Training is a played scenario, not a manual. Chen introduces herself and the war, then walks you through everything in a fight inside the RSF training chamber, where the rift and the phantoms are holograms she can pause: she freezes each one in reach at the moment you would punch it, explains what matters, and waits for the right move. One possession is let through on purpose and she has you look at your left glove, where your life force shows; punch power is shown with damage readouts, and it ends on a short live wave. About five minutes; training cannot fail, and ending it from pause counts as done.
+- **Dr. Chen on comms.** She calls you Recruit in training and Striker, a member of the Resonance Strike Force, once you deploy. Fully voiced callouts for rift bearings, first contact with each species, wrong-hand corrections, chain milestones, life force warnings, possession, and debriefs that know whether this is your first attempt, a retry after the failsafe, a replay, a flawless seal, or a new best. Captioned on the wrist panel.
 - **Your own music.** A settings switch silences the soundtrack so a playlist from any music app plays through the mission while Chen stays audible.
+- **Four difficulties,** picked on the Operations screen and kept between sessions. Assist, Standard, and Operator change phantom speed, tell length, rift health, spawn rate, and how hard a possession hits; Standard is the game as tuned. **Full Resonance** is the movement difficulty, open from the start: speed and tells stay at Standard and rifts hold a tenth more, and The Maw can break open into a boss fight answered with squats, jumps, and push-ups. The boss carries the movements; until the war map brings more boss missions, the other operations ask nothing extra of the body. It assumes you can jump; clear the space around you. Only Full Resonance has bosses.
 
 ## The campaign today
 
-Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission_catalog.gd](Scripts/Core/mission_catalog.gd).
+Training comes first: Dr. Chen's training chamber, outside the operations list (see How it plays). Then six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission_catalog.gd](Scripts/Core/mission_catalog.gd).
 
 | Op | Title | Rifts | Card estimate | What it introduces |
 |---|---|---|---|---|
@@ -36,7 +38,9 @@ Six operations, unlocked in order. Each is a wave table in [Scripts/Core/mission
 | OP-05 | Open Arc | 16 paired | 6 to 10 min | Paired rifts spread across the front arc |
 | OP-06 | The Maw | 1 | 4 to 6 min | One double-size rift that spawns fast, with double health |
 
-Each Operations card shows its expected time ("6 TO 8 MIN") and, once the player has won it, their best time beside it. The ranges are estimates from the wave tables until timed headset runs replace them. A clean run through all six takes roughly 40 minutes. They work as an extended tutorial for the combat system, and that is what they will become: the on-ramp that teaches every mechanic before the world map opens. Replay value and narrative hooks are the next things to build; see the roadmap.
+At Full Resonance, The Maw's card reads 4 to 7 minutes: the first Maw a profile faces there always breaks, and after that about one in three does (never three dry Maws in a row). A Maw that breaks plays a false seal, a thirteen-second turn, and a boss fight against its tentacles until it loses its hold and retreats. A Full Resonance Maw that holds simply seals. Every other difficulty ends on the seal, sometimes with a tentacle glimpse at the rim.
+
+Each Operations card shows its expected time ("6 TO 8 MIN") and, once the player has won it at the chosen difficulty, their best time there beside it. A clear at any difficulty unlocks the next operation. The ranges are estimates from the wave tables until timed headset runs replace them. A clean run through all six takes roughly 40 minutes. They work as an extended tutorial for the combat system, and that is what they will become: the on-ramp that teaches every mechanic before the world map opens. Replay value and narrative hooks are the next things to build; see the roadmap.
 
 ## Controls
 
@@ -49,7 +53,7 @@ Each Operations card shows its expected time ("6 TO 8 MIN") and, once the player
 | Settings | Button on the panel | S |
 | Recenter | Hold Meta button | none |
 
-Debug builds also accept `H` to take a hit and `R` to reset life force.
+Debug builds also accept `H` to take a hit, `R` to reset life force, `B` in the main menu for The Maw at Full Resonance whatever is unlocked (`Shift+B` forces the boss through; it records nothing), and `P` for one push-up on a spent tentacle. `--tier=<id>` on the command line sets the difficulty of a `--mission=<id>` deploy.
 
 ## Running and validating
 
@@ -59,7 +63,7 @@ Godot 4.7.1 exactly. The desktop fallback runs without a headset for menu, flow,
 godot --path .
 ```
 
-Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, rift stragglers, elapsed timer and best time, expected mission times, menu surfaces and footers, own-music settings, pink dodge, squat detector prototype):
+Automated validation (resource loading, SFX takes, variant rules, life force arithmetic, strike window, mission catalog, rift stragglers, elapsed timer and best time, expected mission times, difficulty tiers and their records, menu surfaces and footers, own-music settings, pink dodge, squat, push-up, and jump detection, the resonance sweep, The Maw's break odds, boss fight, and glimpse, the training hold, punch power, and a full training run):
 
 ```bash
 tools/validate_project.sh
@@ -75,17 +79,25 @@ godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/art_captur
 godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn
 ```
 
+The whole training chamber, played through by a stand-in recruit, with a still at each paused hologram:
+
+```bash
+godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn -- --tutorial --art-label=tutorial
+```
+
 Chen's lines are generated from `Assets/Audio/VO/chen/chen_lines.json` with `tools/generate_elevenlabs_vo.ps1` and checked against the script with `tools/check_vo.ps1`.
 
 Quest builds: [development/Quest_Export_Guide.md](development/Quest_Export_Guide.md).
 
 ## Project layout
 
-- `Scripts/Core/` mission catalog, round controller, game flow, settings
+- `Scripts/Core/` mission catalog, difficulty tiers, round controller, game flow, settings, and the tutorial director that runs training
+- `Scripts/Bosses/` The Maw's boss phase: the turn, tentacles, slam
+- `Scripts/Hazards/` the resonance sweep
 - `Scripts/Phantoms/` phantom base arc, Angler (yellow, blue), Carapace (green), Spearfin (pink)
 - `Scripts/Rifts/` rift director (which rifts open where) and rift manager (spawning, health, closure, stragglers)
 - `Scripts/Player/` XR origin, hands and strike detection, life force and its feedback
-- `Scripts/Presentation/` creature meshes, breach city, arena, gauntlets, VFX, compass and bearings
+- `Scripts/Presentation/` creature meshes, breach city, arena, training chamber dome, gauntlets, VFX, compass and bearings
 - `Scripts/Audio/` Chen comms, music intensity, SFX takes
 - `Scripts/UI/` world-space menu panel and presenter, wrist HUD
 - `Scripts/Debug/` performance monitor and capture scenes
@@ -99,9 +111,9 @@ The design intent, in priority order. Details and status in the roadmap.
 
 1. **Fitness first.** Session stats, missions of five to ten minutes, workout-length sessions, and a reason to sweat that is bigger than a score.
 2. **Replay value.** Best scores shown and medals per operation, an endless hold mode, and leaderboards.
-3. **Narrative hooks.** A shared war against the Overseer, with a world map in the spirit of Helldivers 2 where every operator's seals push the front line. The six operations become the tutorial; after it, the player picks missions from the map by difficulty rather than working through a numbered list.
+3. **Narrative hooks.** A shared war against the Overseer, with a world map in the spirit of Helldivers 2 where every Striker's seals push the front line. The six operations become the tutorial; after it, the player picks missions from the map by difficulty rather than working through a numbered list.
 4. **Location variety.** Different breach sites, skies, and lighting per operation.
-5. **Difficulty per mission.** Assist, Standard, and Operator, plus Full Resonance: an opt-in movement difficulty, the only place bosses appear, where their attacks have to be answered with squats, jumps, and push-ups. See [development/Exercise_Mechanics_Exploration.md](development/Exercise_Mechanics_Exploration.md).
+5. **Difficulty per mission.** Built on the Operations screen: Assist, Standard, Operator, and Full Resonance, the opt-in movement difficulty and the only place bosses appear. The war map will take the choice over, mission by mission. Push-ups can be done with the controllers hanging on their straps and the hands tracked (simultaneous hands and controllers). Still to come: the war map's readings hint for The Maw, and timed headset runs to tune the numbers. See [development/Exercise_Mechanics_Exploration.md](development/Exercise_Mechanics_Exploration.md).
 
 ## Lore
 
@@ -161,7 +173,7 @@ Final confrontation: All of this could build up to a climactic mission where you
    - As Phantoms consume more life force, they grow larger and more powerful.
    - Some may evolve specialized abilities, like faster movement or the power to drain life force from a distance.
    - The most powerful Phantoms can drain entire crowds simultaneously.
-   - The largest cannot come through a rift at all until they have drained a city's worth of life force, which is why they rise at dead cities. Holding that shape in our world burns them out: such a Phantom drains away on its own, and an operator who outlasts it forces it back through its rift before the rift closes. These Phantoms are not destroyed; each crossing is an attempt to gather enough energy to hold a permanent presence in our world, and every operator it drains buys it more time.
+   - The largest cannot come through a rift at all until they have drained a city's worth of life force, which is why they rise at dead cities. Holding that shape in our world burns them out: such a Phantom drains away on its own, and a Striker who outlasts it forces it back through its rift before the rift closes. These Phantoms are not destroyed; each crossing is an attempt to gather enough energy to hold a permanent presence in our world, and every Striker it drains buys it more time.
 
 6. The Hive Mind Effect:
    - The Overseer uses the consumed life force to create more Phantoms and strengthen its control over Earth's dimension.
@@ -174,10 +186,10 @@ Final confrontation: All of this could build up to a climactic mission where you
 
 8. The ERM Advantage:
    - The ERM gauntlets don't just destroy Phantoms; they can also temporarily reverse the life force drain in recently affected victims.
-   - This makes RSF operators not just warriors, but potential saviors, adding an extra layer of urgency to their missions.
+   - This makes RSF Strikers not just warriors, but potential saviors, adding an extra layer of urgency to their missions.
 
 9. The Failsafe and the Recovery Team:
-   - The gauntlets draw on the operator's own life force, so Dr. Chen reads the operator's vitals live through them. That is how she knows, over comms, the moment an operator starts to fade.
-   - If an operator's life force collapses, the gauntlets' failsafe inverts the ERM and dumps its whole charge at once. The burst throws every Phantom off the operator and stops the drain, but it knocks the operator out and leaves the gauntlets spent.
-   - An RSF recovery team waits at the pylon line on every deployment. When the failsafe fires, they go in and drag the operator clear. The operator survives, but the breach stays open, and the failsafe has to recharge before the next attempt.
-   - Operators are never consumed in the field. Failing a mission means being pulled out, not dying, which is why an operator can go back into the same breach and try again.
+   - The gauntlets draw on the Striker's own life force, so Dr. Chen reads the Striker's vitals live through them. That is how she knows, over comms, the moment a Striker starts to fade.
+   - If a Striker's life force collapses, the gauntlets' failsafe inverts the ERM and dumps its whole charge at once. The burst throws every Phantom off the Striker and stops the drain, but it knocks the Striker out and leaves the gauntlets spent.
+   - An RSF recovery team waits at the pylon line on every deployment. When the failsafe fires, they go in and drag the Striker clear. The Striker survives, but the breach stays open, and the failsafe has to recharge before the next attempt.
+   - Strikers are never consumed in the field. Failing a mission means being pulled out, not dying, which is why a Striker can go back into the same breach and try again.

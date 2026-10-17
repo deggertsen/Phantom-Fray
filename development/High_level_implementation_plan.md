@@ -47,7 +47,7 @@ Master checklist across systems, as of 2026-10-08. Phase ownership is in [Produc
 - [ ] Power-ups (see Ideas_Backlog.md)
 - [ ] Bosses at the movement difficulty: the two-phase Maw first, then more on the war map (see Exercise_Mechanics_Exploration.md)
 - [ ] Missions five to ten minutes of actual play
-- [ ] Hand tracking as an input option
+- [ ] Hand tracking as an input option (tested 2026-10-14: hands for push-ups only, the fighting stays on controllers; decision 39 in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md))
 
 ## 5. Fitness (Phase 6)
 - [ ] Session stats on results

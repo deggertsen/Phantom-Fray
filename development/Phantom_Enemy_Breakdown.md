@@ -1,6 +1,6 @@
 # Phantom Enemy System
 
-How phantoms work in the code today, and what is still planned. Updated 2026-10-08.
+How phantoms work in the code today, and what is still planned. Updated 2026-10-13.
 
 ## Species and rules
 
@@ -13,6 +13,8 @@ How phantoms work in the code today, and what is still planned. Updated 2026-10-
 | none | Drifter | `phantom.gd` base | Any hand. Not in any wave pool today. | 100 | 10 |
 
 A valid strike during the phantom's commit phase is "on beat": score times 1.25, rift damage times 1.15. Because strikes only count in reach, nearly every valid hit is on beat. Pink's dodge is always on beat.
+
+**Punch power.** A valid strike's rift damage is also scaled by how fast the fist was moving (`Phantom.strike_power`): 0.85x at 2 m/s or slower, rising to 1.3x at 6 m/s or faster, applied with the on-beat bonus and rounded once. A yellow's plain on-beat hit does 10 soft to 15 hard; a lure crit does 20 soft to 30 hard, so a soft crit still beats the hardest plain hit. Score is unchanged. The result carries `power` (0 to 1); the rift's damage flash and the hand haptic scale with it. Green's block uses the second hand's speed. Pink's dodge has no punch and does its full 18.
 
 Every phantom that reaches the player drains 20 life force (`contact_damage`).
 
@@ -47,13 +49,28 @@ Approaches lower and faster, widens its body in the commit phase. The first hand
 ### Spearfin specifics
 Does not use the arc. It telegraphs for `telegraph_seconds` (1.15 s) while a chevron lane shader draws on the floor from the fish to the player and a little past. The aim starts bowed to one side and straightens as the telegraph completes, then it charges at `charge_speed` (7 m/s). Passing its locked target without possessing resolves it as a dodge.
 
+## Training hold
+
+Training pauses phantoms so Chen can teach them (`Scripts/Core/tutorial_director.gd`). `hold_in_reach(distance)` lets the phantom fly its arc and stop on the first frame within `distance` of the head (0.95 m for an Angler, 0.9 m for a Carapace): no movement, phase COMMIT so strikes count, facing the head, lifetime frozen, and no possession even if the head leans into it. Its hologram stops mid-motion (`frozen_time` on the creature shader) inside a cyan ring. A valid strike resolves it as usual; anything else leaves it held. `release_hold()` sends it straight in at commit speed. `SpearfinPhantom.hold_at_lane_lock()` pauses a pink the frame its telegraph ends, lane at full strength; released, it charges the lane it locked. `set_hologram(true)` gives the body the training chamber's scanlines; the training rift sets it on everything it sends.
+
 ## Pressure
 
 `apply_pressure(speed_scale, telegraph_scale)` is called per spawn from the rift's wave entry. Speed multiplies `move_speed`, `pattern_commit_speed`, and pink's `charge_speed`. The telegraph scale divides acceleration (a longer tell is a gentler ramp) and scales the telegraph time with a floor of 0.35 s (0.45 s for pink).
 
+The difficulty sits on top of the wave. `RoundController.begin_round(mission, tier)` passes a copy of the mission through `DifficultyTier.apply_mission` (`Scripts/Core/difficulty_tier.gd`) before any rift opens, so every wave a rift configures already carries the tier:
+
+| Tier | `speed_scale` | `telegraph_scale` | rift `health` | spawn `interval` | contact damage | Sweeps |
+|---|---|---|---|---|---|---|
+| Assist | x0.85 | x1.25 | x0.8 | x1.15 | x0.6 (12 a possession) | duck depth at most |
+| Standard | x1 | x1 | x1 | x1 | x1 (20) | duck depth at most |
+| Operator | x1.12 | x0.85 | x1.15 | x0.9 | x1.25 (25) | duck depth at most |
+| Full Resonance | x1 | x1 | x1.1 | x1 | x1 (20) | none in ordinary rifts; a wave's own sweep asks for a squat (0.20) |
+
+Standard leaves every wave exactly as the catalog has it. Contact damage is the wave field `contact_scale`: `RiftManager` multiplies the `contact_damage` of everything it spawns or that attacks for it (a boss's sweep or slam), so the scaled amount travels through `player_contact`, the rift, the director, and the round controller to `LifeForceManager.apply_damage`. A boss's escort is always a phantom, even from a pool with a sweep in it.
+
 ## Spawning
 
-`Scripts/Rifts/rift_manager.gd` spawns on a timer from its wave's `pool`, up to `max_live` live phantoms, offset in front of the portal. `Scripts/Rifts/rift_spawn_manager.gd` (the RiftDirector) decides how many rifts are open, where they sit, and when the next one replaces a sealed one. Wave fields: `health`, `interval`, `max_live`, `speed_scale`, `telegraph_scale`, `pool`, `scale`.
+`Scripts/Rifts/rift_manager.gd` spawns on a timer from its wave's `pool`, up to `max_live` live phantoms, offset in front of the portal. `Scripts/Rifts/rift_spawn_manager.gd` (the RiftDirector) decides how many rifts are open, where they sit, and when the next one replaces a sealed one. Wave fields: `health`, `interval`, `max_live`, `speed_scale`, `telegraph_scale`, `pool`, `scale`, and optionally `squat_depth` (sweeps), and `contact_scale` (set by the difficulty).
 
 Sealing a rift stops its spawning and dissolves the portal, but phantoms already out keep their course and still score or possess. The rift emits `drained` once they are gone, the director emits `all_clear` once every rift is sealed and drained, and only then does the round end in victory. Phantoms dissolving from a stall or round cleanup no longer count as live.
 
@@ -66,8 +83,8 @@ Sealing a rift stops its spawning and dissolves the portal, but phantoms already
 
 ## Planned
 
-- Low approaches that ask for uppercuts and squats. Everything currently aims at head height.
-- The Maw as the first boss, in two phases (today's flood, then the tentacles), at the movement difficulty only, and an Overseer presence. Bosses drain away on their own and retreat if the operator outlasts them; they never die. Their tentacle attacks (high sweep, low sweep, slam) are answered with a squat, a jump, and a side-step, and a slam leaves the tentacle spent on the floor for push-ups that drive resonance into it. Phantoms circle the boss as an escort it sends in as volleys. See [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
+- Low approaches that ask for uppercuts and squats. Every phantom currently aims at head height; at Full Resonance The Maw's boss asks for them.
+- The Maw's boss is built and reached at Full Resonance (OP-06): two phases, the flood then the tentacles. Still planned: an Overseer presence, and bosses on the war map. Bosses drain away on their own and retreat if the Striker outlasts them; they never die. Their tentacle attacks (high sweep, low sweep, slam) are answered with a squat, a jump, and a side-step, and a slam leaves the tentacle spent on the floor for push-ups that drive resonance into it. Phantoms circle the boss as an escort it sends in as volleys. See [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 - Intelligence targets from the lore: relay phantoms, captures.
 - Further species ideas kept from the original design: a shield phantom needing a punch sequence, phantoms that drain from range, projectile phantoms to punch away.
 - The Drifter is built but unused. It could seed a mixed "any hand" wave for warmups or the endless hold.

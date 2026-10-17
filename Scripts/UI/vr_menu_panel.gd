@@ -55,21 +55,27 @@ func _update_thumbstick_scroll(delta: float) -> void:
 		return
 	_settings_scroll.scroll_vertical += int(-scroll_input * 620.0 * delta)
 
-func show_main_menu(deploy_detail: String = "Seal the next live rift") -> void:
-	_begin_view(&"DEPLOYMENT", "RSF // OPERATOR INTERFACE", "PHANTOM FRAY", "RESONANCE RISING", COLOR_CYAN)
+## training_first: training has not been finished on this profile, so it is the highlighted
+## button and Deploy says so. Deploy still works.
+func show_main_menu(deploy_detail: String = "Seal the next live rift", training_first: bool = false) -> void:
+	_begin_view(&"DEPLOYMENT", "RSF // STRIKER INTERFACE", "PHANTOM FRAY", "RESONANCE RISING", COLOR_CYAN)
 	# The deploy, operations, and training rows plus the footer only fit the 780 px panel with tighter rows.
 	_content.add_theme_constant_override("separation", 8)
-	_add_copy("THE BREACH IS ACTIVE", "Deploy the next contract, or open Operations and choose.", COLOR_MUTED)
+	if training_first:
+		_add_copy("NEW RECRUIT", "Start with Dr. Chen's training chamber. About five minutes.", COLOR_MUTED)
+	else:
+		_add_copy("THE BREACH IS ACTIVE", "Deploy the next contract, or open Operations and choose.", COLOR_MUTED)
+	var deploy_heading := "TRAINING RECOMMENDED FIRST" if training_first else "LIVE COMBAT OPERATION"
 	_content.add_child(_make_action_button(
 		&"deploy",
-		"⚡  DEPLOY MISSION\nLIVE COMBAT OPERATION\n%s" % deploy_detail,
+		"⚡  DEPLOY MISSION\n%s\n%s" % [deploy_heading, deploy_detail],
 		COLOR_MAGENTA,
 		Vector2(0, 128),
-		true
+		not training_first
 	))
 	_content.add_child(_make_action_button(
 		&"operations",
-		"◉  OPERATIONS\nCHOOSE A CONTRACT\nSix live operations from Dr. Chen",
+		"◉  OPERATIONS\nCHOOSE A CONTRACT AND DIFFICULTY\nSix live operations from Dr. Chen",
 		COLOR_AMBER,
 		Vector2(0, 96)
 	))
@@ -79,22 +85,26 @@ func show_main_menu(deploy_detail: String = "Seal the next live rift") -> void:
 	_content.add_child(secondary)
 	secondary.add_child(_make_action_button(
 		&"training",
-		"◈  START TRAINING\nLEARN THE COMBAT SYSTEM\nRecommended before first deployment",
+		"◈  START TRAINING\nDR. CHEN'S TRAINING CHAMBER\n%s" % ("Recommended before first deployment" if training_first else "Replay the full walkthrough"),
 		COLOR_VIOLET,
-		Vector2(0, 118)
+		Vector2(0, 118),
+		training_first
 	))
 	secondary.add_child(_make_action_button(
 		&"settings",
-		"⌁  OPEN SETTINGS\nAUDIO • HAPTICS • COMFORT\nCustomize your operator profile",
+		"⌁  OPEN SETTINGS\nAUDIO • HAPTICS • COMFORT\nCustomize your Striker profile",
 		COLOR_BLUE,
 		Vector2(0, 118)
 	))
 	_set_footer("POINT AT A BUTTON  •  PULL TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
 
-func show_operations(entries: Array[Dictionary]) -> void:
-	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "EACH SEAL TEACHES THE NEXT", COLOR_AMBER, 40)
-	# Six two-line cards, the back button, and the footer only fit the 780 px panel with tighter rows.
-	_content.add_theme_constant_override("separation", 8)
+func show_operations(entries: Array[Dictionary], tier_id: String = DifficultyTier.STANDARD) -> void:
+	var tier := DifficultyTier.resolve(tier_id)
+	# The subtitle says what the chosen difficulty asks for, so Full Resonance's jumps are named before Deploy.
+	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "%s  •  %s" % [DifficultyTier.label(tier), DifficultyTier.blurb(tier).to_upper()], _tier_color(tier), 36)
+	# Six two-line cards, the difficulty row, the back button, and the footer only fit the 780 px panel with tighter rows.
+	_content.add_theme_constant_override("separation", 6)
+	_content.add_child(_make_tier_row(tier))
 	for entry in entries:
 		var unlocked: bool = entry.get("unlocked", false)
 		var cleared: bool = entry.get("cleared", false)
@@ -118,50 +128,47 @@ func show_operations(entries: Array[Dictionary]) -> void:
 		button.disabled = not unlocked
 		_compact_menu_button(button, 56.0)
 		_content.add_child(button)
-	var back := _make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 52))
-	_compact_menu_button(back, 52.0)
+	var back := _make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 44))
+	_compact_menu_button(back, 44.0)
 	_content.add_child(back)
 	_set_footer("LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
 
-func show_tutorial(page_index: int, pages: Array[Dictionary]) -> void:
-	var page: Dictionary = pages[page_index]
-	_begin_view(&"TRAINING", "RSF // GUIDED ORIENTATION", "TRAINING", "MODULE %02d / %02d" % [page_index + 1, pages.size()], COLOR_VIOLET)
-	var lesson := PanelContainer.new()
-	lesson.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	lesson.add_theme_stylebox_override("panel", _style_box(COLOR_PANEL_SOFT, page.get("color", COLOR_VIOLET), 2, 20))
-	_content.add_child(lesson)
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 34)
-	margin.add_theme_constant_override("margin_right", 34)
-	margin.add_theme_constant_override("margin_top", 28)
-	margin.add_theme_constant_override("margin_bottom", 28)
-	lesson.add_child(margin)
-	var lesson_stack := VBoxContainer.new()
-	lesson_stack.add_theme_constant_override("separation", 14)
-	margin.add_child(lesson_stack)
-	lesson_stack.add_child(_label(page.get("eyebrow", "TRAINING OBJECTIVE"), 20, page.get("color", COLOR_VIOLET), true))
-	lesson_stack.add_child(_label(page.get("title", ""), 42, COLOR_TEXT, true))
-	var body := _label(page.get("body", ""), 26, COLOR_TEXT)
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	lesson_stack.add_child(body)
-	var callout := _label(page.get("callout", ""), 22, COLOR_AMBER, true)
-	callout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lesson_stack.add_child(callout)
-	var actions := HBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_END
-	actions.add_theme_constant_override("separation", 18)
-	_content.add_child(actions)
-	if page_index > 0:
-		actions.add_child(_make_action_button(&"tutorial_back", "BACK", COLOR_MUTED, Vector2(175, 72)))
-	else:
-		actions.add_child(_make_action_button(&"tutorial_exit", "EXIT TRAINING", COLOR_MUTED, Vector2(220, 72)))
-	var continue_text := "COMPLETE TRAINING" if page_index == pages.size() - 1 else "CONTINUE"
-	actions.add_child(_make_action_button(&"tutorial_continue", continue_text, COLOR_VIOLET, Vector2(270, 72), true))
-	_set_footer("THIS LESSON WILL WAIT  •  SELECT CONTINUE WHEN YOU ARE READY  •  HOLD META TO RECENTER")
+## After Chen signs off, in the chamber: deploy the next operation, go again, or leave.
+func show_training_complete(deploy_detail: String) -> void:
+	_begin_view(&"TRAINING", "RSF // TRAINING CHAMBER 07", "TRAINING COMPLETE", "THE GAUNTLETS ARE YOURS", COLOR_GREEN)
+	_add_copy("SIMULATION ENDED", "Every rule you just met works the same out there. The phantoms will not pause.", COLOR_MUTED)
+	_content.add_child(_make_action_button(&"training_deploy", "⚡  DEPLOY\n%s" % deploy_detail, COLOR_MAGENTA, Vector2(0, 104), true))
+	_content.add_child(_make_action_button(&"training_replay", "REPLAY TRAINING", COLOR_VIOLET, Vector2(0, 82)))
+	_content.add_child(_make_action_button(&"training_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 82)))
+	_set_footer("POINT + TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
+
+## One button per difficulty; the chosen one is marked and lit. Picking one sends tier_<id>.
+func _make_tier_row(selected: String) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for tier in DifficultyTier.ORDER:
+		var chosen := tier == selected
+		var text := ("● %s" if chosen else "%s") % DifficultyTier.label(tier)
+		var button := _make_action_button(StringName("tier_%s" % tier), text, _tier_color(tier), Vector2(0, 44), chosen)
+		_compact_menu_button(button, 44.0)
+		row.add_child(button)
+	return row
+
+func _tier_color(tier_id: String) -> Color:
+	match tier_id:
+		DifficultyTier.ASSIST:
+			return COLOR_GREEN
+		DifficultyTier.OPERATOR:
+			return COLOR_AMBER
+		DifficultyTier.FULL_RESONANCE:
+			return COLOR_MAGENTA
+		_:
+			return COLOR_CYAN
+
 
 func show_settings(music_text: String, effects_text: String, haptics_text: String, reduced_flashes: bool, from_pause: bool, own_music: bool = false) -> void:
-	_begin_view(&"SETTINGS", "RSF // OPERATOR PROFILE", "SETTINGS", "", COLOR_BLUE)
+	_begin_view(&"SETTINGS", "RSF // STRIKER PROFILE", "SETTINGS", "", COLOR_BLUE)
 	var scroll_hint := _label("AIM AT PANEL • USE EITHER THUMBSTICK TO SCROLL", 16, COLOR_MUTED, true)
 	scroll_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_content.add_child(scroll_hint)
@@ -206,7 +213,15 @@ func show_settings(music_text: String, effects_text: String, haptics_text: Strin
 	_content.add_child(bottom_spacer)
 	_set_footer("STATIONARY VR  •  NO ARTIFICIAL LOCOMOTION  •  HOLD META BUTTON TO RECENTER")
 
-func show_pause() -> void:
+func show_pause(training: bool = false) -> void:
+	if training:
+		_begin_view(&"PAUSED", "RSF // TRAINING CHAMBER 07", "TRAINING PAUSED", "SIMULATION HELD", COLOR_AMBER)
+		_add_copy("TAKE YOUR TIME", "Ending training counts it as done. You can replay it from the main menu.", COLOR_MUTED)
+		_content.add_child(_make_action_button(&"resume", "RESUME TRAINING", COLOR_GREEN, Vector2(0, 92), true))
+		_content.add_child(_make_action_button(&"pause_settings", "SETTINGS", COLOR_BLUE, Vector2(0, 82)))
+		_content.add_child(_make_action_button(&"end_training", "END TRAINING", COLOR_RED, Vector2(0, 82)))
+		_set_footer("POINT + TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
+		return
 	_begin_view(&"PAUSED", "RSF // MISSION CONTROL", "MISSION PAUSED", "COMBAT SYSTEMS SUSPENDED", COLOR_AMBER)
 	_add_copy("YOUR MISSION IS SAFE", "Time, damage, spawning, and recovery remain frozen until you resume.", COLOR_MUTED)
 	_content.add_child(_make_action_button(&"resume", "RESUME MISSION", COLOR_GREEN, Vector2(0, 92), true))
@@ -215,7 +230,7 @@ func show_pause() -> void:
 	_set_footer("POINT + TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
 
 func show_reset_confirmation() -> void:
-	_begin_view(&"CONFIRM", "RSF // OPERATOR PROFILE", "RESET MISSION PROGRESS?", "CLEARED CONTRACTS RETURN TO LOCKED", COLOR_RED)
+	_begin_view(&"CONFIRM", "RSF // STRIKER PROFILE", "RESET MISSION PROGRESS?", "CLEARED CONTRACTS RETURN TO LOCKED", COLOR_RED)
 	_add_copy("AUDIO AND TRAINING STAY", "Music, effects, haptics, and the training record are left alone.", COLOR_MUTED)
 	_content.add_child(_make_action_button(&"reset_cancel", "KEEP PROGRESS", COLOR_GREEN, Vector2(0, 92), true))
 	_content.add_child(_make_action_button(&"reset_confirm", "RESET PROGRESS", COLOR_RED, Vector2(0, 92)))
@@ -255,11 +270,15 @@ func _closest_button(node: Node, point: Vector2, best: Array) -> void:
 	for child in node.get_children():
 		_closest_button(child, point, best)
 
-## seconds is the live round time; previous_best is the stored fastest victory before this one (0 when none).
-func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0) -> void:
+## seconds is the live round time; previous_best is the stored fastest victory at this tier before
+## this one (0 when none); tier_label names the difficulty it was played at. offer_training adds
+## REVIEW TRAINING, for a Striker the failsafe just pulled out.
+func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0, tier_label: String = "", offer_training: bool = false) -> void:
 	var victory := outcome == &"victory"
 	var title := "MISSION COMPLETE" if victory else "OPERATION ENDED"
 	var subtitle := "ALL RIFTS SEALED" if victory else "LIFE FORCE DEPLETED"
+	if tier_label != "":
+		subtitle += "  •  %s" % tier_label
 	var accent := COLOR_GREEN if victory else COLOR_RED
 	_begin_view(&"RESULTS", "RSF // AFTER-ACTION REPORT", title, subtitle, accent, 34)
 	var outcome_banner := ColorRect.new()
@@ -293,6 +312,8 @@ func show_results(outcome: StringName, score: int, debrief: String = "", next_ti
 	if next_title != "":
 		_content.add_child(_make_action_button(&"next_mission", "NEXT OPERATION\n%s" % next_title, COLOR_GREEN, Vector2(0, 78), true))
 	_content.add_child(_make_action_button(&"retry", "RETRY MISSION", COLOR_CYAN, Vector2(0, 78), next_title == ""))
+	if offer_training:
+		_content.add_child(_make_action_button(&"results_training", "REVIEW TRAINING", COLOR_VIOLET, Vector2(0, 78)))
 	_content.add_child(_make_action_button(&"results_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 78)))
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -449,6 +470,7 @@ func _make_action_button(action: StringName, text: String, accent: Color, minimu
 	button.add_theme_stylebox_override("pressed", _style_box(Color(accent, 0.34), Color.WHITE, 4, 18, 6))
 	button.add_theme_stylebox_override("disabled", _style_box(Color(0.02, 0.025, 0.04, 0.8), Color(0.2, 0.25, 0.32, 0.4), 1, 18))
 	button.set_meta(&"menu_action", action)
+	button.set_meta(&"primary", primary)
 	button.pressed.connect(_on_action_pressed.bind(action))
 	button.mouse_entered.connect(_on_button_hovered.bind(button))
 	return button

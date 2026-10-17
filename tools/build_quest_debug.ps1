@@ -1,7 +1,7 @@
 param(
     # Measurement build for the hand tracking tests (development/Exercise_Mechanics_Exploration.md,
-    # section 3, tests 7 and 8): OpenXR hand tracking, the simultaneous hands and controllers
-    # extension, and the HandTrackingProbe overlay, for this export only.
+    # section 3, tests 7 and 8): the HandTrackingProbe overlay, for this export only. Hand tracking
+    # and simultaneous hands and controllers are on in every build since decision 39.
     [switch] $HandTrackingTest
 )
 
@@ -23,19 +23,10 @@ if (Select-String -Path $projectFile -SimpleMatch $handTestMarker -Quiet) {
 $projectBytes = $null
 if ($HandTrackingTest) {
     $output = Join-Path $projectRoot 'builds\phantom-fray-handtest.apk'
-    # The Meta export plugin adds the hand tracking permission and the
-    # com.oculus.handtracking.frequency meta-data only when this project setting is on in the
-    # exporting editor, and the editor ignores override.cfg and custom feature tags, so the
-    # settings go into project.godot for this export and the file is put back byte for byte.
+    # The editor ignores override.cfg and custom feature tags when exporting, so the probe
+    # setting goes into project.godot for this export and the file is put back byte for byte.
     $projectBytes = [System.IO.File]::ReadAllBytes($projectFile)
     $handTestSettings = @"
-
-[xr]
-
-openxr/extensions/hand_tracking=true
-openxr/extensions/hand_tracking_unobstructed_data_source=true
-openxr/extensions/hand_tracking_controller_data_source=true
-openxr/extensions/meta/simultaneous_hands_and_controllers=true
 
 [phantom_fray]
 

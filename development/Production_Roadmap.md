@@ -1,6 +1,6 @@
 # Phantom Fray — Production Roadmap
 
-**Last updated:** 2026-10-09
+**Last updated:** 2026-10-13
 **Current stage:** Combat system complete and fun in headset. Chen fully voiced. The six operations play as an extended tutorial, which is what they will become: the on-ramp to a world map of missions the player picks by difficulty. Replay value and narrative hooks are the gap before launch.
 **Engine:** Godot 4.7.1 + OpenXR / godot-xr-tools 4.5.1
 **Target:** Meta Quest-class standalone headset
@@ -12,19 +12,22 @@ Ideas that are not scheduled live in [Ideas_Backlog.md](Ideas_Backlog.md).
 
 ## What the game is today
 
-`Main Menu → Training or Deploy → one of six operations (no time limit; the clock counts up) → After-action report → Next operation / Retry`
+`Main Menu → Training (Chen's chamber) or Deploy → one of six operations at one of four difficulties (no time limit; the clock counts up) → After-action report → Next operation / Retry`
 
 - Stationary, physical play: punch, two-hand block, side-step or duck. No artificial locomotion.
+- Training is a played scenario: Dr. Chen's training chamber, a holographic dome where she introduces herself and pauses each phantom's hologram in reach to teach it, lets one possession through, shows punch power with damage readouts, and ends on a live wave. It cannot fail and replaces the six text pages. Plan in [Tutorial_Plan.md](Tutorial_Plan.md).
+- Punch power: rift damage scales 0.85x to 1.3x with punch speed (2 to 6 m/s); score does not.
 - Four phantom rules on three creature species with three body forms each: Angler (yellow left, blue right, lure is the crit), Carapace (green, two-hand block), Spearfin (pink, floor lane, dodge).
 - Phantoms arrive on one continuous accelerating arc and lunge for the head. A strike counts once the body is in reach.
 - Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift. Missions doubled in length on 2026-10-09: OP-01 to OP-05 run twice the rifts (4, 12, 12, 16, 16) and The Maw's single rift has twice the health (1600). A sealed rift's phantoms stay in play; the operation is won when the last one is dealt with.
-- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the operator out. Operators never die.
-- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score and fastest victory per operation are stored; results show the completion time and call a new best time. Each Operations card shows an expected time range and the best time beside it.
+- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the Striker out. Strikers never die.
+- Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score and fastest victory are stored per operation and difficulty; results show the completion time and call a new best time. Each Operations card shows an expected time range and the best time beside it.
 - Dr. Chen on comms: 33 moments, 4 to 5 takes each, voiced with ElevenLabs. Cooldown and max-wait pacing so she never cuts herself off. Opening line knows if this is a first attempt, a retry after the failsafe, or a replay; victory line knows if it was flawless, at critical, or a new best.
 - Play My Own Music: a settings switch silences the soundtrack so any music app plays through.
+- Four difficulties chosen on the Operations screen and saved: Assist, Standard (the game as tuned), Operator, and Full Resonance, the movement difficulty, where The Maw can break into its boss fight (high and low sweeps, slams, push-ups on a spent tentacle, escort volleys). `Scripts/Core/difficulty_tier.gd`.
 - Breach-site arena: hex floor with corruption veins that follow open rifts, RSF pylons, dead-city skyline, rubble, sky crack.
 - Bracer wrist panel: operation, elapsed time, life force, rift hexes, score, multiplier, Chen caption.
-- World-space menu with dual lasers: main (next mission with its expected time), Operations (six contracts with lock state, expected time, and best time), six-page Training, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation.
+- World-space menu with dual lasers: main (next mission with its expected time and difficulty), Operations (difficulty row, six contracts with lock state, expected time, and best time at that difficulty), Training (the chamber) and Training Complete, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation and, after a defeat, Review Training.
 - Mission progress, best scores, best times, and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, own-music settings, rift stragglers, and the pink dodge.
 - Quest debug and release build scripts, signed-package evidence, export guide, ElevenLabs generation and transcription check for Chen's lines.
 
@@ -74,33 +77,36 @@ Fitness is the product. The tutorial operations are the on-ramp; the world map i
 - [x] Expected mission time on every mission card: an `expected_minutes` range per operation ("6 TO 8 MIN") with the player's best time beside it once they have one. The ranges are estimates from the wave tables; replace them from timed headset runs.
 - [ ] Workout-length framing in the menu: a quick 10-minute hold, a 20-minute operation set, a 30-minute campaign.
 - [ ] Meta fitness tracking tag for the store listing and Horizon OS Move integration if the SDK exposes it.
-- [ ] Difficulty per mission, chosen on the world map: Assist, Standard, Operator, and Full Resonance. The first three are multipliers on the wave fields `speed_scale`, `telegraph_scale`, rift health, and contact damage. Full Resonance is the movement difficulty (squats, jumps, push-ups), available from the start, never required. The tutorial operations run at Standard with no detected movement. Design in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
+- [x] Difficulty per mission: Assist, Standard, Operator, and Full Resonance (`Scripts/Core/difficulty_tier.gd`, built 2026-10-13). Each multiplies the wave fields `speed_scale`, `telegraph_scale`, rift health, and spawn interval, and scales contact damage; Standard is the catalog exactly. Full Resonance is the movement difficulty (squats, jumps, push-ups, and The Maw's boss), available from the start, never required. Chosen on the Operations screen for now and saved in `GameSettings`; the war map takes the choice over when it exists. Best score and time are kept per mission and difficulty. Design and numbers in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md), section 4.
+- [ ] Tune the difficulty numbers from timed headset runs at each tier, and give the Operations cards a range per tier where it differs.
 
 ## Phase 7 — Narrative hooks and the war
 
-Give the sweat a purpose. The Overseer is winning unless operators show up.
+Give the sweat a purpose. The Overseer is winning unless Strikers show up.
 
 - [ ] Campaign restructure: the current six operations become the RSF tutorial. Together they teach the combat rules the world map uses, ending with The Maw's flood and a first glimpse of the tentacle holding it open. Each clear is also a story beat with a Chen debrief that reveals one thing about the Overseer.
 - [ ] War map: a world map of breach sites with a front line. After the tutorial this is how the game is played: the player picks a breach and a difficulty, not the next operation number. Sealing rifts pushes the line. Early version is local-only; later versions aggregate across players, in the spirit of Helldivers 2's galactic war.
 - [ ] Daily and weekly breach: a seeded operation on the map everyone fights that day.
 - [ ] Leaderboards per operation and for the endless hold.
-- [ ] A real finale for The Maw, as the first boss: phase one is today's flood of phantoms; when the rift's health hits zero it tears wider instead of sealing, and phase two is the tentacles. The turn into phase two is a false seal, then silence, then a tentacle rising over the player: it must feel like the opening of a boss fight. The Maw does not always break, so it is never a guaranteed boss. The full fight is a war-map mission at the movement difficulty; the tutorial keeps phase one and the glimpse. A prototype of both is built behind a debug mission (Step 6 in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md)); it needs the headset session, real tentacle art, the boss theme, and Chen's VO.
+- [ ] A real finale for The Maw, as the first boss: phase one is today's flood of phantoms; when the rift's health hits zero it tears wider instead of sealing, and phase two is the tentacles. The turn into phase two is a false seal, then silence, then a tentacle rising over the player: it must feel like the opening of a boss fight. The Maw does not always break, so it is never a guaranteed boss. The full fight belongs to Full Resonance; every other difficulty keeps phase one and the glimpse. Built (Steps 6 and 7 in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md)) and, since 2026-10-13, reached in the campaign: OP-06 at Full Resonance uses the break odds and plays the boss fight; the debug-only boss mission is retired (debug builds keep B and `--mission=the_maw_boss` as a shortcut). Still needs real tentacle art, the boss theme, and headset time on the whole mission; Chen is voiced.
 - [ ] Bosses on the war map. Bosses never die: they are gathering enough energy to establish a permanent presence in our world, and holding their shape here burns so much that they drain on their own. Outlast one and it retreats through the rift it came from before the rift closes. In a boss mission the rift's health is the boss's anchor: it drains over time, possessions feed it, and resolved phantoms and work on a spent tentacle drain it faster. Tentacle attacks each have one physical answer: squat under a high sweep, jump a low sweep, side-step a slam, then push-ups on the spent tentacle to drive resonance through the ground into it. Phantoms circle the boss as an escort it sends in as volleys. A spent tentacle stays down for up to 20 seconds or 10 push-ups. Bosses appear only at the movement difficulty, because of the exertion; Assist, Standard, and Operator never meet one. See [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 - [ ] Intelligence operations from the lore: target a relay phantom, capture a signal, hold a position while Chen's team works.
 
 ## Phase 8 — Location variety
 
 - [ ] Breach-site presets per operation: sky color and crack, pylon state, city density and height, floor palette, rubble. All of it is already procedural.
-- [ ] Remove the training-chamber briefing text from the dead-city arena, or make the first operation a chamber and move the rest outside.
-- [ ] Two or three distinct sites for the map: dead city, coastal breach, mountain relay, and a training chamber.
+- [x] Remove the training-chamber briefing text from the dead-city arena. Done 2026-10-13: the sign shows only inside the training chamber dome.
+- [ ] Two or three distinct sites for the map: dead city, coastal breach, mountain relay. (The training chamber exists as a dome over the breach site; a real chamber interior could replace it.)
 
 ## Phase 9 — Comfort and feel
 
 - [ ] Validate the strike-window rule with testers: punches only count once the phantom is within `strike_reach` or in its commit phase. The developer has not felt this as a problem. Confirm with players who have not been told the rule before changing anything.
 - [ ] Cap the full-screen damage tint and distortion in headset, and make Reduced Flashes cap them harder.
 - [ ] Phantom approach heights: currently every phantom aims just below the eyes. Add lower approaches that ask for uppercuts and squats.
-- [ ] Squats, jumps, and push-ups: tune the squat detector prototype on headset, then headset-test the resonance sweep (the boss's high sweep, built as the debug-only Sweep Drill). Run the jump signal and hand tracking tests before building jumps or push-ups. Plan, thresholds, and safety tests in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
-- [ ] Hand tracking: test it at punch speed and with simultaneous hands and controllers (`godotopenxrvendors`). The direction is to move off controllers: hand tracking is required at Full Resonance as the first try, haptics loss accepted, with simultaneous hands and controllers as the fallback.
+- [ ] Squats, jumps, and push-ups: tune the squat detector prototype on headset, then headset-test the resonance sweep (the boss's high sweep, built as the debug-only Sweep Drill). The jump signal and hand tracking tests have run (jumps viable; hands for push-ups only). Plan, thresholds, and safety tests in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
+- [x] Hand tracking: tested at punch speed and with simultaneous hands and controllers (2026-10-14 and 2026-10-17, [Playtest_Log.md](Playtest_Log.md)). Tracked hands cannot carry the fighting: 4 to 10 dropped punches in 20 against a bar of 2, and visible lag. The fallback works (decision 39).
+- [x] Simultaneous hands and controllers at Full Resonance (built 2026-10-17): fight on controllers, let them hang on their straps for push-ups with the hands tracked. Hand tracking settings in the real builds, resume simultaneous tracking on every session, gauntlets follow the tracked hand while the controller hangs, palms-on-floor plank rule in `PushUpDetector`, no strikes from a hanging hand. Details under "Hand tracking" in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
+- [x] Chen's spent-tentacle lines say push-ups plainly: six takes (`boss_spent_1` to `_6`), voiced 2026-10-17, replacing lines like "Ground the gauntlets on it" that never said push-ups. (A plank already needs both hands, or their hanging controllers, down on the floor; 10 of 10 push-ups twice in a boss fight on 2026-10-17.)
 
 ## Phase 10 — Launch
 

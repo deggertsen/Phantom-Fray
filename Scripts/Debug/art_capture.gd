@@ -46,7 +46,7 @@ func _ready() -> void:
 	_place_hands()
 	await _settle(30)
 
-	await _shot("operator", Vector3(0.0, 1.6, 0.0), Vector3(0.0, 1.4, -6.0))
+	await _shot("striker", Vector3(0.0, 1.6, 0.0), Vector3(0.0, 1.4, -6.0))
 	await _shot("wide", Vector3(7.5, 5.0, 5.5), Vector3(0.0, 1.2, -5.0))
 	await _shot("arena", Vector3(0.0, 1.6, 0.0), Vector3(-6.0, 1.9, 4.0))
 	for id in _phantoms:
@@ -54,6 +54,7 @@ func _ready() -> void:
 		var front := phantom.global_position + phantom.global_transform.basis.z * 2.1 + Vector3(0.7, 0.35, 0.0)
 		await _shot("phantom-%s" % id, front, phantom.global_position)
 	await _shot("gauntlets", Vector3(0.0, 1.62, 0.12), Vector3(0.0, 1.2, -0.6))
+	await _powered_gauntlets()
 	await _wrist(rift)
 	await _hits()
 	await _low_life()
@@ -191,6 +192,28 @@ func _place_hands() -> void:
 	# A guard: fists forward at chest height, knuckles toward the camera's view.
 	left.transform = Transform3D(Basis.from_euler(Vector3(0.35, -0.25, 0.0)), Vector3(-0.2, 1.28, -0.38))
 	right.transform = Transform3D(Basis.from_euler(Vector3(0.35, 0.25, 0.0)), Vector3(0.2, 1.28, -0.38))
+
+## Fists closed, with time stopped: the surge down the bracer, the ring snapping off the
+## knuckles, then the held charge.
+func _powered_gauntlets() -> void:
+	var gauntlets: Array[Node] = []
+	var gloves: Array[XRToolsHand] = []
+	for hand in ["LeftHandController", "RightHandController"]:
+		gauntlets.append(_main.get_node("Player/%s/ERMGauntlet" % hand))
+		gloves.append(XRToolsHand.find_instance(_main.get_node("Player/%s" % hand)))
+	for glove in gloves:
+		glove.force_grip_trigger(1.0, 1.0)
+	await _settle(10)
+	Engine.time_scale = 0.0
+	for shot in [["gauntlets-surge", 0.06], ["gauntlets-ignition", 0.15], ["gauntlets-powered", 1.0]]:
+		for gauntlet in gauntlets:
+			gauntlet.show_ignition(shot[1])
+		await _shot(shot[0], Vector3(0.0, 1.62, 0.12), Vector3(0.0, 1.2, -0.6))
+	Engine.time_scale = 1.0
+	for gauntlet in gauntlets:
+		gauntlet.power_override = -1.0
+	for glove in gloves:
+		glove.force_grip_trigger(-1.0, -1.0)
 
 func _shot(file_name: String, from: Vector3, look: Vector3) -> void:
 	_camera.global_position = from

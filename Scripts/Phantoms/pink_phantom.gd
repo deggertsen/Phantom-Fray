@@ -1,4 +1,5 @@
 extends Phantom
+class_name SpearfinPhantom
 
 @export var telegraph_seconds: float = 1.15
 @export var charge_speed: float = 7.0
@@ -10,6 +11,7 @@ var _previous_target_distance: float = INF
 var _pink_bow: float = 1.2
 var _lane: MeshInstance3D
 var _lane_material: ShaderMaterial
+var _hold_on_lock: bool = false
 
 const LANE_SHADER := preload("res://Resources/Materials/dodge_lane.gdshader")
 const LANE_OVERRUN := 1.5
@@ -85,10 +87,34 @@ func release_from_escort() -> void:
 	_charging = false
 	_lock_pink_target()
 
+## Training: pause the hologram the moment its lane locks, before the charge.
+func hold_at_lane_lock() -> void:
+	_hold_on_lock = true
+
+## The charge runs down the lane it locked, at full speed from where it was paused.
+func release_hold() -> void:
+	if not _held or _terminal:
+		return
+	_held = false
+	_hold_on_lock = false
+	_show_hold(false)
+	velocity = (_locked_target - global_position).normalized() * charge_speed
+	_previous_target_distance = global_position.distance_to(_locked_target)
+
+## Where the charge will go: from the fish, through its locked target, and on past it.
+func charge_line() -> PackedVector3Array:
+	var through := _locked_target - global_position
+	var past := _locked_target + (through.normalized() * LANE_OVERRUN if through.length_squared() > 0.0001 else Vector3.ZERO)
+	return PackedVector3Array([global_position, past])
+
 func _physics_process(delta: float) -> void:
 	if _terminal or _escorting:
 		_update_lane(0.0)
 		super(delta)
+		return
+	if _held:
+		velocity = Vector3.ZERO
+		_update_lane(1.0)
 		return
 	if _try_possess_between(global_position, global_position):
 		return
@@ -96,6 +122,11 @@ func _physics_process(delta: float) -> void:
 	if _telegraph_remaining > 0.0:
 		_telegraph_remaining = maxf(_telegraph_remaining - delta, 0.0)
 		told = 1.0 - clampf(_telegraph_remaining / maxf(telegraph_seconds, 0.01), 0.0, 1.0)
+	elif _hold_on_lock:
+		_hold_on_lock = false
+		_update_lane(1.0)
+		_enter_hold()
+		return
 	var blend := told * told
 	var aim := _locked_target
 	if _player_camera:

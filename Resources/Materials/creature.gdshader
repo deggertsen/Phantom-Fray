@@ -22,11 +22,19 @@ uniform float flap_speed = 4.0;
 // 0: fins swing both ways. 1: jaws snap open and shut.
 uniform float snap : hint_range(0.0, 1.0) = 0.0;
 uniform sampler2D noise_tex : filter_linear_mipmap, repeat_enable;
+// The training chamber: 1 draws the body as a hologram, scanlines climbing through it.
+uniform float hologram : hint_range(0.0, 1.0) = 0.0;
+// A paused hologram: 0 or more stops the sway, the flap, and the scanlines at that moment.
+uniform float frozen_time = -1.0;
 
 varying vec3 world_vertex;
 
+float clock() {
+	return (frozen_time >= 0.0 ? frozen_time : TIME) + phase_offset;
+}
+
 void vertex() {
-	float t = TIME + phase_offset;
+	float t = clock();
 	VERTEX.x += sin(t * sway_speed + VERTEX.z * 3.2) * UV2.x;
 	float beat = sin(t * flap_speed + VERTEX.z * 1.5);
 	VERTEX.y += mix(beat, abs(beat), snap) * UV2.y;
@@ -34,7 +42,7 @@ void vertex() {
 }
 
 void fragment() {
-	float t = TIME + phase_offset;
+	float t = clock();
 	float facing = clamp(abs(dot(normalize(NORMAL), normalize(VIEW))), 0.0, 1.0);
 	float fres = pow(1.0 - facing, 2.0);
 	float drift = texture(noise_tex, UV * vec2(2.0, 1.0) + vec2(0.0, -t * 0.22)).r;
@@ -61,6 +69,21 @@ void fragment() {
 
 	float alpha = (0.42 + solid * 0.38 + fres * 0.6 + glow) * COLOR.r;
 	alpha *= smoothstep(0.1, 0.5, drift + COLOR.r * 0.5);
+	if (hologram > 0.0) {
+		// Scanlines in world height, so they read as a projection rather than a skin. Paused,
+		// they stop and the body takes Chen's cyan.
+		bool paused = frozen_time >= 0.0;
+		float band = sin(world_vertex.y * 140.0 - t * 9.0) * 0.5 + 0.5;
+		float sweep = smoothstep(0.9, 1.0, sin(world_vertex.y * 3.0 - t * 2.4));
+		float flicker = paused ? 1.0 : 0.9 + 0.1 * sin(TIME * 37.0 + phase_offset);
+		vec3 tint = paused ? vec3(0.35, 0.9, 1.0) : base_color.rgb;
+		vec3 holo = col * (0.6 + band * 0.6) + tint * sweep * 0.5;
+		if (paused) {
+			holo = mix(holo, tint * (0.35 + band * 0.4), 0.3);
+		}
+		col = mix(col, holo, hologram);
+		alpha = mix(alpha, alpha * (0.55 + band * 0.45) * flicker + sweep * 0.25 * COLOR.r, hologram);
+	}
 	ALBEDO = col;
 	ALPHA = clamp(max(alpha * base_color.a, burn), 0.0, 1.0);
 }

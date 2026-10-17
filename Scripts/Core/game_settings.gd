@@ -15,11 +15,14 @@ var haptic_scale: float = 1.0
 var reduced_flashes: bool = false
 var tutorial_completed: bool = false
 var cleared_missions: PackedStringArray = PackedStringArray()
-## Mission id -> the best score a victory has earned there.
+## Record key (DifficultyTier.record_key: the mission id at Standard, "<id>@<tier>" otherwise) ->
+## the best score a victory has earned there.
 var best_scores: Dictionary = {}
-## Mission id -> the fastest victory there, in seconds of live round time.
+## Record key -> the fastest victory there, in seconds of live round time.
 var best_times: Dictionary = {}
-## Maws faced at the boss difficulty, and how many in a row have sealed without a boss.
+## The difficulty the next deploy plays at (DifficultyTier). A preference, so Reset Progress keeps it.
+var difficulty_tier: String = DifficultyTier.DEFAULT
+## Maws faced at Full Resonance, and how many in a row have sealed without a boss.
 ## They drive the break odds (MawBoss.decide_break) and persist with progress.
 var boss_maws_faced: int = 0
 var maws_without_boss: int = 0
@@ -59,6 +62,7 @@ func load_settings() -> void:
 		best_times = saved_times
 	boss_maws_faced = int(config.get_value("progress", "boss_maws_faced", boss_maws_faced))
 	maws_without_boss = int(config.get_value("progress", "maws_without_boss", maws_without_boss))
+	difficulty_tier = DifficultyTier.resolve(String(config.get_value("gameplay", "difficulty_tier", difficulty_tier)))
 	_snap_volumes(true)
 
 func save_settings() -> void:
@@ -76,6 +80,7 @@ func save_settings() -> void:
 	config.set_value("progress", "best_times", best_times)
 	config.set_value("progress", "boss_maws_faced", boss_maws_faced)
 	config.set_value("progress", "maws_without_boss", maws_without_boss)
+	config.set_value("gameplay", "difficulty_tier", difficulty_tier)
 	config.save(settings_path)
 	apply_audio()
 
@@ -139,31 +144,39 @@ func mark_mission_cleared(mission_id: String) -> void:
 	cleared_missions.append(mission_id)
 	save_settings()
 
-func best_score(mission_id: String) -> int:
-	return int(best_scores.get(mission_id, 0))
+## Picks the difficulty for the next deploy. Unknown ids are ignored.
+func set_difficulty_tier(tier_id: String) -> void:
+	if not DifficultyTier.is_valid(tier_id) or tier_id == difficulty_tier:
+		return
+	difficulty_tier = tier_id
+	save_settings()
+
+## Best scores and times are kept per mission and tier.
+func best_score(mission_id: String, tier_id: String = DifficultyTier.STANDARD) -> int:
+	return int(best_scores.get(DifficultyTier.record_key(mission_id, tier_id), 0))
 
 ## Keeps the higher of the stored best and this victory's score.
-func record_score(mission_id: String, score: int) -> void:
-	if mission_id == "" or score <= best_score(mission_id):
+func record_score(mission_id: String, score: int, tier_id: String = DifficultyTier.STANDARD) -> void:
+	if mission_id == "" or score <= best_score(mission_id, tier_id):
 		return
-	best_scores[mission_id] = score
+	best_scores[DifficultyTier.record_key(mission_id, tier_id)] = score
 	save_settings()
 
-## Fastest stored victory in seconds, or 0.0 when the mission has never been won.
-func best_time(mission_id: String) -> float:
-	return float(best_times.get(mission_id, 0.0))
+## Fastest stored victory in seconds at this tier, or 0.0 when it has never been won there.
+func best_time(mission_id: String, tier_id: String = DifficultyTier.STANDARD) -> float:
+	return float(best_times.get(DifficultyTier.record_key(mission_id, tier_id), 0.0))
 
 ## Keeps the faster of the stored best and this victory's time.
-func record_time(mission_id: String, seconds: float) -> void:
+func record_time(mission_id: String, seconds: float, tier_id: String = DifficultyTier.STANDARD) -> void:
 	if mission_id == "" or seconds <= 0.0:
 		return
-	var previous := best_time(mission_id)
+	var previous := best_time(mission_id, tier_id)
 	if previous > 0.0 and seconds >= previous:
 		return
-	best_times[mission_id] = seconds
+	best_times[DifficultyTier.record_key(mission_id, tier_id)] = seconds
 	save_settings()
 
-## Counts one Maw at the boss difficulty, and whether a boss came through it.
+## Counts one Maw at Full Resonance, and whether a boss came through it.
 func record_maw(broke: bool) -> void:
 	boss_maws_faced += 1
 	maws_without_boss = 0 if broke else maws_without_boss + 1

@@ -14,6 +14,7 @@
 [ext_resource type="Script" uid="uid://xi4845eyogjx" path="res://Scripts/UI/vr_menu_presenter.gd" id="13_menu_presenter"]
 [ext_resource type="Material" path="res://Resources/Materials/breach_sky.tres" id="14_breach_sky"]
 [ext_resource type="Script" uid="uid://cyskfh4se8vna" path="res://Scripts/Audio/chen_comms.gd" id="15_chen_comms"]
+[ext_resource type="Script" path="res://Scripts/Core/tutorial_director.gd" id="16_tutorial"]
 
 [sub_resource type="Sky" id="Sky_f4kfd"]
 sky_material = ExtResource("14_breach_sky")
@@ -83,6 +84,9 @@ script = ExtResource("7_gameover")
 
 [node name="ChenComms" type="Node" parent="." unique_id=1572162038]
 script = ExtResource("15_chen_comms")
+
+[node name="TutorialDirector" type="Node" parent="."]
+script = ExtResource("16_tutorial")
 
 [node name="VRMenuPresenter" type="Node3D" parent="." unique_id=699288695]
 script = ExtResource("13_menu_presenter")

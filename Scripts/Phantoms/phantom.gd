@@ -18,8 +18,20 @@ signal resolved(result: Dictionary)
 signal player_contact(damage: float)
 signal feedback_requested(kind: StringName, position: Vector3, intensity: float)
 signal strike_rejected(reason: StringName)
+## Entered a hold (hold_in_reach): still, in reach, punchable, and unable to possess.
+signal held
 
 enum Phase { APPROACH, TELEGRAPH, COMMIT, RECOVER }
+
+## Punch power: how hard the fist was moving scales the rift damage a valid strike does.
+## At POWER_SOFT_SPEED m/s or slower it does POWER_MIN of its damage, at POWER_HARD_SPEED or
+## faster POWER_MAX, in a straight line between. Score does not change with power.
+const POWER_SOFT_SPEED := 2.0
+const POWER_HARD_SPEED := 6.0
+const POWER_MIN := 0.85
+const POWER_MAX := 1.3
+## The hologram's paused tint and the stasis ring around a held phantom.
+const HOLD_COLOR := Color(0.35, 0.9, 1.0)
 
 @export var variant_id: StringName = &"neutral"
 @export var move_speed: float = 3.2
@@ -97,6 +109,10 @@ var _escort_radii: Vector2 = Vector2.ONE
 var _escort_angle: float = 0.0
 ## Radians per second around the ring. Zero holds the escort still.
 var _escort_orbit_speed: float = 0.0
+## Training: once this close to the camera, stop and wait to be struck. Negative: no hold.
+var _hold_distance: float = -1.0
+var _held: bool = false
+var _hold_ring: MeshInstance3D
 
 func _ready() -> void:
 	# The body is punchable but does not physically block on the player's hurtbox.
@@ -161,6 +177,9 @@ func _physics_process(delta: float) -> void:
 	if _escorting:
 		_tick_escort(delta)
 		return
+	if _held:
+		_tick_hold()
+		return
 	if not uses_attack_pattern or _player_camera == null:
 		return
 
@@ -174,7 +193,7 @@ func _physics_process(delta: float) -> void:
 		_tick_recover(delta)
 	else:
 		_tick_arc(delta)
-	if not _terminal:
+	if not _terminal and not _held:
 		_try_possess_between(origin, global_position)
 
 func _process(delta: float) -> void:
@@ -222,12 +241,20 @@ func receive_strike(strike: Dictionary) -> Dictionary:
 		var feedback: StringName = &"guard" if result.get("resolution_kind", &"") == &"block_half" else &"rejected"
 		feedback_requested.emit(feedback, strike.get("position", global_position), 0.35 if feedback == &"guard" else 0.25)
 		return result
+	var damage := float(result.get("rift_damage", 0))
 	if _phase == Phase.COMMIT:
 		result["on_beat"] = true
 		result["base_score"] = int(round(float(result.get("base_score", 0)) * 1.25))
-		result["rift_damage"] = int(round(float(result.get("rift_damage", 0)) * 1.15))
+		damage *= 1.15
+	var power := strike_power(float(strike.get("speed", 0.0)))
+	result["power"] = power
+	result["rift_damage"] = int(round(damage * lerpf(POWER_MIN, POWER_MAX, power)))
 	_resolve_from_strike(result, strike)
 	return result
+
+## 0 for a soft punch, 1 for a hard one, from the fist's speed in m/s.
+static func strike_power(speed: float) -> float:
+	return clampf((speed - POWER_SOFT_SPEED) / (POWER_HARD_SPEED - POWER_SOFT_SPEED), 0.0, 1.0)
 
 func _evaluate_strike(strike: Dictionary) -> Dictionary:
 	var hand_id: StringName = strike.get("hand_id", &"")
@@ -277,6 +304,82 @@ func resolve_without_strike(result: Dictionary) -> void:
 	_disable_collisions()
 	_begin_dissolve(global_position, Vector3.UP)
 	resolved.emit(result)
+
+## Training: wears the hologram look of Chen's chamber.
+func set_hologram(enabled: bool) -> void:
+	var material := mesh_instance.material_override as ShaderMaterial if mesh_instance else null
+	if material:
+		material.set_shader_parameter("hologram", 1.0 if enabled else 0.0)
+
+## Training: fly the arc as usual, but stop on the first frame within `distance` of the head
+## and wait there, in the commit phase, to be struck. While held it cannot possess and its
+## lifetime does not run. A valid strike resolves it; anything else leaves it held.
+func hold_in_reach(distance: float) -> void:
+	_hold_distance = distance
+
+func is_held() -> bool:
+	return _held and not _terminal
+
+## Out of the hold and straight at the head, from where it stands, at full commit speed.
+## Possesses unless struck on the way in.
+func release_hold() -> void:
+	if not _held or _terminal:
+		return
+	_held = false
+	_hold_distance = -1.0
+	_show_hold(false)
+	if _player_camera == null:
+		return
+	_lock_target()
+	_curve_start = global_position
+	_curve_end = _locked_target
+	_curve_control = _curve_start.lerp(_curve_end, 0.33)
+	_curve_control_b = _curve_start.lerp(_curve_end, 0.66)
+	_curve_length = maxf(_curve_start.distance_to(_curve_end), 0.5)
+	_curve_progress = 0.9
+	_camera_closest = INF
+	_coast_time = 0.0
+	_curve_ready = true
+	velocity = (_curve_end - _curve_start).normalized() * pattern_commit_speed
+
+func _enter_hold() -> void:
+	_held = true
+	_phase = Phase.COMMIT
+	velocity = Vector3.ZERO
+	_set_alert(1.0)
+	_show_hold(true)
+	held.emit()
+
+func _tick_hold() -> void:
+	velocity = Vector3.ZERO
+	if _player_camera:
+		_face_direction(_player_camera.global_position - global_position)
+
+## The paused hologram: its motion stops where it is and a ring of Chen's field holds it.
+func _show_hold(on: bool) -> void:
+	var material := mesh_instance.material_override as ShaderMaterial if mesh_instance else null
+	if material:
+		material.set_shader_parameter("frozen_time", fmod(Time.get_ticks_msec() / 1000.0, 3600.0) if on else -1.0)
+	if on and _hold_ring == null:
+		_hold_ring = MeshInstance3D.new()
+		_hold_ring.name = "HoldRing"
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.52
+		torus.outer_radius = 0.56
+		torus.rings = 24
+		torus.ring_segments = 6
+		_hold_ring.mesh = torus
+		var ring_material := StandardMaterial3D.new()
+		ring_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		ring_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		ring_material.albedo_color = Color(HOLD_COLOR, 0.7)
+		_hold_ring.material_override = ring_material
+		_hold_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# Upright, facing the player, around the body.
+		_hold_ring.rotation = Vector3(PI * 0.5, 0.0, 0.0)
+		add_child(_hold_ring)
+	if _hold_ring:
+		_hold_ring.visible = on
 
 func set_interactions_enabled(enabled: bool) -> void:
 	if _terminal:
@@ -339,6 +442,8 @@ func force_cleanup() -> void:
 	_disable_collisions()
 	_dissolving = true
 	dissolve_speed = maxf(dissolve_speed, 3.0)
+	if _hold_ring:
+		_hold_ring.visible = false
 
 func _tick_arc(delta: float) -> void:
 	if not _curve_ready:
@@ -384,6 +489,9 @@ func _tick_arc(delta: float) -> void:
 	_face_direction(desired)
 	move_and_slide()
 	camera_distance = global_position.distance_to(_player_camera.global_position)
+	if _hold_distance > 0.0 and camera_distance <= _hold_distance:
+		_enter_hold()
+		return
 	var closing_in := camera_distance < strike_reach * 1.4
 	if velocity.length() < 0.2 and _curve_progress > 0.08 and not closing_in:
 		_stall_time += delta
@@ -527,6 +635,8 @@ func _tune_creature_material(_material: ShaderMaterial) -> void:
 
 func _begin_dissolve(impact_position: Vector3, direction: Vector3, play_death_sound: bool = true) -> void:
 	_dissolving = true
+	if _hold_ring:
+		_hold_ring.visible = false
 	_on_dissolve_started()
 	var material := mesh_instance.material_override as ShaderMaterial
 	if material:
@@ -583,7 +693,7 @@ func _play_death_sound() -> void:
 func _play_possession_sound() -> void:
 	if _possess_player == null:
 		return
-	var stream := SfxVariations.pick("phantom_possess")
+	var stream := SfxVariations.pick("bones_cracking")
 	if stream == null:
 		if _shared_possess_stream == null:
 			_shared_possess_stream = _make_possession_tone()
@@ -592,7 +702,7 @@ func _play_possession_sound() -> void:
 	_possess_player.play()
 
 func _make_possession_tone() -> AudioStreamWAV:
-	## Used only when no phantom_possess take is in the SFX folder.
+	## Used only when no bones_cracking take is in the SFX folder.
 	## https://docs.godotengine.org/en/stable/classes/class_audiostreamwav.html
 	var sample_rate := 22050
 	var duration := 0.72
@@ -627,7 +737,7 @@ func _closest_distance(from_position: Vector3, to_position: Vector3, point: Vect
 	return from_position.lerp(to_position, t).distance_to(point)
 
 func _on_contact_body_entered(body: Node3D) -> void:
-	if _terminal or not body.is_in_group("PlayerBody"):
+	if _terminal or _held or not body.is_in_group("PlayerBody"):
 		return
 	# The contact capsule's skin used to count as a bite. Only the origin does.
 	if not _core_reaches_player(global_position, global_position):

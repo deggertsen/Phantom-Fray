@@ -14,6 +14,7 @@ func _run_validation() -> void:
 	_validate_life_force()
 	await _validate_attack_window()
 	await _validate_mission_catalog()
+	await _validate_difficulty_tiers()
 	await _validate_rift_stragglers()
 	await _validate_elapsed_timer()
 	await _validate_menu_surface()
@@ -26,8 +27,12 @@ func _run_validation() -> void:
 	_validate_maw_break_odds()
 	await _validate_maw_boss()
 	await _validate_maw_glimpse()
+	await _validate_phantom_hold()
+	await _validate_punch_power()
+	await _validate_tutorial_flow()
 	await _validate_resonance_sweep()
 	_validate_hand_tracking_probe()
+	_validate_tracked_hands()
 	await process_frame
 	if failures.is_empty():
 		print("PHANTOM FRAY VALIDATION PASSED")
@@ -68,21 +73,21 @@ func _validate_resources() -> void:
 func _validate_sfx_variations() -> void:
 	var expected := {
 		"phantom_death": 4,
-		"phantom_possess": 2,
+		"bones_cracking": 8,
 		"rift_close_sound": 3,
 		"rift_open_sound": 1,
 	}
 	for stem in expected:
 		if SfxVariations.variation_count(stem) != int(expected[stem]):
 			failures.append("%s has %d takes, expected %d" % [stem, SfxVariations.variation_count(stem), int(expected[stem])])
-	var first := SfxVariations.pick("phantom_possess")
+	var first := SfxVariations.pick("bones_cracking")
 	var varied := false
 	for _i in 6:
-		if SfxVariations.pick("phantom_possess") != first:
+		if SfxVariations.pick("bones_cracking") != first:
 			varied = true
 			break
 	if first == null or not varied:
-		failures.append("Possession takes did not vary")
+		failures.append("Hit takes did not vary")
 	for stem in expected:
 		var stream := SfxVariations.pick(stem)
 		if stream == null:
@@ -167,16 +172,32 @@ func _validate_menu_surface() -> void:
 		)
 		if not menu.activate_at_viewport_point(deploy.get_global_rect().get_center()) or not activated[0]:
 			failures.append("Pointing at a menu button did not activate it")
-	var tutorial_pages: Array[Dictionary] = [{
-		"eyebrow": "TEST",
-		"title": "WAIT FOR CONTINUE",
-		"body": "Tutorial content remains visible until Continue is selected.",
-		"callout": "CONTINUE",
-		"color": Color.CYAN,
-	}]
-	menu.show_tutorial(0, tutorial_pages)
-	if _find_button(menu, "COMPLETE TRAINING") == null:
-		failures.append("Tutorial continue action is missing")
+	# A new recruit: training is the highlighted button, and Deploy still works.
+	menu.show_main_menu("NEXT", true)
+	await process_frame
+	var new_training := _find_button(menu, "START TRAINING")
+	var new_deploy := _find_button(menu, "DEPLOY MISSION")
+	if new_training == null or not bool(new_training.get_meta(&"primary", false)) or new_deploy == null or bool(new_deploy.get_meta(&"primary", false)) or new_deploy.disabled:
+		failures.append("A new recruit's main menu does not lead with training")
+	elif not "TRAINING RECOMMENDED FIRST" in new_deploy.text:
+		failures.append("Deploy does not recommend training to a new recruit")
+	menu.show_training_complete("NEXT")
+	await process_frame
+	var complete_actions := _button_actions(menu)
+	if complete_actions != ["training_deploy", "training_replay", "training_menu"]:
+		failures.append("Training Complete offers %s" % [complete_actions])
+	menu.show_pause(true)
+	await process_frame
+	if _button_actions(menu) != ["resume", "pause_settings", "end_training"]:
+		failures.append("The training pause menu offers %s" % [_button_actions(menu)])
+	menu.show_results(&"defeat", 100, "", "", 0.0, 0.0, "", true)
+	await process_frame
+	if not "results_training" in _button_actions(menu):
+		failures.append("Defeat results do not offer Review Training")
+	menu.show_results(&"victory", 100, "", "NEXT", 60.0, 0.0, "", false)
+	await process_frame
+	if "results_training" in _button_actions(menu):
+		failures.append("Victory results offer Review Training")
 	menu.show_settings("75%", "50%", "100%", false, false)
 	await process_frame
 	var flashes_off := false
@@ -238,6 +259,12 @@ func _buttons_under(node: Node) -> Array[Button]:
 	for child in node.get_children():
 		found.append_array(_buttons_under(child))
 	return found
+
+func _button_actions(node: Node) -> Array[String]:
+	var actions: Array[String] = []
+	for button in _buttons_under(node):
+		actions.append(String(button.get_meta(&"menu_action", &"")))
+	return actions
 
 func _find_button(node: Node, text_fragment: String) -> Button:
 	if node is Button and text_fragment in node.text:
@@ -618,8 +645,8 @@ func _validate_mission_catalog() -> void:
 			failures.append("%s labels, barks, or seal lines do not match its %d rifts" % [mission.get("id", ""), rift_count])
 	if MissionCatalog.expected_minutes_text({"expected_minutes": [6, 8]}) != "6 TO 8 MIN":
 		failures.append("Expected time range does not read as 6 TO 8 MIN")
-	if MissionCatalog.deploy_detail(null) != "NEXT • OP-01 FIRST LIGHT • %s" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("first_light")):
-		failures.append("Deploy button does not show the next mission's expected time: %s" % MissionCatalog.deploy_detail(null))
+	if MissionCatalog.deploy_detail(null) != "NEXT • OP-01 FIRST LIGHT • %s • STANDARD" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("first_light")):
+		failures.append("Deploy button does not show the next mission's expected time and tier: %s" % MissionCatalog.deploy_detail(null))
 	var none := PackedStringArray()
 	if not MissionCatalog.is_unlocked_with_clears("first_light", none):
 		failures.append("First Light should be available immediately")
@@ -683,6 +710,241 @@ func _validate_mission_catalog() -> void:
 	for variant_id in ["yellow", "blue", "green", "pink"]:
 		if load(MissionCatalog.scene_path(variant_id)) == null:
 			failures.append("Mission pool failed to load %s" % variant_id)
+
+## The four difficulties: Standard is the catalog exactly; every tier's multipliers reach a
+## spawned phantom, its rift, and the life force; Full Resonance adds no sweeps to ordinary rifts
+## (bosses carry the movements); the choice and per-tier records persist; only Full Resonance
+## reaches the boss turn.
+func _validate_difficulty_tiers() -> void:
+	# Standard reproduces today's numbers.
+	for mission in MissionCatalog.all_missions() + MissionCatalog.debug_missions():
+		var standard := DifficultyTier.apply_mission(mission, DifficultyTier.STANDARD)
+		if standard.get("rifts", []) != mission.get("rifts", []) or standard.has("boss") or standard.get("expected_minutes") != mission.get("expected_minutes"):
+			failures.append("Standard changed %s" % mission.get("id", ""))
+	var first_wave: Dictionary = DifficultyTier.apply_mission(MissionCatalog.get_mission("first_light"), DifficultyTier.STANDARD)["rifts"][0]
+	if int(first_wave["health"]) != 70 or float(first_wave["interval"]) != 4.2 or float(first_wave["speed_scale"]) != 0.85 or float(first_wave["telegraph_scale"]) != 1.28 or first_wave.has("contact_scale") or first_wave["pool"] != ["yellow", "yellow", "blue"]:
+		failures.append("Standard First Light is not 70 health, 4.2 s, 0.85 speed, 1.28 tells: %s" % first_wave)
+	var maw_standard := DifficultyTier.apply_mission(MissionCatalog.get_mission("the_maw"), DifficultyTier.STANDARD)
+	if maw_standard.has("tier_boss") or not maw_standard.get("glimpse", false) or int(maw_standard["rifts"][0]["health"]) != 1600:
+		failures.append("The Standard Maw is not the 1600-health tutorial Maw with its glimpse")
+	if DifficultyTier.apply_mission(maw_standard, DifficultyTier.FULL_RESONANCE) != maw_standard:
+		failures.append("A tiered mission took a second tier")
+	# Below Full Resonance a sweep never asks for more than a duck; at it, always a squat.
+	var deep := {"health": 100, "interval": 3.0, "max_live": 4, "speed_scale": 1.0, "telegraph_scale": 1.0, "pool": ["yellow", "sweep"], "squat_depth": 0.2}
+	for tier in [DifficultyTier.ASSIST, DifficultyTier.STANDARD, DifficultyTier.OPERATOR]:
+		if not is_equal_approx(float(DifficultyTier.apply_wave(deep, tier)["squat_depth"]), DifficultyTier.DUCK_DEPTH):
+			failures.append("%s let a sweep ask for more than a duck" % tier)
+		if DifficultyTier.allows_bosses(tier) or DifficultyTier.asks_for_movement(tier):
+			failures.append("%s asks for movement or allows a boss" % tier)
+	if not DifficultyTier.allows_bosses(DifficultyTier.FULL_RESONANCE) or not DifficultyTier.info(DifficultyTier.FULL_RESONANCE).get("jumps", false):
+		failures.append("Full Resonance does not ask for jumps or allow bosses")
+	var base_wave := {"health": 100, "interval": 3.0, "max_live": 4, "speed_scale": 1.0, "telegraph_scale": 1.0, "pool": ["yellow"]}
+	var yellow_scene := load(MissionCatalog.scene_path("yellow")) as PackedScene
+	var reference := yellow_scene.instantiate() as Phantom
+	root.add_child(reference)
+	await process_frame
+	var base_speed := reference.move_speed
+	var base_tell := reference.pattern_telegraph_seconds
+	var base_contact := reference.contact_damage
+	reference.queue_free()
+	# Each tier on a real round: the rift, the phantom it sends, and a contact reaching life force.
+	for tier in DifficultyTier.ORDER:
+		var info := DifficultyTier.info(tier)
+		var container := Node3D.new()
+		container.add_to_group("PhantomContainer")
+		root.add_child(container)
+		var director := RiftDirector.new()
+		director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+		root.add_child(director)
+		var life := LifeForceManager.new()
+		root.add_child(life)
+		var round_controller := RoundController.new()
+		round_controller.countdown_seconds = 0
+		root.add_child(round_controller)
+		await process_frame
+		await process_frame
+		round_controller.set_process(false)
+		round_controller.begin_round({"id": "tier_check", "rifts": [base_wave]}, tier)
+		round_controller._process(0.0)
+		var rift: RiftManager = director.rift_instances[0] if not director.rift_instances.is_empty() else null
+		if round_controller.current_tier() != tier or rift == null:
+			failures.append("%s did not reach the round" % tier)
+		else:
+			var expected_health := maxi(int(round(100.0 * float(info["health"]))), 1)
+			if rift.maximum_health != expected_health or not is_equal_approx(rift.spawn_interval, 3.0 * float(info["interval"])):
+				failures.append("%s rift has %d health every %.2f s, expected %d every %.2f s" % [tier, rift.maximum_health, rift.spawn_interval, expected_health, 3.0 * float(info["interval"])])
+			var phantom: Phantom = null
+			for _try in 24:
+				var spawned := rift._spawn_phantom()
+				if spawned is Phantom:
+					phantom = spawned
+					break
+			if phantom == null:
+				failures.append("%s rift sent no phantom" % tier)
+			else:
+				var expected_tell := maxf(base_tell * float(info["telegraph"]), 0.35)
+				if not is_equal_approx(phantom.move_speed, base_speed * float(info["speed"])) or not is_equal_approx(phantom.pattern_telegraph_seconds, expected_tell) or not is_equal_approx(phantom.contact_damage, base_contact * float(info["contact"])):
+					failures.append("%s phantom moves %.2f with %.2f s tells and %.1f contact" % [tier, phantom.move_speed, phantom.pattern_telegraph_seconds, phantom.contact_damage])
+				var before := life.current_life_force
+				phantom.player_contact.emit(phantom.contact_damage)
+				if not is_equal_approx(before - life.current_life_force, base_contact * float(info["contact"])):
+					failures.append("%s contact did not reach life force at its scale: %.1f" % [tier, before - life.current_life_force])
+		round_controller.abandon_round()
+		for node in [round_controller, life, director, container]:
+			node.queue_free()
+		await process_frame
+	# Full Resonance leaves ordinary rifts' pools alone: bosses carry the movements. A wave that
+	# already has a sweep (the Sweep Drill) asks for a real squat there.
+	for mission in MissionCatalog.all_missions():
+		for wave in DifficultyTier.apply_mission(mission, DifficultyTier.FULL_RESONANCE).get("rifts", []):
+			if "sweep" in wave.get("pool", []) or wave.has("squat_depth"):
+				failures.append("Full Resonance put a sweep in %s" % mission.get("id", ""))
+				break
+	var drill_wave := {"health": 100, "interval": 3.0, "max_live": 4, "speed_scale": 1.0, "telegraph_scale": 1.0, "pool": ["yellow", "sweep"], "squat_depth": DifficultyTier.DUCK_DEPTH}
+	var resonant := DifficultyTier.apply_wave(drill_wave, DifficultyTier.FULL_RESONANCE)
+	if resonant["pool"] != ["yellow", "sweep"] or not is_equal_approx(float(resonant["squat_depth"]), DifficultyTier.SQUAT_DEPTH):
+		failures.append("Full Resonance did not deepen an existing sweep to a squat: %s" % resonant)
+	if base_wave["pool"] != ["yellow"] or drill_wave["pool"] != ["yellow", "sweep"]:
+		failures.append("Applying a tier changed the catalog's own wave")
+	var sweep_box := Node3D.new()
+	sweep_box.add_to_group("PhantomContainer")
+	root.add_child(sweep_box)
+	var sweep_rift := RiftManager.new()
+	sweep_rift.phantom_scenes = [yellow_scene]
+	root.add_child(sweep_rift)
+	await process_frame
+	sweep_rift.configure_wave(resonant)
+	var sweep: ResonanceSweep = null
+	for _i in 24:
+		var spawned := sweep_rift._spawn_phantom()
+		if spawned is ResonanceSweep:
+			sweep = spawned
+			break
+	if sweep == null or not is_equal_approx(sweep.squat_depth, DifficultyTier.SQUAT_DEPTH):
+		failures.append("A Full Resonance sweep did not ask for a squat")
+	for _i in 12:
+		if sweep_rift.spawn_escort() is ResonanceSweep:
+			failures.append("A boss escort came out as a sweep")
+			break
+	sweep_rift.force_cleanup()
+	sweep_box.queue_free()
+	await process_frame
+	# The choice persists, defaults to Standard, survives Reset Progress, and records are per tier.
+	var path := "user://validation_tier_settings.cfg"
+	var levels = load("res://Scripts/Core/game_settings.gd").new()
+	levels.settings_path = path
+	if levels.difficulty_tier != DifficultyTier.STANDARD or MissionCatalog.tier_from(levels) != DifficultyTier.STANDARD:
+		failures.append("A fresh profile does not start at Standard")
+	levels.set_difficulty_tier(DifficultyTier.FULL_RESONANCE)
+	levels.set_difficulty_tier("nightmare")
+	levels.record_time("first_light", 200.0, DifficultyTier.FULL_RESONANCE)
+	levels.record_score("first_light", 9000, DifficultyTier.FULL_RESONANCE)
+	levels.record_time("first_light", 150.0)
+	var reloaded = load("res://Scripts/Core/game_settings.gd").new()
+	reloaded.settings_path = path
+	reloaded.load_settings()
+	if reloaded.difficulty_tier != DifficultyTier.FULL_RESONANCE:
+		failures.append("The difficulty choice did not persist: %s" % reloaded.difficulty_tier)
+	if not is_equal_approx(reloaded.best_time("first_light", DifficultyTier.FULL_RESONANCE), 200.0) or not is_equal_approx(reloaded.best_time("first_light"), 150.0) or reloaded.best_score("first_light", DifficultyTier.FULL_RESONANCE) != 9000 or reloaded.best_score("first_light") != 0:
+		failures.append("Best scores and times are not kept per tier")
+	if reloaded.best_times.get("first_light", 0.0) != 150.0:
+		failures.append("Standard records moved off the bare mission id")
+	var entries := MissionCatalog.operation_entries(reloaded)
+	if not is_equal_approx(float(entries[0].get("best_seconds", 0.0)), 200.0) or entries[0].get("tier", "") != DifficultyTier.FULL_RESONANCE:
+		failures.append("Operations does not show the chosen tier's best time")
+	if not MissionCatalog.deploy_detail(reloaded).ends_with("• FULL RESONANCE"):
+		failures.append("Deploy does not show the chosen tier: %s" % MissionCatalog.deploy_detail(reloaded))
+	var maw_entry: Dictionary = entries[entries.size() - 1]
+	if maw_entry.get("expected_minutes", []) != [4, 7]:
+		failures.append("The Full Resonance Maw card does not cover the boss: %s" % [maw_entry.get("expected_minutes", [])])
+	reloaded.reset_mission_progress()
+	if reloaded.difficulty_tier != DifficultyTier.FULL_RESONANCE or reloaded.best_time("first_light", DifficultyTier.FULL_RESONANCE) != 0.0:
+		failures.append("Reset Progress dropped the difficulty or kept a tier's record")
+	levels.free()
+	reloaded.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	# The Operations screen offers all four, marks the choice, and still fits; results name the tier.
+	var menu := (load("res://Scenes/UI/vr_menu_panel.tscn") as PackedScene).instantiate() as VRMenuPanel
+	root.add_child(menu)
+	await process_frame
+	menu.show_operations(MissionCatalog.operation_entries(null), DifficultyTier.OPERATOR)
+	await process_frame
+	await process_frame
+	var tier_buttons := 0
+	for button in _buttons_under(menu):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action.begins_with("tier_"):
+			tier_buttons += 1
+			var marked := button.text.begins_with("●")
+			if marked != (action == "tier_operator"):
+				failures.append("Operations marks the wrong difficulty: %s" % button.text)
+			if not Rect2(Vector2.ZERO, Vector2(1280, 780)).encloses(button.get_global_rect()):
+				failures.append("A difficulty button sits outside the panel")
+	if tier_buttons != 4:
+		failures.append("Operations offers %d difficulties, not four" % tier_buttons)
+	var footer := _find_label(menu, "LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
+	if footer == null or footer.get_global_rect().end.y > 750.0:
+		failures.append("The difficulty row pushed the Operations footer off the panel")
+	if _find_label(menu, "OPERATOR  •  %s" % DifficultyTier.blurb(DifficultyTier.OPERATOR).to_upper()) == null:
+		failures.append("Operations does not say what the chosen difficulty asks")
+	menu.show_results(&"victory", 4000, "", "", 300.0, 0.0, DifficultyTier.label(DifficultyTier.FULL_RESONANCE))
+	await process_frame
+	if not _has_label(menu, "ALL RIFTS SEALED  •  FULL RESONANCE"):
+		failures.append("Results do not name the difficulty")
+	menu.queue_free()
+	await process_frame
+	await _validate_boss_only_at_full_resonance()
+
+## The campaign Maw, forced to break, at every tier: only Full Resonance arms the rift and plays
+## the turn at zero health; every other tier seals it, on the glimpse when it shows.
+func _validate_boss_only_at_full_resonance() -> void:
+	var saved := {}
+	_borrow_settings(true, saved)
+	var lines: Dictionary = (load("res://Assets/Audio/VO/chen/chen_lines.json") as JSON).data.get("events", {})
+	if not lines.has(DifficultyTier.deploy_event(DifficultyTier.FULL_RESONANCE)) or not lines.has("sweep_bend"):
+		failures.append("Chen has no Full Resonance deploy line or bend correction")
+	for tier in DifficultyTier.ORDER:
+		var container := Node3D.new()
+		container.add_to_group("PhantomContainer")
+		root.add_child(container)
+		var director := RiftDirector.new()
+		director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+		root.add_child(director)
+		var life := LifeForceManager.new()
+		root.add_child(life)
+		var round_controller := RoundController.new()
+		round_controller.countdown_seconds = 0
+		root.add_child(round_controller)
+		await process_frame
+		await process_frame
+		round_controller.set_process(false)
+		var boss := director.get_node("MawBoss") as MawBoss
+		var countdown := [""]
+		round_controller.countdown_started.connect(func(mission: Dictionary) -> void: countdown[0] = DifficultyTier.deploy_event(String(mission.get("tier", ""))))
+		MawBoss.force_next_break = true
+		round_controller.begin_round(MissionCatalog.get_mission("the_maw"), tier)
+		round_controller._process(0.0)
+		var resonant := tier == DifficultyTier.FULL_RESONANCE
+		if (countdown[0] != "") != resonant:
+			failures.append("%s countdown line is wrong: '%s'" % [tier, countdown[0]])
+		var rift: RiftManager = director.rift_instances[0] if not director.rift_instances.is_empty() else null
+		if rift == null:
+			failures.append("%s Maw did not open" % tier)
+		else:
+			if boss.breaks != resonant or rift.hold_open != resonant:
+				failures.append("%s Maw %s" % [tier, "did not break" if resonant else "let a boss through"])
+			rift.apply_result({"rift_damage": 100000, "base_score": 10})
+			var turned := boss.stage == MawBoss.Stage.TURN
+			if turned != resonant:
+				failures.append("%s Maw %s the boss turn" % [tier, "never reached" if resonant else "reached"])
+		if MawBoss.force_next_break:
+			failures.append("A forced break outlived the %s Maw" % tier)
+		MawBoss.force_next_break = false
+		round_controller.abandon_round()
+		for node in [round_controller, life, director, container]:
+			node.queue_free()
+		await process_frame
+	_borrow_settings(false, saved)
 
 func _validate_paired_rift_placement() -> void:
 	var director := RiftDirector.new()
@@ -1319,6 +1581,9 @@ func _borrow_settings(scratch: bool, saved: Dictionary) -> void:
 		saved["faced"] = settings.boss_maws_faced
 		saved["dry"] = settings.maws_without_boss
 		saved["cleared"] = settings.cleared_missions
+		saved["tutorial"] = settings.tutorial_completed
+		saved["scores"] = settings.best_scores.duplicate()
+		saved["times"] = settings.best_times.duplicate()
 		settings.settings_path = "user://validation_boss_settings.cfg"
 		settings.cleared_missions = PackedStringArray()
 		return
@@ -1326,6 +1591,9 @@ func _borrow_settings(scratch: bool, saved: Dictionary) -> void:
 	settings.boss_maws_faced = saved["faced"]
 	settings.maws_without_boss = saved["dry"]
 	settings.cleared_missions = saved["cleared"]
+	settings.tutorial_completed = saved["tutorial"]
+	settings.best_scores = saved["scores"]
+	settings.best_times = saved["times"]
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://validation_boss_settings.cfg"))
 
 func _validate_maw_boss() -> void:
@@ -1351,14 +1619,16 @@ func _validate_maw_boss() -> void:
 	var named := [""]
 	boss.phase_two_started.connect(func(boss_name: String, _rift_id: int) -> void: named[0] = boss_name)
 	MawBoss.force_next_break = true
-	round_controller.begin_round(MissionCatalog.get_mission("the_maw_boss"))
+	# The boss Maw is the campaign Maw at Full Resonance.
+	round_controller.begin_round(MissionCatalog.get_mission("the_maw"), DifficultyTier.FULL_RESONANCE)
 	round_controller._process(0.0)
 	var rift: RiftManager = director.rift_instances[0] if not director.rift_instances.is_empty() else null
 	if rift == null or not boss.breaks or not rift.hold_open:
 		failures.append("The boss Maw did not arm its rift to break")
 		await _end_boss_validation(round_controller, life, director, container, saved)
 		return
-	if rift.maximum_health != 800:
+	# 1600 at Standard, 1760 at Full Resonance, half of it on a Maw that breaks.
+	if rift.maximum_health != 880:
 		failures.append("A breaking Maw's phase one was not shortened: %d" % rift.maximum_health)
 	var closed := [false]
 	rift.closed.connect(func() -> void: closed[0] = true)
@@ -1479,8 +1749,8 @@ func _validate_maw_glimpse() -> void:
 	container.queue_free()
 	await process_frame
 	_borrow_settings(false, saved)
-	if not MissionCatalog.get_mission("the_maw_boss").has("boss") or MissionCatalog.all_missions().any(func(mission: Dictionary) -> bool: return mission.has("boss")):
-		failures.append("The boss Maw is not a debug-only mission")
+	if not MissionCatalog.get_mission("the_maw_boss").is_empty() or MissionCatalog.all_missions().any(func(mission: Dictionary) -> bool: return mission.has("boss")):
+		failures.append("A catalog mission carries a boss outside Full Resonance, or the old debug boss Maw is back")
 	var lines: Dictionary = (load("res://Assets/Audio/VO/chen/chen_lines.json") as JSON).data.get("events", {})
 	for event in ["boss_false_seal", "boss_holding_open", "boss_not_a_phantom", "boss_get_ready", "boss_sweep", "boss_slam", "boss_spent", "boss_waking", "boss_volley", "boss_retreat", "maw_glimpse"]:
 		if not lines.has(event):
@@ -1517,6 +1787,12 @@ func _validate_hand_tracking_probe() -> void:
 	_drive_palm(probe, hand, clock, rest + Vector3(0.0, 0.0, -1.0), rest + Vector3(0.0, 0.0, -1.0), 0.3, true)
 	if hand.jumps != 1 or hand.punches != 2:
 		failures.append("Hand tracking probe counted a pose jump as hand speed")
+	var held := rest + Vector3(0.0, 0.0, -1.0)
+	clock[0] += 1.0 / 72.0
+	probe.sample_hand(hand, clock[0], 1.0 / 72.0, true, held, Vector3(0.0, 0.0, -110.0), true)
+	_drive_palm(probe, hand, clock, held, held, 0.3, true)
+	if hand.jumps != 2 or hand.punches != 2:
+		failures.append("Hand tracking probe counted a reported velocity spike as a punch")
 	var straight := PackedVector3Array()
 	var curled := PackedVector3Array()
 	for index in 5:
@@ -1581,7 +1857,83 @@ func _validate_push_up_detector() -> void:
 		push.sample(lerpf(0.72, 1.62, step / 19.0), 5.0)
 	if count[0] != 5 or push.in_plank:
 		failures.append("Push-up detector took a deep squat for a plank")
+	# Controllers hanging, both hands tracked: a low head with the palms off the floor is no plank;
+	# palms flat on the floor let it in, and a hand lost mid-set does not throw it out.
+	for step in 20:
+		push.sample(lerpf(1.62, 0.45, step / 19.0), -70.0, PushUpDetector.Palms.OFF_FLOOR)
+	if push.in_plank:
+		failures.append("Push-up detector entered a plank with the palms off the floor")
+	push.sample(0.45, -70.0, PushUpDetector.Palms.ON_FLOOR)
+	for step in 15:
+		push.sample(lerpf(0.45, 0.22, step / 14.0), -70.0, PushUpDetector.Palms.OFF_FLOOR)
+	for step in 15:
+		push.sample(lerpf(0.22, 0.45, step / 14.0), -70.0, PushUpDetector.Palms.UNKNOWN)
+	if count[0] != 6 or not push.in_plank:
+		failures.append("Push-up detector lost a push-up with the palms on the floor (%d of 6)" % count[0])
 	push.free()
+
+## Simultaneous hands and controllers (decision 39): a hand is free only once the cameras have
+## held it briefly, stays free through a short loss, and is held again the moment it grips; a free
+## hand's visuals move onto the palm, where a held controller would put them, and it cannot strike.
+func _validate_tracked_hands() -> void:
+	var hands := TrackedHands.new()
+	var changes := []
+	hands.hand_freed.connect(func(side: StringName, free: bool) -> void: changes.append([side, free]))
+	var step := 1.0 / 72.0
+	for _i in 4:
+		hands.step(&"left", step, true, false)
+	if hands.is_free(&"left"):
+		failures.append("Tracked hands freed a hand the cameras had seen for only %.2f s" % (4 * step))
+	for _i in 6:
+		hands.step(&"left", step, true, false)
+	if not hands.is_free(&"left") or changes.size() != 1:
+		failures.append("Tracked hands did not free a hand the cameras held")
+	for _i in 30:
+		hands.step(&"left", step, false, false)
+	if not hands.is_free(&"left"):
+		failures.append("Tracked hands dropped a free hand on a 0.4 s tracking loss")
+	for _i in 20:
+		hands.step(&"left", step, false, false)
+	if hands.is_free(&"left"):
+		failures.append("Tracked hands kept a hand free after the cameras lost it for 0.7 s")
+	for _i in 10:
+		hands.step(&"left", step, true, false)
+	hands.step(&"left", step, false, true)
+	if hands.is_free(&"left") or hands.is_free(&"right"):
+		failures.append("Tracked hands kept a hand free after it gripped its controller")
+	# A right hand held out as if shaking hands: fingers ahead, thumb side up, back of the hand right.
+	var frame := TrackedHands.frame_from_points(Vector3(0.0, 0.0, 0.1), Vector3.ZERO, Vector3(0.0, 0.02, 0.0),
+		Vector3(0.0, -0.04, 0.0), Vector3(0.0, 0.0, 0.04))
+	if not frame.basis.is_equal_approx(Basis.IDENTITY) or not frame.origin.is_equal_approx(Vector3(0.0, 0.0, 0.04)):
+		failures.append("Tracked hands built the hand frame wrong: %s" % frame)
+	if TrackedHands.palm_is_flat(Transform3D.IDENTITY, 35.0) \
+			or not TrackedHands.palm_is_flat(Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3.ZERO), 35.0) \
+			or not TrackedHands.palm_is_flat(Transform3D(Basis(Vector3.BACK, -PI / 2.0), Vector3.ZERO), 35.0):
+		failures.append("Tracked hands misjudged a flat palm")
+	hands.free()
+	# Loaded here, not named: hand_collision.gd uses the XRToolsUserSettings autoload, which a
+	# script compiled before the autoloads exist (this runner) cannot see.
+	var combat_script := load("res://Scripts/Player/hand_collision.gd") as GDScript
+	for side in [&"left", &"right"]:
+		var controller = combat_script.new()
+		controller.hand_id = side
+		controller.tracker = StringName("%s_hand" % side)
+		var glove := Node3D.new()
+		glove.position = Vector3(0.0, 0.0, 0.05)
+		controller.add_child(glove)
+		root.add_child(controller)
+		controller.set_hand_free(true)
+		var grip: Transform3D = combat_script.get_script_constant_map()["GRIP_IN_PALM_%s" % String(side).to_upper()]
+		var on_palm := grip.orthonormalized() * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 0.05))
+		if controller.tracker != StringName("%s_hand" % side) or not glove.top_level \
+				or not glove.global_transform.is_equal_approx(on_palm):
+			failures.append("The %s hand's glove did not move onto the palm, where a held controller would be" % side)
+		if controller.is_menu_trigger_down() or controller.free_hand_curl() != -1.0:
+			failures.append("The %s free hand pinched or curled with no hand tracker" % side)
+		controller.set_hand_free(false)
+		if glove.top_level or not glove.position.is_equal_approx(Vector3(0.0, 0.0, 0.05)):
+			failures.append("The %s hand did not go back to its controller" % side)
+		controller.queue_free()
 
 ## Jumps from head height, shaped like the Quest 3 jump test (2026-10-09): a jump takes off near
 ## 2 m/s and lifts the head well over standing; a calf raise and a fast stand-up out of a squat do not.
@@ -1669,3 +2021,302 @@ func _validate_low_sweep() -> void:
 		sweep.free()
 	player.free()
 	await process_frame
+
+## Training's paused hologram: a yellow told to hold stops in reach and stays there without
+## possessing, even with the head leaning into it; a wrong hand leaves it held, the right hand
+## resolves it, and a released one lunges and possesses. A pink holds at lane lock, shrugs off
+## a punch, and once the head is out of its lane and it is released, resolves as a dodge.
+func _validate_phantom_hold() -> void:
+	var head := Node3D.new()
+	root.add_child(head)
+	head.global_position = Vector3(0.0, 1.6, 0.0)
+	var yellow := await _held_yellow(head)
+	if yellow == null:
+		failures.append("A yellow told to hold never paused in reach")
+		head.queue_free()
+		return
+	var distance := yellow.global_position.distance_to(head.global_position)
+	if distance > 1.1 or distance < 0.8:
+		failures.append("A held yellow paused %.2f m from the head, not in punching reach" % distance)
+	var spot := yellow.global_position
+	for _step in 90:
+		await _physics_step(yellow)
+	head.global_position = spot + Vector3(0.0, 0.0, 0.2)
+	for _step in 30:
+		await _physics_step(yellow)
+	if yellow._terminal or yellow.global_position.distance_to(spot) > 0.01 or not yellow.is_held():
+		failures.append("A held yellow moved, ended, or possessed while paused")
+	head.global_position = Vector3(0.0, 1.6, 0.0)
+	var lure: Vector3 = yellow.sweet_spot_visual.global_position
+	var wrong: Dictionary = yellow.receive_strike({"hand_id": &"right", "position": lure, "direction": Vector3.FORWARD, "speed": 4.0})
+	if wrong.get("resolution_kind", &"") != &"wrong_hand" or not yellow.is_held():
+		failures.append("A wrong hand released a held yellow")
+	var right: Dictionary = yellow.receive_strike({"hand_id": &"left", "position": lure, "direction": Vector3.FORWARD, "speed": 4.0})
+	if not right.get("valid", false) or yellow.is_held():
+		failures.append("The right hand did not resolve a held yellow")
+	yellow.queue_free()
+	var lunger := await _held_yellow(head)
+	if lunger:
+		var bitten := [false]
+		lunger.player_contact.connect(func(_damage: float) -> void: bitten[0] = true)
+		lunger.release_hold()
+		for _step in 120:
+			if bitten[0]:
+				break
+			await _physics_step(lunger)
+		if not bitten[0]:
+			failures.append("A released yellow did not lunge in and possess")
+		lunger.queue_free()
+	var pink := (load("res://Scenes/Phantoms/pink_phantom.tscn") as PackedScene).instantiate() as SpearfinPhantom
+	root.add_child(pink)
+	await process_frame
+	pink.global_position = Vector3(0.0, 1.6, -9.0)
+	pink._player_camera = head
+	pink._lock_pink_target()
+	pink.set_physics_process(false)
+	pink.hold_at_lane_lock()
+	for _step in 240:
+		await _physics_step(pink)
+		if pink.is_held() or pink._terminal:
+			break
+	if not pink.is_held():
+		failures.append("A pink told to hold did not pause at lane lock")
+	else:
+		var punch: Dictionary = pink.receive_strike({"hand_id": &"left", "position": pink.global_position, "direction": Vector3.FORWARD, "speed": 4.0})
+		if punch.get("valid", true) or not pink.is_held():
+			failures.append("A punch moved a held pink")
+		head.global_position += Vector3(0.6, 0.0, 0.0)
+		var line := pink.charge_line()
+		if Geometry3D.get_closest_point_to_segment(head.global_position, line[0], line[1]).distance_to(head.global_position) <= TutorialDirector.LANE_CLEARANCE:
+			failures.append("A side-step did not leave the pink's lane")
+		var outcome := [&""]
+		pink.resolved.connect(func(result: Dictionary) -> void: outcome[0] = result.get("resolution_kind", &""))
+		pink.player_contact.connect(func(_damage: float) -> void: outcome[0] = &"possessed")
+		pink.release_hold()
+		for _step in 240:
+			if outcome[0] != &"":
+				break
+			await _physics_step(pink)
+		if outcome[0] != &"dodge":
+			failures.append("A released pink past an empty lane did not resolve as a dodge (%s)" % outcome[0])
+	pink.queue_free()
+	head.queue_free()
+	await process_frame
+
+func _held_yellow(head: Node3D) -> ResonancePhantom:
+	var yellow := (load("res://Scenes/Phantoms/yellow_phantom.tscn") as PackedScene).instantiate() as ResonancePhantom
+	root.add_child(yellow)
+	await process_frame
+	yellow.global_position = head.global_position + Vector3(0.0, -0.1, -3.0)
+	yellow._player_camera = head
+	yellow.set_physics_process(false)
+	yellow.place_sweet_spot(TutorialDirector.LURE_JAB)
+	yellow.hold_in_reach(TutorialDirector.HOLD_ANGLER)
+	var entered := [false]
+	yellow.held.connect(func() -> void: entered[0] = true)
+	for _step in 400:
+		await _physics_step(yellow)
+		if entered[0] or yellow._terminal:
+			break
+	if not entered[0] or not yellow.is_held():
+		yellow.queue_free()
+		return null
+	return yellow
+
+## Punch power: rift damage rises from 0.85x for a 2 m/s punch to 1.3x for a 6 m/s one, the score
+## does not move, and a soft lure hit still beats the hardest plain hit.
+func _validate_punch_power() -> void:
+	var soft := await _committed_strike(2.0, false)
+	var hard := await _committed_strike(6.0, false)
+	var harder := await _committed_strike(9.0, false)
+	var soft_crit := await _committed_strike(2.0, true)
+	if int(soft.get("rift_damage", 0)) != 10 or int(hard.get("rift_damage", 0)) != 15 or int(harder.get("rift_damage", 0)) != 15:
+		failures.append("Punch power is not 0.85x to 1.3x rift damage: %d, %d, %d" % [soft.get("rift_damage", 0), hard.get("rift_damage", 0), harder.get("rift_damage", 0)])
+	if int(soft.get("base_score", 0)) != int(hard.get("base_score", 0)):
+		failures.append("Punch power changed the score")
+	if int(soft_crit.get("rift_damage", 0)) <= int(hard.get("rift_damage", 0)):
+		failures.append("A soft lure hit no longer beats the hardest plain hit")
+	if not is_equal_approx(float(soft.get("power", -1.0)), 0.0) or not is_equal_approx(float(hard.get("power", -1.0)), 1.0):
+		failures.append("Punch power is not carried on the result")
+
+func _committed_strike(speed: float, on_lure: bool) -> Dictionary:
+	var yellow := (load("res://Scenes/Phantoms/yellow_phantom.tscn") as PackedScene).instantiate() as ResonancePhantom
+	root.add_child(yellow)
+	await process_frame
+	yellow.place_sweet_spot(TutorialDirector.LURE_JAB)
+	yellow._phase = Phantom.Phase.COMMIT
+	var at: Vector3 = yellow.sweet_spot_visual.global_position if on_lure else yellow.global_position + Vector3(0.0, -0.5, -0.4)
+	var result: Dictionary = yellow.receive_strike({"hand_id": &"left", "position": at, "direction": Vector3.FORWARD, "speed": speed})
+	yellow.queue_free()
+	return result
+
+## The training run, beat by beat, on the real round, rift, and life force, with the tutorial
+## director's fast mode. The recruit is played by hand: a wrong hand first on the Anglers, one
+## hand first on the green, a punch and then a side-step on the pink, hands down on the
+## possession, a tap then a hard hit for power, and every phantom of the live wave.
+func _validate_tutorial_flow() -> void:
+	var saved := {}
+	_borrow_settings(true, saved)
+	var settings := root.get_node_or_null("GameSettings")
+	if settings:
+		settings.tutorial_completed = false
+		settings.best_scores = {}
+		settings.best_times = {}
+	var player := Node3D.new()
+	player.add_to_group("Player")
+	root.add_child(player)
+	var camera := Node3D.new()
+	camera.name = "XRCamera3D"
+	player.add_child(camera)
+	camera.position = Vector3(0.0, 1.6, 0.0)
+	var container := Node3D.new()
+	container.add_to_group("PhantomContainer")
+	root.add_child(container)
+	var director := RiftDirector.new()
+	director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+	root.add_child(director)
+	var life := LifeForceManager.new()
+	root.add_child(life)
+	var round_controller := RoundController.new()
+	root.add_child(round_controller)
+	var tutorial := TutorialDirector.new()
+	tutorial.fast = true
+	root.add_child(tutorial)
+	await process_frame
+	await process_frame
+	await process_frame
+	var beats: Array[StringName] = []
+	tutorial.beat_started.connect(func(beat: StringName) -> void: beats.append(beat))
+	var done := [false]
+	tutorial.finished.connect(func() -> void: done[0] = true)
+	tutorial.start()
+	# What the stand-in recruit has done in each beat.
+	var acted := {}
+	var drains: Array[float] = []
+	life.damage_applied.connect(func(amount: float, _current: float) -> void:
+		if tutorial.beat == &"possession":
+			drains.append(amount))
+	var wrong_held := {}
+	for _frame_index in 6000:
+		if done[0]:
+			break
+		await process_frame
+		var phantom := tutorial.current_phantom()
+		match tutorial.beat:
+			&"yellow", &"blue":
+				if phantom and phantom.is_held():
+					var right_hand: StringName = &"left" if tutorial.beat == &"yellow" else &"right"
+					var wrong_hand: StringName = &"right" if right_hand == &"left" else &"left"
+					if not acted.has(tutorial.beat):
+						acted[tutorial.beat] = true
+						_hit(phantom, wrong_hand, 4.0, true)
+						wrong_held[tutorial.beat] = phantom.is_held() and tutorial.beat in [&"yellow", &"blue"]
+					elif tutorial.spoken.count("tutorial_wrong_hand") >= (1 if tutorial.beat == &"yellow" else 2):
+						_hit(phantom, right_hand, 4.0, true)
+			&"chain":
+				for node in container.get_children():
+					var live := node as Phantom
+					if live and live.shows_approach_cue() and live.is_strike_window_open():
+						_hit(live, &"left" if live.variant_id == &"yellow" else &"right", 4.0, false)
+			&"green":
+				if phantom and phantom.is_held():
+					if not acted.has(&"green"):
+						acted[&"green"] = true
+						_hit(phantom, &"left", 4.0, false)
+						if not phantom.is_held():
+							failures.append("One hand broke a held green")
+					elif "tutorial_green_one" in tutorial.spoken:
+						_hit(phantom, &"left", 4.0, false)
+						_hit(phantom, &"right", 4.0, false)
+			&"pink":
+				if phantom and phantom.is_held():
+					if not acted.has(&"pink"):
+						acted[&"pink"] = true
+						_hit(phantom, &"left", 4.0, false)
+						if not phantom.is_held():
+							failures.append("A punch released a held pink")
+					elif not acted.has(&"pink_step") and "tutorial_pink_punch" in tutorial.spoken:
+						acted[&"pink_step"] = true
+						camera.position = Vector3(0.6, 1.6, 0.0)
+			&"possession":
+				camera.position = Vector3(0.0, 1.6, 0.0)
+			&"power":
+				if phantom and phantom.is_held() and phantom.shows_approach_cue():
+					var first := not acted.has(&"tap")
+					acted[&"tap"] = true
+					_hit(phantom, &"left", 1.5 if first else 7.0, false)
+			&"live_wave":
+				if not acted.has(&"floor"):
+					acted[&"floor"] = true
+					life.apply_damage(500.0)
+					if life.is_depleted() or not is_equal_approx(life.current_life_force, 20.0):
+						failures.append("Training's life floor did not hold the recruit at 20: %.0f" % life.current_life_force)
+				for node in container.get_children():
+					var live := node as Phantom
+					if live == null or not live.shows_approach_cue() or not live.is_strike_window_open():
+						continue
+					match live.variant_id:
+						&"yellow":
+							_hit(live, &"left", 4.0, false)
+						&"blue":
+							_hit(live, &"right", 4.0, false)
+						&"green":
+							_hit(live, &"left", 4.0, false)
+							_hit(live, &"right", 4.0, false)
+	if not done[0]:
+		failures.append("Training did not finish; it stopped in beat %s" % tutorial.beat)
+	if beats != TutorialDirector.BEATS:
+		failures.append("Training beats ran out of order: %s" % [beats])
+	for beat in [&"yellow", &"blue"]:
+		if not wrong_held.get(beat, false):
+			failures.append("A wrong hand moved training past the %s beat" % beat)
+	if drains != [20.0]:
+		failures.append("The possession beat did not drain exactly 20 once: %s" % [drains])
+	for event in ["tutorial_wrong_hand", "tutorial_green_one", "tutorial_pink_punch", "tutorial_pink_done", "tutorial_possessed", "tutorial_glove_seen", "tutorial_power_seen", "tutorial_last_one", "tutorial_straggler", "tutorial_signoff_comms"]:
+		if not event in tutorial.spoken:
+			failures.append("Training never said %s" % event)
+	if not tutorial.spoken.has("tutorial_chain_done") and not tutorial.spoken.has("tutorial_chain_enough"):
+		failures.append("The chain beat never finished")
+	var lines: Dictionary = (load("res://Assets/Audio/VO/chen/chen_lines.json") as JSON).data.get("events", {})
+	for event in tutorial.spoken:
+		if not lines.has(event):
+			failures.append("Training says %s, which chen_lines.json does not have" % event)
+	if settings:
+		if not settings.tutorial_completed:
+			failures.append("Finishing training did not mark it complete")
+		if not settings.cleared_missions.is_empty() or not settings.best_scores.is_empty() or not settings.best_times.is_empty():
+			failures.append("Training recorded a clear, a score, or a time")
+	# End Training from the pause menu stops it anywhere and still counts it as done.
+	var flow = load("res://Scripts/Core/game_flow_controller.gd").new()
+	flow._tutorial = tutorial
+	flow._round = round_controller
+	flow._settings = settings
+	if settings:
+		settings.tutorial_completed = false
+	round_controller.abandon_round()
+	tutorial.start()
+	for _i in 3:
+		await process_frame
+	flow._end_training()
+	if tutorial.is_running():
+		failures.append("End Training left the simulation running")
+	if settings and not settings.tutorial_completed:
+		failures.append("End Training did not count training as done")
+	flow.free()
+	tutorial.stop()
+	round_controller.abandon_round()
+	for node in [tutorial, round_controller, life, director, container, player]:
+		node.queue_free()
+	await process_frame
+	_borrow_settings(false, saved)
+
+func _hit(phantom: Phantom, hand: StringName, speed: float, on_lure: bool) -> void:
+	if not is_instance_valid(phantom) or not phantom.shows_approach_cue():
+		return
+	var at := phantom.global_position
+	var lure := phantom.get_node_or_null("SweetSpotVisual") as Node3D
+	if lure and on_lure:
+		at = lure.global_position
+	elif lure:
+		at += Vector3(0.0, -0.5, 0.0)
+	phantom.receive_strike({"hand_id": hand, "position": at, "direction": Vector3.FORWARD, "speed": speed})

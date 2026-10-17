@@ -21,6 +21,8 @@ uniform float health_ratio : hint_range(0.0, 1.0) = 1.0;
 uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.0;
 uniform float damage_flash : hint_range(0.0, 1.0) = 0.0;
 uniform float intensity : hint_range(0.0, 2.0) = 1.0;
+// The training chamber's projected rift: scanlines and a flicker, its colors unchanged.
+uniform float hologram : hint_range(0.0, 1.0) = 0.0;
 
 void vertex() {
 	mat4 modified_model_view = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
@@ -57,6 +59,12 @@ void fragment() {
 	float alpha = max(inside, max(rim, outer * 0.5)) * (1.0 - smoothstep(0.85, 1.0, r));
 	float breakup = texture(noise_tex, UV * 1.3).r;
 	alpha *= smoothstep(dissolve_amount - 0.12, dissolve_amount + 0.08, breakup + (1.0 - r) * 0.2);
+	if (hologram > 0.0) {
+		float lines = sin(UV.y * 260.0 - TIME * 6.0) * 0.5 + 0.5;
+		float flicker = 0.9 + 0.1 * sin(TIME * 31.0);
+		col = mix(col, col * (0.65 + lines * 0.5) + vec3(0.1, 0.5, 0.65) * lines * 0.15, hologram);
+		alpha *= mix(1.0, (0.7 + lines * 0.3) * flicker, hologram);
+	}
 	ALBEDO = col * intensity;
 	ALPHA = clamp(alpha, 0.0, 1.0);
 }

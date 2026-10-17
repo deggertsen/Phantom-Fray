@@ -34,7 +34,7 @@ Ideas worth keeping that are not on the roadmap yet. Nothing here is scheduled. 
 - **Intelligence-gathering operations.** Capture a specific phantom type, hold a position while Chen's team works, target relay phantoms that are feeding the Overseer.
 - **Checkpoints inside long operations.** For 8-minute operations, a mid-operation checkpoint after a seal so a failsafe does not cost the whole run.
 - **Earth mission replays and off-planet DLC.** From the original progression notes: replaying cleared breaches with modifiers; a later expansion through a rift to the phantom dimension.
-- **Multiplayer.** Co-op holds where two operators share a breach, and the original "life force sharing" idea where one operator can lend the other recovery.
+- **Multiplayer.** Co-op holds where two Strikers share a breach, and the original "life force sharing" idea where one Striker can lend the other recovery.
 - **Daily and weekly breach.** Scheduled in Phase 7; the seeded, shared version of it with modifiers is still an idea.
 
 ## Presentation and audio
@@ -47,11 +47,11 @@ Ideas worth keeping that are not on the roadmap yet. Nothing here is scheduled. 
 
 ## Platform and community
 
-- **Hand tracking as an input option.** Research gesture recognition for punches without controllers. Direction as of 2026-10-09: move off controllers; hand tracking required at Full Resonance as the first try. Tests for punch speed and simultaneous hands and controllers are on the roadmap in Phase 9.
+- **Hand tracking as an input option.** Research gesture recognition for punches without controllers. Direction as of 2026-10-09: move off controllers; hand tracking required at Full Resonance as the first try. Tested 2026-10-14 and 2026-10-17: tracked hands lose too many punches and lag at full speed, so the fighting stays on controllers; simultaneous hands and controllers is the Full Resonance input, with hands for push-ups (decision 39 in Exercise_Mechanics_Exploration.md). Gesture punches without controllers stay an idea for a future headset or runtime.
 - **Achievements.** Flawless seals, maximum chain, all operations gold.
 - **Leaderboards.** Scheduled in Phase 7; friend leaderboards and weekly resets stay here.
 - **Mod support.** Custom wave tables and breach sites as data files, since operations are already dictionaries.
-- **Community features.** Shared war progress (Phase 7), clans or squads, operator profiles.
+- **Community features.** Shared war progress (Phase 7), clans or squads, Striker profiles.
 
 ## Lore and story
 
