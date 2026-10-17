@@ -22,7 +22,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_5:
 				_menu.show_results(&"victory", 12840, "Chen: It knows your resonance now. This was the opening move. Not the end of the war.", "DOUBLE BREACH", 252.0, 280.0)
 			KEY_6:
-				_menu.show_results(&"defeat", 4120, "Chen: The matrix drank you before the seal. Learn the pattern. Then go back in.", "", 0.0, 0.0, true)
+				_menu.show_results(&"defeat", 4120, "Chen: The matrix drank you before the seal. Learn the pattern. Then go back in.", "", 0.0, 0.0, "STANDARD", true)
 
 func _on_action(action: StringName) -> void:
 	match action:

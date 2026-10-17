@@ -189,11 +189,11 @@ func _validate_menu_surface() -> void:
 	await process_frame
 	if _button_actions(menu) != ["resume", "pause_settings", "end_training"]:
 		failures.append("The training pause menu offers %s" % [_button_actions(menu)])
-	menu.show_results(&"defeat", 100, "", "", 0.0, 0.0, true)
+	menu.show_results(&"defeat", 100, "", "", 0.0, 0.0, "", true)
 	await process_frame
 	if not "results_training" in _button_actions(menu):
 		failures.append("Defeat results do not offer Review Training")
-	menu.show_results(&"victory", 100, "", "NEXT", 60.0, 0.0, false)
+	menu.show_results(&"victory", 100, "", "NEXT", 60.0, 0.0, "", false)
 	await process_frame
 	if "results_training" in _button_actions(menu):
 		failures.append("Victory results offer Review Training")

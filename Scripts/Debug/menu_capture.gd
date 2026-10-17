@@ -59,7 +59,7 @@ func _capture_pause() -> void:
 func _capture_results() -> void:
 	_menu.show_results(&"victory", 12840, "Chen: It knows your resonance now. This was the opening move. Not the end of the war.", "DOUBLE BREACH  •  %s" % MissionCatalog.expected_minutes_text(MissionCatalog.get_mission("double_breach")), 252.0, 280.0)
 	await _capture("results.png")
-	_menu.show_results(&"defeat", 4120, "Chen: The matrix drank you before the seal. Learn the pattern. Then go back in.", "", 0.0, 0.0, true)
+	_menu.show_results(&"defeat", 4120, "Chen: The matrix drank you before the seal. Learn the pattern. Then go back in.", "", 0.0, 0.0, "STANDARD", true)
 	await _capture("results-defeat.png")
 
 func _capture(file_name: String) -> void:
