@@ -1793,7 +1793,7 @@ func _validate_push_up_detector() -> void:
 
 ## Simultaneous hands and controllers (decision 39): a hand is free only once the cameras have
 ## held it briefly, stays free through a short loss, and is held again the moment it grips; a free
-## hand's controller node moves onto the palm, back of the hand up, and cannot strike.
+## hand's visuals move onto the palm, where a held controller would put them, and it cannot strike.
 func _validate_tracked_hands() -> void:
 	var hands := TrackedHands.new()
 	var changes := []
@@ -1820,9 +1820,14 @@ func _validate_tracked_hands() -> void:
 	hands.step(&"left", step, false, true)
 	if hands.is_free(&"left") or hands.is_free(&"right"):
 		failures.append("Tracked hands kept a hand free after it gripped its controller")
-	if not TrackedHands.palm_is_flat(Transform3D.IDENTITY, 35.0) \
-			or not TrackedHands.palm_is_flat(Transform3D(Basis(Vector3.RIGHT, PI), Vector3.ZERO), 35.0) \
-			or TrackedHands.palm_is_flat(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3.ZERO), 35.0):
+	# A right hand held out as if shaking hands: fingers ahead, thumb side up, back of the hand right.
+	var frame := TrackedHands.frame_from_points(Vector3(0.0, 0.0, 0.1), Vector3.ZERO, Vector3(0.0, 0.02, 0.0),
+		Vector3(0.0, -0.04, 0.0), Vector3(0.0, 0.0, 0.04))
+	if not frame.basis.is_equal_approx(Basis.IDENTITY) or not frame.origin.is_equal_approx(Vector3(0.0, 0.0, 0.04)):
+		failures.append("Tracked hands built the hand frame wrong: %s" % frame)
+	if TrackedHands.palm_is_flat(Transform3D.IDENTITY, 35.0) \
+			or not TrackedHands.palm_is_flat(Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3.ZERO), 35.0) \
+			or not TrackedHands.palm_is_flat(Transform3D(Basis(Vector3.BACK, -PI / 2.0), Vector3.ZERO), 35.0):
 		failures.append("Tracked hands misjudged a flat palm")
 	hands.free()
 	# Loaded here, not named: hand_collision.gd uses the XRToolsUserSettings autoload, which a
@@ -1837,14 +1842,15 @@ func _validate_tracked_hands() -> void:
 		controller.add_child(glove)
 		root.add_child(controller)
 		controller.set_hand_free(true)
-		var back_of_hand := Vector3.RIGHT if side == &"right" else Vector3.LEFT
-		if controller.tracker != StringName("/user/hand_tracker/%s" % side) \
-				or not (glove.transform.basis * back_of_hand).is_equal_approx(Vector3.UP):
-			failures.append("The %s hand's glove did not move onto the palm, back of the hand up" % side)
+		var grip: Transform3D = combat_script.get_script_constant_map()["GRIP_IN_PALM_%s" % String(side).to_upper()]
+		var on_palm := grip.orthonormalized() * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 0.05))
+		if controller.tracker != StringName("%s_hand" % side) or not glove.top_level \
+				or not glove.global_transform.is_equal_approx(on_palm):
+			failures.append("The %s hand's glove did not move onto the palm, where a held controller would be" % side)
 		if controller.is_menu_trigger_down() or controller.free_hand_curl() != -1.0:
 			failures.append("The %s free hand pinched or curled with no hand tracker" % side)
 		controller.set_hand_free(false)
-		if controller.tracker != StringName("%s_hand" % side) or not glove.position.is_equal_approx(Vector3(0.0, 0.0, 0.05)):
+		if glove.top_level or not glove.position.is_equal_approx(Vector3(0.0, 0.0, 0.05)):
 			failures.append("The %s hand did not go back to its controller" % side)
 		controller.queue_free()
 
