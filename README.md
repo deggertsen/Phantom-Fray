@@ -113,7 +113,7 @@ The design intent, in priority order. Details and status in the roadmap.
 2. **Replay value.** Best scores shown and medals per operation, an endless hold mode, and leaderboards.
 3. **Narrative hooks.** A shared war against the Overseer, with a world map in the spirit of Helldivers 2 where every Striker's seals push the front line. The six operations become the tutorial; after it, the player picks missions from the map by difficulty rather than working through a numbered list.
 4. **Location variety.** Different breach sites, skies, and lighting per operation.
-5. **Difficulty per mission.** Built on the Operations screen: Assist, Standard, Operator, and Full Resonance, the opt-in movement difficulty and the only place bosses appear. The war map will take the choice over, mission by mission. Still to come: hand tracking for push-ups, the war map's readings hint for The Maw, and timed headset runs to tune the numbers. See [development/Exercise_Mechanics_Exploration.md](development/Exercise_Mechanics_Exploration.md).
+5. **Difficulty per mission.** Built on the Operations screen: Assist, Standard, Operator, and Full Resonance, the opt-in movement difficulty and the only place bosses appear. The war map will take the choice over, mission by mission. Push-ups can be done with the controllers hanging on their straps and the hands tracked (simultaneous hands and controllers). Still to come: the war map's readings hint for The Maw, and timed headset runs to tune the numbers. See [development/Exercise_Mechanics_Exploration.md](development/Exercise_Mechanics_Exploration.md).
 
 ## Lore
 

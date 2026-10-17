@@ -32,6 +32,7 @@ func _run_validation() -> void:
 	await _validate_tutorial_flow()
 	await _validate_resonance_sweep()
 	_validate_hand_tracking_probe()
+	_validate_tracked_hands()
 	await process_frame
 	if failures.is_empty():
 		print("PHANTOM FRAY VALIDATION PASSED")
@@ -1736,6 +1737,12 @@ func _validate_hand_tracking_probe() -> void:
 	_drive_palm(probe, hand, clock, rest + Vector3(0.0, 0.0, -1.0), rest + Vector3(0.0, 0.0, -1.0), 0.3, true)
 	if hand.jumps != 1 or hand.punches != 2:
 		failures.append("Hand tracking probe counted a pose jump as hand speed")
+	var held := rest + Vector3(0.0, 0.0, -1.0)
+	clock[0] += 1.0 / 72.0
+	probe.sample_hand(hand, clock[0], 1.0 / 72.0, true, held, Vector3(0.0, 0.0, -110.0), true)
+	_drive_palm(probe, hand, clock, held, held, 0.3, true)
+	if hand.jumps != 2 or hand.punches != 2:
+		failures.append("Hand tracking probe counted a reported velocity spike as a punch")
 	var straight := PackedVector3Array()
 	var curled := PackedVector3Array()
 	for index in 5:
@@ -1800,7 +1807,83 @@ func _validate_push_up_detector() -> void:
 		push.sample(lerpf(0.72, 1.62, step / 19.0), 5.0)
 	if count[0] != 5 or push.in_plank:
 		failures.append("Push-up detector took a deep squat for a plank")
+	# Controllers hanging, both hands tracked: a low head with the palms off the floor is no plank;
+	# palms flat on the floor let it in, and a hand lost mid-set does not throw it out.
+	for step in 20:
+		push.sample(lerpf(1.62, 0.45, step / 19.0), -70.0, PushUpDetector.Palms.OFF_FLOOR)
+	if push.in_plank:
+		failures.append("Push-up detector entered a plank with the palms off the floor")
+	push.sample(0.45, -70.0, PushUpDetector.Palms.ON_FLOOR)
+	for step in 15:
+		push.sample(lerpf(0.45, 0.22, step / 14.0), -70.0, PushUpDetector.Palms.OFF_FLOOR)
+	for step in 15:
+		push.sample(lerpf(0.22, 0.45, step / 14.0), -70.0, PushUpDetector.Palms.UNKNOWN)
+	if count[0] != 6 or not push.in_plank:
+		failures.append("Push-up detector lost a push-up with the palms on the floor (%d of 6)" % count[0])
 	push.free()
+
+## Simultaneous hands and controllers (decision 39): a hand is free only once the cameras have
+## held it briefly, stays free through a short loss, and is held again the moment it grips; a free
+## hand's visuals move onto the palm, where a held controller would put them, and it cannot strike.
+func _validate_tracked_hands() -> void:
+	var hands := TrackedHands.new()
+	var changes := []
+	hands.hand_freed.connect(func(side: StringName, free: bool) -> void: changes.append([side, free]))
+	var step := 1.0 / 72.0
+	for _i in 4:
+		hands.step(&"left", step, true, false)
+	if hands.is_free(&"left"):
+		failures.append("Tracked hands freed a hand the cameras had seen for only %.2f s" % (4 * step))
+	for _i in 6:
+		hands.step(&"left", step, true, false)
+	if not hands.is_free(&"left") or changes.size() != 1:
+		failures.append("Tracked hands did not free a hand the cameras held")
+	for _i in 30:
+		hands.step(&"left", step, false, false)
+	if not hands.is_free(&"left"):
+		failures.append("Tracked hands dropped a free hand on a 0.4 s tracking loss")
+	for _i in 20:
+		hands.step(&"left", step, false, false)
+	if hands.is_free(&"left"):
+		failures.append("Tracked hands kept a hand free after the cameras lost it for 0.7 s")
+	for _i in 10:
+		hands.step(&"left", step, true, false)
+	hands.step(&"left", step, false, true)
+	if hands.is_free(&"left") or hands.is_free(&"right"):
+		failures.append("Tracked hands kept a hand free after it gripped its controller")
+	# A right hand held out as if shaking hands: fingers ahead, thumb side up, back of the hand right.
+	var frame := TrackedHands.frame_from_points(Vector3(0.0, 0.0, 0.1), Vector3.ZERO, Vector3(0.0, 0.02, 0.0),
+		Vector3(0.0, -0.04, 0.0), Vector3(0.0, 0.0, 0.04))
+	if not frame.basis.is_equal_approx(Basis.IDENTITY) or not frame.origin.is_equal_approx(Vector3(0.0, 0.0, 0.04)):
+		failures.append("Tracked hands built the hand frame wrong: %s" % frame)
+	if TrackedHands.palm_is_flat(Transform3D.IDENTITY, 35.0) \
+			or not TrackedHands.palm_is_flat(Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3.ZERO), 35.0) \
+			or not TrackedHands.palm_is_flat(Transform3D(Basis(Vector3.BACK, -PI / 2.0), Vector3.ZERO), 35.0):
+		failures.append("Tracked hands misjudged a flat palm")
+	hands.free()
+	# Loaded here, not named: hand_collision.gd uses the XRToolsUserSettings autoload, which a
+	# script compiled before the autoloads exist (this runner) cannot see.
+	var combat_script := load("res://Scripts/Player/hand_collision.gd") as GDScript
+	for side in [&"left", &"right"]:
+		var controller = combat_script.new()
+		controller.hand_id = side
+		controller.tracker = StringName("%s_hand" % side)
+		var glove := Node3D.new()
+		glove.position = Vector3(0.0, 0.0, 0.05)
+		controller.add_child(glove)
+		root.add_child(controller)
+		controller.set_hand_free(true)
+		var grip: Transform3D = combat_script.get_script_constant_map()["GRIP_IN_PALM_%s" % String(side).to_upper()]
+		var on_palm := grip.orthonormalized() * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 0.05))
+		if controller.tracker != StringName("%s_hand" % side) or not glove.top_level \
+				or not glove.global_transform.is_equal_approx(on_palm):
+			failures.append("The %s hand's glove did not move onto the palm, where a held controller would be" % side)
+		if controller.is_menu_trigger_down() or controller.free_hand_curl() != -1.0:
+			failures.append("The %s free hand pinched or curled with no hand tracker" % side)
+		controller.set_hand_free(false)
+		if glove.top_level or not glove.position.is_equal_approx(Vector3(0.0, 0.0, 0.05)):
+			failures.append("The %s hand did not go back to its controller" % side)
+		controller.queue_free()
 
 ## Jumps from head height, shaped like the Quest 3 jump test (2026-10-09): a jump takes off near
 ## 2 m/s and lifts the head well over standing; a calf raise and a fast stand-up out of a squat do not.
