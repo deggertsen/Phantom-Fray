@@ -104,7 +104,7 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 - [ ] Squats, jumps, and push-ups: tune the squat detector prototype on headset, then headset-test the resonance sweep (the boss's high sweep, built as the debug-only Sweep Drill). The jump signal and hand tracking tests have run (jumps viable; hands for push-ups only). Plan, thresholds, and safety tests in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
 - [x] Hand tracking: tested at punch speed and with simultaneous hands and controllers (2026-10-14 and 2026-10-17, [Playtest_Log.md](Playtest_Log.md)). Tracked hands cannot carry the fighting: 4 to 10 dropped punches in 20 against a bar of 2, and visible lag. The fallback works (decision 39).
 - [x] Simultaneous hands and controllers at Full Resonance (built 2026-10-17): fight on controllers, let them hang on their straps for push-ups with the hands tracked. Hand tracking settings in the real builds, resume simultaneous tracking on every session, gauntlets follow the tracked hand while the controller hangs, palms-on-floor plank rule in `PushUpDetector`, no strikes from a hanging hand. Details under "Hand tracking" in [Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md).
-- [ ] Keep the hands free on the floor: they flipped back to their hanging controllers mid-set (likely a controller touching the hand reads as held), so the palms-on-the-floor plank rule has not yet applied in a fight. Then voice Chen's push-up call to let the gauntlets hang.
+- [ ] Voice Chen's push-up call asking the player to let the gauntlets hang. (A plank already needs both hands, or their hanging controllers, down on the floor; 10 of 10 push-ups twice in a boss fight on 2026-10-17.)
 
 ## Phase 10 — Launch
 
