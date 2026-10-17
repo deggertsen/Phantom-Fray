@@ -16,6 +16,10 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(_out_dir)
 	_main = (load("res://main.tscn") as PackedScene).instantiate() as Node3D
 	add_child(_main)
+	# A desktop window losing focus would suspend the run as a headset does. Not here.
+	var lifecycle := _main.get_node_or_null("XRLifecycleController")
+	if lifecycle:
+		lifecycle.queue_free()
 	await _wait(1.0)
 	# Stand the desktop camera at head height, as a player would be.
 	var camera := _main.get_node("Player/XRCamera3D") as Node3D
@@ -106,6 +110,7 @@ func _capture_tutorial(camera: Node3D) -> void:
 	await _wait(0.5)
 	await _capture("t00-menu-new-recruit")
 	_press(KEY_T)
+	_watch_beats.call_deferred(tutorial)
 	await _wait(2.0)
 	await _capture("t01-intro")
 	_capture_bracer("t01a-intro-caption")
@@ -185,7 +190,6 @@ func _capture_tutorial(camera: Node3D) -> void:
 					taken[beat] = true
 					await _wait(4.0)
 					await _capture("t12-live-wave")
-					_watch_live_wave(tutorial)
 				if beat == &"live_wave" and not taken.has(&"seal") and "tutorial_last_one" in tutorial.spoken:
 					taken[&"seal"] = true
 					while tutorial.beat == &"live_wave" and not "tutorial_straggler" in tutorial.spoken and not "tutorial_sealed_clean" in tutorial.spoken:
@@ -198,19 +202,33 @@ func _capture_tutorial(camera: Node3D) -> void:
 	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
 
-## If the live wave has not reached its last call in 60 s, print what is in play.
-func _watch_live_wave(tutorial: TutorialDirector) -> void:
-	await _wait(60.0)
-	if tutorial.beat != &"live_wave" or "tutorial_last_one" in tutorial.spoken:
-		return
-	var round := get_tree().get_first_node_in_group("RoundController") as RoundController
-	print("LIVE WAVE STALL round_active=%s paused=%s" % [round.is_round_active(), round._paused])
-	for rift in get_tree().get_nodes_in_group("active_rift"):
-		print("  rift health=%d feed=%s spawning=%s live=%d" % [rift.rift_health, rift.feed_enabled, rift.spawning_enabled, rift.live_phantoms().size()])
-	for node in get_tree().get_nodes_in_group("phantom"):
-		var p := node as Phantom
-		if p:
-			print("  %s held=%s phase=%d pos=%s vel=%s alive=%.1f physics=%s terminal=%s" % [p.variant_id, p.is_held(), p._phase, p.global_position, p.velocity, p._alive_time, p.is_physics_processing(), p._terminal])
+## If a beat runs past 60 s, print what is in play, once per beat, so a stalled run says why.
+func _watch_beats(tutorial: TutorialDirector) -> void:
+	var beat := &""
+	var since := 0.0
+	var reported := false
+	# Started from the T press, which the game reads a frame or two later.
+	while not tutorial.is_running():
+		await get_tree().process_frame
+	while tutorial.is_running():
+		await get_tree().process_frame
+		if tutorial.beat != beat:
+			beat = tutorial.beat
+			since = 0.0
+			reported = false
+		since += get_process_delta_time()
+		if since < 60.0 or reported:
+			continue
+		reported = true
+		var chen := get_tree().get_first_node_in_group("ChenComms") as ChenComms
+		var round := get_tree().get_first_node_in_group("RoundController") as RoundController
+		print("BEAT STALL %s chen=%s queue=%d voice_playing=%s round_active=%s spoken_last=%s" % [beat, chen._playing_event, chen._queue.size(), chen._player.playing, round.is_round_active(), tutorial.spoken.slice(-3)])
+		for rift in get_tree().get_nodes_in_group("active_rift"):
+			print("  rift health=%d feed=%s spawning=%s live=%d" % [rift.rift_health, rift.feed_enabled, rift.spawning_enabled, rift.live_phantoms().size()])
+		for node in get_tree().get_nodes_in_group("phantom"):
+			var p := node as Phantom
+			if p:
+				print("  %s held=%s phase=%d dist=%.2f alive=%.1f physics=%s terminal=%s" % [p.variant_id, p.is_held(), p._phase, p.global_position.distance_to(_main.get_node("Player/XRCamera3D").global_position), p._alive_time, p.is_physics_processing(), p._terminal])
 
 func _until_beat(tutorial: TutorialDirector, beat: StringName) -> void:
 	while tutorial.beat != beat:

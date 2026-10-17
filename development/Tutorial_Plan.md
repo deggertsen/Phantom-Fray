@@ -37,6 +37,7 @@ Conventions:
 - **Tag** is a floating label beside a paused phantom ("LURE", "LEFT HAND", "BOTH HANDS"), pointing at the part that matters.
 - **Nudge**: if the recruit does nothing useful for 8 seconds, Chen repeats the instruction with another take, again at 16 s.
 - Chen's lines are listed by event name; the text is in section 5.
+- **Timing** (after the 2026-10-17 headset session): an instruction plays while its phantom is still flying in, and the cue to act is always the last thing she says before the recruit can act, so it is heard first. Where a beat lists lines "on the approach", they start as the phantom leaves the rift.
 
 ### The chamber
 
@@ -64,14 +65,14 @@ While training runs, the breach site is replaced by the training chamber: a dark
 ### Beat 4: Grip and strike, the yellow Angler, the lure
 
 - **On screen:** one yellow Angler comes out of the rift, slow and with a long tell, and arcs in from the left. About 0.95 m from the face it pauses mid-flap, the hologram frozen and tinted. Its lure sits in front of its mouth (the jab spot). Tags: "LEFT HAND", "LURE". Card: "LEFT HAND • GRIP, THEN PUNCH THROUGH THE LURE".
-- **Chen:** `tutorial_paused`, `tutorial_yellow_left`, `tutorial_fist_punch`, `tutorial_lure`, `tutorial_lure_crit`.
+- **Chen:** on the approach `tutorial_yellow_left`; once paused `tutorial_paused`, `tutorial_lure`, `tutorial_lure_crit`, and the cue `tutorial_fist_punch`.
 - **To advance:** a valid left-hand strike. `tutorial_crit_landed` on a lure hit, `tutorial_plain_landed` otherwise.
 - **Wrong:** right hand: the lure flashes red, the hand buzzes, it stays paused, `tutorial_wrong_hand`. Grip without a punch or a slow push registers nothing; nudge `tutorial_strike_nudge`.
 
 ### Beat 5: Blue Angler
 
 - **On screen:** a blue arcs in from the right and pauses, lure out on its right (the hook spot). Tags: "RIGHT HAND", "LURE". Card: "RIGHT HAND • HOOK THE LURE".
-- **Chen:** `tutorial_blue_right`, `tutorial_hook`.
+- **Chen:** on the approach `tutorial_blue_right`, `tutorial_hook`.
 - **To advance:** a valid right-hand strike, with the crit or plain line.
 - **Wrong:** as beat 4.
 
@@ -86,21 +87,21 @@ While training runs, the breach site is replaced by the training chamber: a dark
 ### Beat 7: Green Carapace, the two-hand catch
 
 - **On screen:** a green comes in low and fast and pauses at chest height, body widened. Tag: "BOTH HANDS". Card: "BOTH FISTS AT ONCE".
-- **Chen:** `tutorial_green`, `tutorial_green_both`.
+- **Chen:** on the approach `tutorial_green`, `tutorial_green_both`.
 - **To advance:** both hands inside the 0.55 s window, then `tutorial_green_done`.
 - **Wrong:** one hand gets the amber guard flash and half-buzz; if the window lapses, `tutorial_green_one`. It stays paused.
 
 ### Beat 8: Pink Spearfin, the lane, the dodge
 
 - **On screen:** a pink paints its chevron lane toward the recruit and pauses at the moment the lane locks, just before the charge. The lane stays at full strength. Tag: "CAN'T BE PUNCHED". Card: "STEP OUT OF THE LANE, OR DUCK".
-- **Chen:** `tutorial_pink`, `tutorial_pink_lane`, `tutorial_pink_move`.
+- **Chen:** during its tell `tutorial_pink`, `tutorial_pink_lane`; once paused, the cue `tutorial_pink_move`.
 - **To advance:** the recruit's head moves more than 0.5 m from the charge line. The hologram resumes, charges down the empty lane, and resolves as a dodge: `tutorial_pink_done`.
 - **Wrong:** a punch passes through with the rejected buzz, `tutorial_pink_punch`. It stays paused until they leave the lane.
 
 ### Beat 9: A possession, on purpose
 
 - **On screen:** a yellow arcs in and pauses. Card: "HANDS DOWN • LET IT IN".
-- **Chen:** `tutorial_let_in`, `tutorial_hands_down`. The hologram resumes and lunges into the head: the impact distortion and possession flash, the siphon sound, life force 100 to 80 with the bracer's life bar framed. (Frost and veins only close in below 70, so a single possession does not bring them; Chen's failsafe line covers what comes after.) Then `tutorial_possessed`, and the glove check: card "LOOK AT YOUR LEFT GLOVE", `tutorial_glove_check`, and Chen waits until the recruit looks at the display on their left glove (within 0.9 m and 30 degrees of the middle of their view, for 0.4 s), then `tutorial_glove_seen`. If they have not looked after 8 s, `tutorial_glove_nudge`; after another 8 s she moves on. Then `tutorial_recover` and `tutorial_failsafe`.
+- **Chen:** on the approach `tutorial_let_in`, `tutorial_hands_down`; once she has said both and it has paused, the hologram resumes and lunges into the head: the impact distortion and possession flash, the siphon sound, life force 100 to 80 with the bracer's life bar framed. (Frost and veins only close in below 70, so a single possession does not bring them; Chen's failsafe line covers what comes after.) Then `tutorial_possessed`, and the glove check: card "LOOK AT YOUR LEFT GLOVE", `tutorial_glove_check`, and Chen waits until the recruit looks at the display on their left glove (within 0.9 m and 30 degrees of the middle of their view, for 0.4 s), then `tutorial_glove_seen`. If they have not looked after 8 s, `tutorial_glove_nudge`; after another 8 s she moves on. Then `tutorial_recover` and `tutorial_failsafe`.
 - **To advance:** runs on; the recruit sees the bar start to climb.
 - **Wrong:** if they punch it first, `tutorial_let_in_again` and another comes. If they punch that too, `tutorial_watch_glove` and the drain is applied directly (`LifeForceManager.apply_damage(20)`), which still drives the distortion, the drain blip, and the bar.
 
@@ -114,7 +115,7 @@ While training runs, the breach site is replaced by the training chamber: a dark
 The hands-on lesson David asked for.
 
 - **On screen:** a yellow arcs in and pauses. Card: "TAP IT LIGHTLY". Every resolve in this beat pops a damage readout at the strike point ("RIFT −9") and the rift's damage flash scales with the hit.
-- **Chen:** `tutorial_power_intro`, `tutorial_power_soft`. After the tap lands: a second yellow pauses, card "NOW HIT IT HARD", `tutorial_power_hard`.
+- **Chen:** on the approach `tutorial_power_intro`, `tutorial_power_soft`. After the tap lands, a second yellow comes with `tutorial_power_hard` on its approach and the card "NOW HIT IT HARD".
 - **To advance:** the hard hit does more rift damage than the tap. Then `tutorial_power_seen` and `tutorial_power_lure`.
 - **Wrong:** a tap that lands hard (power 0.5 or more) gets `tutorial_power_lighter` and another yellow, up to three. If the hard hit does not beat the tap, `tutorial_power_again` and another, up to three. After that, Chen moves on with `tutorial_power_seen` anyway (the readouts have shown the numbers).
 

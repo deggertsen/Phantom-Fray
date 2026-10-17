@@ -218,11 +218,12 @@ func _run(id: int) -> void:
 			&"rift":
 				ok = await _beat_rift()
 			&"yellow":
+				# What it is while it flies in; the lure once it is paused; the punch cue last.
 				ok = await _beat_angler("yellow", LURE_JAB, "LEFT HAND", "LEFT HAND  •  MAKE A FIST, PUNCH THROUGH THE LURE",
-					["tutorial_paused", "tutorial_yellow_left", "tutorial_fist_punch", "tutorial_lure", "tutorial_lure_crit"])
+					["tutorial_yellow_left"], ["tutorial_paused", "tutorial_lure", "tutorial_lure_crit", "tutorial_fist_punch"])
 			&"blue":
 				ok = await _beat_angler("blue", LURE_HOOK, "RIGHT HAND", "RIGHT HAND  •  HOOK THE LURE",
-					["tutorial_blue_right", "tutorial_hook"])
+					["tutorial_blue_right", "tutorial_hook"], [])
 			&"chain":
 				ok = await _beat_chain()
 			&"green":
@@ -292,9 +293,10 @@ func _beat_rift() -> bool:
 	_rift = _rifts.rift_instances[0] as RiftManager
 	return await _say("tutorial_rift_open")
 
-func _beat_angler(variant: String, lure: int, hand_tag: String, card: String, lines: Array) -> bool:
-	var phantom := await _send_held(variant, lure, HOLD_ANGLER)
-	if phantom == null:
+## approach_lines play while the Angler flies in; lines once it is paused, ending on the cue to act.
+func _beat_angler(variant: String, lure: int, hand_tag: String, card: String, approach_lines: Array, lines: Array) -> bool:
+	var phantom := await _send_held(variant, lure, HOLD_ANGLER, true, approach_lines)
+	if phantom == null and _result.is_empty():
 		return false
 	_tag(phantom, hand_tag)
 	_tag_lure(phantom)
@@ -338,13 +340,11 @@ func _beat_chain() -> bool:
 	return false
 
 func _beat_green() -> bool:
-	var phantom := await _send_held("green", -1, HOLD_CARAPACE)
-	if phantom == null:
+	var phantom := await _send_held("green", -1, HOLD_CARAPACE, true, ["tutorial_green", "tutorial_green_both"])
+	if phantom == null and _result.is_empty():
 		return false
 	_tag(phantom, "BOTH HANDS")
 	_show_card("BOTH FISTS AT ONCE")
-	if not await _say_all(["tutorial_green", "tutorial_green_both"]):
-		return false
 	var nudges := 0
 	while _result.is_empty():
 		var outcome := await _until(func() -> bool: return not _result.is_empty() or _guards > _answered_guards or _rejections > _answered_rejections, NUDGE_SECONDS)
@@ -370,12 +370,13 @@ func _beat_green() -> bool:
 	return await _say("tutorial_green_done")
 
 func _beat_pink() -> bool:
-	var phantom := await _send_pink()
+	# The lane lights while it tells, so Chen explains it then; the dodge cue comes on the pause.
+	var phantom := await _send_pink(["tutorial_pink", "tutorial_pink_lane"])
 	if phantom == null:
 		return false
 	_tag(phantom, "CAN'T BE PUNCHED")
 	_show_card("STEP OUT OF THE LANE, OR DUCK")
-	if not await _say_all(["tutorial_pink", "tutorial_pink_lane", "tutorial_pink_move"]):
+	if not await _say("tutorial_pink_move"):
 		return false
 	var pink := phantom
 	var nudges := 0
@@ -395,7 +396,8 @@ func _beat_pink() -> bool:
 				return false
 	_clear_tags()
 	phantom.release_hold()
-	if await _until(func() -> bool: return not _result.is_empty() or _contact or _gone(phantom)) < 0:
+	var pink_ref: WeakRef = weakref(phantom)
+	if await _until(func() -> bool: return not _result.is_empty() or _contact or _gone(pink_ref.get_ref())) < 0:
 		return false
 	if _result.get("resolution_kind", &"") == &"dodge":
 		return await _say("tutorial_pink_done")
@@ -405,18 +407,15 @@ func _beat_pink() -> bool:
 func _beat_possession() -> bool:
 	_show_card("HANDS DOWN  •  LET IT IN")
 	for attempt in 2:
-		var phantom := await _send_held("yellow", LURE_JAB, HOLD_ANGLER)
-		if phantom == null:
-			return false
+		# Hands down before it arrives, not after: it is released once she has said so.
 		var lines := ["tutorial_let_in", "tutorial_hands_down"] if attempt == 0 else ["tutorial_let_in_again"]
-		for line in lines:
-			if not _result.is_empty():
-				break
-			if not await _say(line):
-				return false
+		var phantom := await _send_held("yellow", LURE_JAB, HOLD_ANGLER, true, lines)
+		if phantom == null and _result.is_empty():
+			return false
 		if _result.is_empty():
 			phantom.release_hold()
-			if await _until(func() -> bool: return not _result.is_empty() or _contact or _gone(phantom)) < 0:
+			var let_in_ref: WeakRef = weakref(phantom)
+			if await _until(func() -> bool: return not _result.is_empty() or _contact or _gone(let_in_ref.get_ref())) < 0:
 				return false
 		if _contact:
 			return await _explain_possession()
@@ -441,9 +440,9 @@ func _explain_possession() -> bool:
 ## so they learn there is information there. Moves on after a nudge if they never look.
 func _glove_check() -> bool:
 	_show_card("LOOK AT YOUR LEFT GLOVE")
+	_confirm_pressed = false
 	if not await _say("tutorial_glove_check"):
 		return false
-	_confirm_pressed = false
 	var looked_for := [0.0]
 	var looking := func() -> bool:
 		if fast or _confirm_pressed:
@@ -483,15 +482,13 @@ func _beat_rift_health() -> bool:
 ## so the numbers show power alone.
 func _beat_power() -> bool:
 	_readouts = true
-	if not await _say("tutorial_power_intro"):
-		return false
 	var soft := 0
+	# Each instruction plays while its yellow flies in, so it is heard before the yellow pauses.
 	for attempt in 3:
-		var phantom := await _send_held("yellow", LURE_JAB, HOLD_ANGLER, false)
-		if phantom == null:
-			return false
 		_show_card("TAP IT LIGHTLY")
-		if not await _say("tutorial_power_soft" if attempt == 0 else "tutorial_power_lighter"):
+		var lines := ["tutorial_power_intro", "tutorial_power_soft"] if attempt == 0 else ["tutorial_power_lighter"]
+		var phantom := await _send_held("yellow", LURE_JAB, HOLD_ANGLER, false, lines)
+		if phantom == null and _result.is_empty():
 			return false
 		if not await _await_strike("tutorial_wrong_hand", "tutorial_power_soft"):
 			return false
@@ -500,11 +497,9 @@ func _beat_power() -> bool:
 			break
 	var lesson_seen := false
 	for attempt in 3:
-		var phantom := await _send_held("yellow", LURE_JAB, HOLD_ANGLER, false)
-		if phantom == null:
-			return false
 		_show_card("NOW HIT IT HARD")
-		if not await _say("tutorial_power_hard" if attempt == 0 else "tutorial_power_again"):
+		var phantom := await _send_held("yellow", LURE_JAB, HOLD_ANGLER, false, ["tutorial_power_hard" if attempt == 0 else "tutorial_power_again"])
+		if phantom == null and _result.is_empty():
 			return false
 		if not await _await_strike("tutorial_wrong_hand", "tutorial_power_hard"):
 			return false
@@ -604,33 +599,50 @@ func _send(variant: String, lure: int = -1, lure_visible: bool = true) -> Phanto
 
 ## Sends one and waits for its hologram to pause in reach. A phantom that stalls out on the
 ## way in is replaced.
-func _send_held(variant: String, lure: int, distance: float, lure_visible: bool = true) -> Phantom:
-	for _try in 3:
+## Sends one and waits for its hologram to pause in reach. Chen says `approach_lines` while it
+## flies in, so the instruction has landed by the time the recruit can act on it (on the
+## headset, a line that waited for the pause came after the recruit had already swung). A
+## phantom that stalls out on the way in is replaced.
+func _send_held(variant: String, lure: int, distance: float, lure_visible: bool = true, approach_lines: Array = []) -> Phantom:
+	for attempt in 3:
 		var phantom := _send(variant, lure, lure_visible)
 		if phantom == null:
 			return null
 		phantom.hold_in_reach(distance)
-		var outcome := await _until(func() -> bool: return _gone(phantom) or phantom.is_held() or not _result.is_empty())
+		# Weakly held: the recruit can strike it while she is still talking, and a struck
+		# phantom dissolves and is freed before her lines end.
+		var ref: WeakRef = weakref(phantom)
+		if attempt == 0 and not await _say_all(approach_lines):
+			return null
+		var outcome := await _until(func() -> bool: return _gone(ref.get_ref()) or ref.get_ref().is_held() or not _result.is_empty())
 		if outcome < 0:
 			return null
-		if not _result.is_empty() or (not _gone(phantom) and phantom.is_held()):
-			phantom_held.emit(phantom)
-			return phantom
+		var still := ref.get_ref() as Phantom
+		if not _result.is_empty():
+			# Struck before or as it paused: the beat counts it. May already be gone (null).
+			return still
+		if not _gone(still) and still.is_held():
+			phantom_held.emit(still)
+			return still
 	push_warning("Training: no %s reached the recruit" % variant)
 	return null
 
-func _send_pink() -> SpearfinPhantom:
-	for _try in 3:
+func _send_pink(approach_lines: Array = []) -> SpearfinPhantom:
+	for attempt in 3:
 		var phantom := _send("pink") as SpearfinPhantom
 		if phantom == null:
 			return null
 		phantom.hold_at_lane_lock()
-		var outcome := await _until(func() -> bool: return _gone(phantom) or phantom.is_held())
+		var ref: WeakRef = weakref(phantom)
+		if attempt == 0 and not await _say_all(approach_lines):
+			return null
+		var outcome := await _until(func() -> bool: return _gone(ref.get_ref()) or ref.get_ref().is_held())
 		if outcome < 0:
 			return null
-		if not _gone(phantom) and phantom.is_held():
-			phantom_held.emit(phantom)
-			return phantom
+		var still := ref.get_ref() as SpearfinPhantom
+		if not _gone(still) and still.is_held():
+			phantom_held.emit(still)
+			return still
 	return null
 
 ## Waits for a valid strike on the phantom in play. A rejected one gets `wrong_line`; doing
@@ -774,10 +786,15 @@ func _clear_card() -> void:
 	if _card:
 		_card.visible = false
 
+## Only on a phantom still waiting: one struck while Chen was talking needs no label.
 func _tag(phantom: Node3D, text: String) -> void:
+	if _gone(phantom):
+		return
 	_add_tag(text, phantom.global_position + Vector3.UP * 0.42, 40)
 
 func _tag_lure(phantom: Node3D) -> void:
+	if _gone(phantom):
+		return
 	var lure := phantom.get_node_or_null("SweetSpotVisual") as Node3D
 	if lure:
 		_add_tag("LURE", lure.global_position + Vector3.UP * 0.1, 30)

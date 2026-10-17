@@ -55,3 +55,12 @@ Squat re-checks, the Sweep Drill, and three runs of the boss Maw, read from `SQU
 
 - **Entrance run (4935549):** the eye looked "odd rather than scary" and was removed. The tentacles prying the Maw open landed; David asked for them to hold the rim through the fight, which 1e2cb39 does. The narrower (0.7 m), faster slam "feels right". Chen's voice lines played for the first time.
 - **Verdict:** "the boss fight is pretty solid at this point"; the missing piece was jumping, built in 1e2cb39 (a jump pair of low sweeps per cycle). **The jump build has not been played on the headset yet** (the Quest was not connected when it finished).
+
+### 2026-10-17 — self, Quest 3, debug build of the training chamber (d3cd00b)
+
+Training played start to finish once, Chen voiced; about 4 minutes 10 seconds from her first word to sign-off (logcat `CHEN` lines).
+
+- **Felt good:** the developer is happy with where it is. The chamber, the paused holograms, the beat order, and the lines all landed; only timing needs adjusting.
+- **Felt wrong:** Chen's instruction came too late to follow. Each line waited for the phantom to fly in and pause, so the recruit could act before hearing it. The log shows it: "Tap this one" came 6 s after the previous line and was followed by "Lighter than that" (the tap landed hard before it was heard), the hard hit was followed by "Harder than that", and "This next one, I'm letting through" was followed by "I said let it in" (the phantom was struck before "hands down" was heard).
+- **Fix:** Chen now gives each instruction while the phantom is still flying in (`approach_lines` in `TutorialDirector._send_held`), and the cue to act comes last: the tap and hard-hit instructions, hands down before the possession phantom arrives (it is released once she has said it), green's both-hands line, the yellow and blue hand lines, and the pink lane lines during its tell. **Not yet re-checked on the headset.**
+- **Not yet checked:** hold distance against a real jab, the glove check, the punch power band at real speeds.
