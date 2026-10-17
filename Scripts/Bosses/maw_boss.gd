@@ -13,8 +13,9 @@ class_name MawBoss
 ## grips the rim and is dragged back through.
 ##
 ## Lives under the RiftDirector, which hands it each mission in start_round. Nothing here runs
-## unless the mission carries a "boss" or "glimpse" key, and only debug missions carry "boss"
-## until the war map's difficulties exist (MissionCatalog.debug_missions).
+## unless the mission carries a "boss" or "glimpse" key. Only Full Resonance gives a mission its
+## "boss" (DifficultyTier.apply_mission turns the catalog Maw's "tier_boss" into it); every other
+## tier keeps the glimpse.
 ## See development/Exercise_Mechanics_Exploration.md, "The Maw" through "Phantoms in a boss fight".
 
 signal phase_two_started(boss_name: String, rift_id: int)
@@ -81,7 +82,7 @@ const CYCLE := [
 	{"do": "rest", "seconds": 2.2},
 ]
 
-## Set by a debug key: the next boss Maw breaks whatever the odds say.
+## Set by a debug key (Shift+B): the next mission's Maw breaks whatever the odds say.
 static var force_next_break: bool = false
 ## Set by --maw-breaks on the command line (debug builds): every boss Maw breaks, for headset tests.
 static var always_break: bool = false
@@ -143,7 +144,7 @@ func _ready() -> void:
 	if push_ups_source and push_ups_source.has_signal("push_up_completed"):
 		push_ups_source.push_up_completed.connect(register_push_up)
 
-## The break odds (decision 29): the first Maw at the boss difficulty always breaks, then about
+## The break odds (decision 29): the first Maw at Full Resonance always breaks, then about
 ## one in three, and never three in a row without a boss. `roll` is uniform in [0, 1).
 static func decide_break(maws_faced: int, maws_without_boss: int, roll: float, odds: float = BREAK_ODDS) -> bool:
 	if maws_faced <= 0:
@@ -167,7 +168,6 @@ func prepare(mission: Dictionary) -> void:
 		var faced: int = int(settings.get("boss_maws_faced")) if settings else 0
 		var dry: int = int(settings.get("maws_without_boss")) if settings else 0
 		breaks = force_next_break or always_break or decide_break(faced, dry, randf())
-		force_next_break = false
 		if settings and settings.has_method("record_maw"):
 			settings.record_maw(breaks)
 		anchor_maximum = int(boss_config.get("anchor", anchor_maximum))
@@ -179,6 +179,8 @@ func prepare(mission: Dictionary) -> void:
 	elif bool(mission.get("glimpse", false)):
 		var first_seal: bool = settings == null or not settings.has_cleared_mission(String(mission.get("id", "")))
 		glimpse = first_seal or randf() < GLIMPSE_ODDS
+	# A forced break is for the next boss Maw only; a mission without a boss uses it up too.
+	force_next_break = false
 	stage = Stage.PHASE_ONE if breaks or glimpse else Stage.IDLE
 
 func _build_streams() -> void:

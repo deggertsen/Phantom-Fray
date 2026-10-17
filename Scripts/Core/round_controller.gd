@@ -8,6 +8,8 @@ signal time_changed(elapsed_seconds: float)
 signal mission_status_changed(text: String)
 signal pressure_changed(ratio: float)
 signal round_finished(outcome: StringName, score: int)
+## A mission was deployed and its countdown began. `mission` is the copy at its difficulty.
+signal countdown_started(mission: Dictionary)
 
 @export var countdown_seconds: int = 3
 @export var combo_timeout: float = 4.0
@@ -80,10 +82,12 @@ func abandon_round() -> void:
 		_message.queue_free()
 	_message = null
 
-func begin_round(mission: Dictionary = {}) -> void:
+## Deploys `mission` at `tier_id`. The catalog holds every mission at Standard; the tier is
+## applied to a copy here, before any wave reaches a rift (DifficultyTier.apply_mission).
+func begin_round(mission: Dictionary = {}, tier_id: String = DifficultyTier.STANDARD) -> void:
 	if _round_active or _countdown_active or _finished or _director == null:
 		return
-	_mission = mission
+	_mission = DifficultyTier.apply_mission(mission, tier_id) if not mission.is_empty() else mission
 	elapsed_seconds = 0.0
 	# A first deploy from the main menu never passes through abandon_round, so announce the fresh round here too.
 	score = 0
@@ -97,6 +101,7 @@ func begin_round(mission: Dictionary = {}) -> void:
 	_paused = false
 	_countdown_remaining = float(mission.get("countdown", countdown_seconds))
 	_countdown_displayed = -1
+	countdown_started.emit(_mission)
 
 func pause_round() -> void:
 	if not is_round_in_progress() or _paused:
@@ -330,6 +335,10 @@ func _clear_message(label: Label3D) -> void:
 		label.queue_free()
 
 
-## The mission this round is playing, as MissionCatalog describes it.
+## The mission this round is playing, as MissionCatalog describes it, at its difficulty.
 func current_mission() -> Dictionary:
 	return _mission
+
+## The difficulty this round is playing at.
+func current_tier() -> String:
+	return String(_mission.get("tier", DifficultyTier.STANDARD))

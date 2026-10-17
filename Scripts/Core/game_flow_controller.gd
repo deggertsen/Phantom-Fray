@@ -11,6 +11,8 @@ const STATE_SETTINGS := &"settings"
 const STATE_RESULTS := &"results"
 const STATE_ABORT_CONFIRM := &"abort_confirm"
 const STATE_RESET_CONFIRM := &"reset_confirm"
+## Debug builds: --mission=the_maw_boss, like B in the main menu, deploys The Maw at Full Resonance.
+const BOSS_SHORTCUT := "the_maw_boss"
 
 var _state: StringName = STATE_MENU
 var _previous_state: StringName = STATE_MENU
@@ -27,6 +29,11 @@ var _last_seconds: float = 0.0
 ## The mission's fastest stored victory before the round that just finished, so results can call a new best.
 var _previous_best_time: float = 0.0
 var _active_mission_id: String = ""
+## The difficulty the active mission plays at, and whether it is a debug shortcut that records nothing.
+var _active_tier: String = DifficultyTier.STANDARD
+var _debug_run: bool = false
+## Debug builds: --tier=<id> plays command-line deploys at that tier without changing the saved choice.
+var _command_tier: String = ""
 var _last_debrief: String = ""
 var _next_mission_title: String = ""
 var _menu_input_armed: bool = false
@@ -57,8 +64,10 @@ func _ready() -> void:
 		_settings.pending_mission_id = ""
 	if pending == "" and OS.is_debug_build():
 		pending = _mission_from_command_line()
-	if pending != "" and not MissionCatalog.get_mission(pending).is_empty():
-		_start_mission(pending)
+	if pending == BOSS_SHORTCUT:
+		_start_boss_shortcut()
+	elif pending != "" and not MissionCatalog.get_mission(pending).is_empty():
+		_start_mission(pending, _command_tier)
 	else:
 		_show_main_menu()
 		_arm_menu_input_after_release()
@@ -66,11 +75,15 @@ func _ready() -> void:
 ## Debug builds: --mission=<id> skips the menu and deploys straight into that operation, including
 ## the debug-only ones in MissionCatalog.debug_missions(). On Quest, put it in the Quest Debug
 ## export preset's Command Line > Extra Args. --maw-breaks makes every boss Maw break.
+## --tier=<id> picks the difficulty (assist, standard, operator, full_resonance) for that deploy.
+## --mission=the_maw_boss is the B shortcut: The Maw at Full Resonance, whatever is unlocked.
 func _mission_from_command_line() -> String:
 	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args() + _debug_args_file()
 	for arg in args:
 		if arg == "--maw-breaks":
 			MawBoss.always_break = true
+		elif arg.begins_with("--tier="):
+			_command_tier = DifficultyTier.resolve(arg.trim_prefix("--tier="))
 	for arg in args:
 		if arg.begins_with("--mission="):
 			return arg.trim_prefix("--mission=")
@@ -129,6 +142,11 @@ func _on_menu_action(action: StringName) -> void:
 		get_tree().create_timer(0.25).timeout.connect(_arm_menu_input_after_release)
 	if String(action).begins_with("mission_"):
 		_start_mission(String(action).trim_prefix("mission_"))
+		return
+	if String(action).begins_with("tier_"):
+		if _settings:
+			_settings.set_difficulty_tier(String(action).trim_prefix("tier_"))
+		_show_operations()
 		return
 	match action:
 		&"deploy":
@@ -271,10 +289,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_T:
 				_on_menu_action(&"training")
 			KEY_B:
-				# Debug builds only: the boss Maw, outside the campaign. Shift forces a break.
+				# Debug builds only: The Maw at Full Resonance, whatever is unlocked. Shift forces a break.
 				if OS.is_debug_build() and _state == STATE_MENU:
 					MawBoss.force_next_break = event.shift_pressed
-					_start_mission("the_maw_boss")
+					_start_boss_shortcut()
 			KEY_P:
 				# Debug builds only: one push-up, until push-up detection exists.
 				if OS.is_debug_build() and _state == STATE_PLAYING:
@@ -306,19 +324,38 @@ func _show_operations() -> void:
 	_state = STATE_MENU
 	_set_menu_visible(true)
 	if _presenter:
-		_presenter.show_operations(MissionCatalog.operation_entries(_settings))
+		_presenter.show_operations(MissionCatalog.operation_entries(_settings), MissionCatalog.tier_from(_settings))
 
-func _start_mission(mission_id: String = "") -> void:
+## Deploys a mission at the chosen difficulty, or at `tier_override` when one is given.
+## A debug run skips the unlock chain and records nothing.
+func _start_mission(mission_id: String = "", tier_override: String = "", debug_run: bool = false) -> void:
 	var resolved_id := mission_id if mission_id != "" else MissionCatalog.next_unlocked_id(_settings)
 	var mission := MissionCatalog.get_mission(resolved_id)
-	if mission.is_empty() or not MissionCatalog.is_unlocked(resolved_id, _settings):
+	if mission.is_empty() or not (debug_run or MissionCatalog.is_unlocked(resolved_id, _settings)):
 		_show_main_menu()
 		return
 	_active_mission_id = resolved_id
+	if tier_override != "":
+		_active_tier = DifficultyTier.resolve(tier_override)
+	elif MissionCatalog.is_debug_mission(resolved_id):
+		# A drill plays as authored unless --tier says otherwise.
+		_active_tier = DifficultyTier.STANDARD
+	else:
+		_active_tier = MissionCatalog.tier_from(_settings)
+	_debug_run = debug_run
 	_state = STATE_PLAYING
 	_set_menu_visible(false)
 	if _round:
-		_round.begin_round(mission)
+		_round.begin_round(mission, _active_tier)
+
+## Debug builds: The Maw at Full Resonance, straight from the menu (B) or the command line
+## (--mission=the_maw_boss). It replaces the old debug-only boss mission, so like a drill it
+## records no clear, score, or time, though its break counts toward the break odds.
+func _start_boss_shortcut() -> void:
+	if not OS.is_debug_build():
+		_show_main_menu()
+		return
+	_start_mission("the_maw", DifficultyTier.FULL_RESONANCE, true)
 
 ## Chen's training chamber, from the top. The menu hides; the director runs the beats.
 func _start_training() -> void:
@@ -471,16 +508,17 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 	_last_seconds = _round.elapsed_seconds if _round else 0.0
 	_previous_best_time = 0.0
 	_next_mission_title = ""
-	# A debug drill is not campaign progress, so it records no clear, score, or time.
-	if outcome == &"victory" and _settings and not MissionCatalog.is_debug_mission(_active_mission_id):
-		_previous_best_time = _settings.best_time(_active_mission_id)
+	# A debug drill or shortcut is not campaign progress, so it records no clear, score, or time.
+	# Records are kept per tier; a clear at any tier unlocks the next operation.
+	if outcome == &"victory" and _settings and not _debug_run and not MissionCatalog.is_debug_mission(_active_mission_id):
+		_previous_best_time = _settings.best_time(_active_mission_id, _active_tier)
 		_settings.mark_mission_cleared(_active_mission_id)
-		_settings.record_score(_active_mission_id, score)
-		_settings.record_time(_active_mission_id, _last_seconds)
+		_settings.record_score(_active_mission_id, score, _active_tier)
+		_settings.record_time(_active_mission_id, _last_seconds, _active_tier)
 		var follow_id := MissionCatalog.unlocked_followup(_active_mission_id, _settings)
 		if follow_id != "":
 			var follow := MissionCatalog.get_mission(follow_id)
-			_next_mission_title = "%s  •  %s" % [follow.get("title", ""), MissionCatalog.expected_minutes_text(follow)]
+			_next_mission_title = "%s  •  %s" % [follow.get("title", ""), MissionCatalog.expected_minutes_text(DifficultyTier.apply_mission(follow, _active_tier))]
 	_state = STATE_RESULTS
 	_menu_input_armed = false
 	_show_results()
@@ -493,7 +531,7 @@ func _show_results() -> void:
 	_menu_input_armed = false
 	_results_pointer_warmup = 0.35
 	if _presenter:
-		_presenter.show_results(_last_outcome, _last_score, _last_debrief, _next_mission_title, _last_seconds, _previous_best_time, _last_outcome == &"defeat")
+		_presenter.show_results(_last_outcome, _last_score, _last_debrief, _next_mission_title, _last_seconds, _previous_best_time, DifficultyTier.label(_active_tier), _last_outcome == &"defeat")
 	_refresh_menu_pointers()
 	call_deferred("_reset_results_pointers_after_render")
 
@@ -525,7 +563,7 @@ func _action_belongs_to_state(action: StringName) -> bool:
 		STATE_RESET_CONFIRM:
 			return action in [&"reset_cancel", &"reset_confirm"]
 		STATE_MENU:
-			return String(action).begins_with("mission_") or action in [&"deploy", &"operations", &"operations_back", &"training", &"settings"]
+			return String(action).begins_with("mission_") or String(action).begins_with("tier_") or action in [&"deploy", &"operations", &"operations_back", &"training", &"settings"]
 		STATE_TUTORIAL:
 			return action in [&"training_deploy", &"training_replay", &"training_menu"]
 		STATE_PAUSED:
@@ -571,15 +609,16 @@ func _activate_menu_from_controller(controller: XRController3D) -> void:
 
 func _restart_mission(mission_id: String) -> void:
 	var mission := MissionCatalog.get_mission(mission_id)
-	if mission.is_empty() or _round == null or not MissionCatalog.is_unlocked(mission_id, _settings):
+	if mission.is_empty() or _round == null or not (_debug_run or MissionCatalog.is_unlocked(mission_id, _settings)):
 		_results_action_locked = false
 		_return_to_operations_menu()
 		return
+	# Retry and Next keep the tier the last mission was played at.
 	_active_mission_id = mission_id
 	_round.abandon_round()
 	_state = STATE_PLAYING
 	_set_menu_visible(false)
-	_round.begin_round(mission)
+	_round.begin_round(mission, _active_tier)
 
 func _return_to_operations_menu() -> void:
 	if _round:

@@ -43,9 +43,9 @@ func show_main_menu(deploy_detail: String = "", training_first: bool = false) ->
 	else:
 		_menu.show_main_menu(deploy_detail, training_first)
 
-func show_operations(entries: Array[Dictionary]) -> void:
+func show_operations(entries: Array[Dictionary], tier_id: String = DifficultyTier.STANDARD) -> void:
 	_show()
-	_menu.show_operations(entries)
+	_menu.show_operations(entries, tier_id)
 
 func show_training_complete(deploy_detail: String) -> void:
 	_show()
@@ -71,9 +71,9 @@ func show_suspended() -> void:
 	_show()
 	_menu.show_suspended()
 
-func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0, offer_training: bool = false) -> void:
+func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0, tier_label: String = "", offer_training: bool = false) -> void:
 	_show()
-	_menu.show_results(outcome, score, debrief, next_title, seconds, previous_best, offer_training)
+	_menu.show_results(outcome, score, debrief, next_title, seconds, previous_best, tier_label, offer_training)
 
 func activate_at_viewport_point(point: Vector2) -> bool:
 	if _menu == null or not _is_visible:

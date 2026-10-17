@@ -27,12 +27,13 @@ static func all_missions() -> Array[Dictionary]:
 
 ## Operations for testing mechanics that are not in the campaign yet. Debug builds only, and never
 ## part of all_missions, so they stay out of the unlock chain and the Operations list. Start one
-## with the --mission=<id> command line argument (see GameFlowController). The boss Maw lives
-## here until the war map and its difficulties exist; B starts it from the main menu too.
+## with the --mission=<id> command line argument (see GameFlowController). The boss Maw is not
+## one of these: it is the campaign Maw at Full Resonance (DifficultyTier). In debug builds B in
+## the main menu, or --mission=the_maw_boss, still deploys it straight away.
 static func debug_missions() -> Array[Dictionary]:
 	if not OS.is_debug_build():
 		return []
-	return [_sweep_drill(), _the_maw_boss()]
+	return [_sweep_drill()]
 
 static func is_debug_mission(mission_id: String) -> bool:
 	for mission in debug_missions():
@@ -84,16 +85,27 @@ static func unlocked_followup(mission_id: String, settings: Object) -> String:
 		return ""
 	return ""
 
+## The Deploy button's line: the next operation, its expected time at the chosen tier, and the tier.
 static func deploy_detail(settings: Object) -> String:
+	var tier := tier_from(settings)
 	var mission := get_mission(next_unlocked_id(settings))
 	if mission.is_empty():
-		return "Seal the next live rift"
+		return "Seal the next live rift • %s" % DifficultyTier.label(tier)
 	var cleared := _cleared_from(settings)
 	var replay := String(mission.get("id", "")) in cleared
 	var prefix := "REPLAY" if replay else "NEXT"
-	return "%s • %s %s • %s" % [prefix, mission.get("codename", "OP"), mission.get("title", "MISSION"), expected_minutes_text(mission)]
+	var tiered := DifficultyTier.apply_mission(mission, tier)
+	return "%s • %s %s • %s • %s" % [prefix, mission.get("codename", "OP"), mission.get("title", "MISSION"), expected_minutes_text(tiered), DifficultyTier.label(tier)]
 
+## The difficulty the settings hold, or Standard.
+static func tier_from(settings: Object) -> String:
+	if settings == null:
+		return DifficultyTier.DEFAULT
+	return DifficultyTier.resolve(String(settings.get("difficulty_tier")))
+
+## Cards for the Operations screen at the chosen tier: the expected and best times are that tier's.
 static func operation_entries(settings: Object) -> Array[Dictionary]:
+	var tier := tier_from(settings)
 	var cleared := _cleared_from(settings)
 	var entries: Array[Dictionary] = []
 	var missions := all_missions()
@@ -109,8 +121,9 @@ static func operation_entries(settings: Object) -> Array[Dictionary]:
 			"codename": mission.get("codename", ""),
 			"title": mission.get("title", ""),
 			"summary": mission.get("summary", ""),
-			"expected_minutes": mission.get("expected_minutes", []),
-			"best_seconds": _best_time_from(settings, mission_id),
+			"expected_minutes": DifficultyTier.apply_mission(mission, tier).get("expected_minutes", []),
+			"best_seconds": _best_time_from(settings, mission_id, tier),
+			"tier": tier,
 			"unlocked": unlocked,
 			"cleared": mission_id in cleared,
 			"lock_reason": lock_reason,
@@ -125,10 +138,10 @@ static func _cleared_from(settings: Object) -> PackedStringArray:
 		return value
 	return PackedStringArray()
 
-static func _best_time_from(settings: Object, mission_id: String) -> float:
+static func _best_time_from(settings: Object, mission_id: String, tier: String) -> float:
 	if settings == null or not settings.has_method("best_time"):
 		return 0.0
-	return float(settings.call("best_time", mission_id))
+	return float(settings.call("best_time", mission_id, tier))
 
 # expected_minutes is [min, max] minutes of play, shown on the mission card. Every pair is an
 # estimate from the wave tables (rift health over roughly 13 rift damage per kill, times the
@@ -251,24 +264,20 @@ static func _the_maw() -> Dictionary:
 		"defeat_line": "Chen: The Maw outpaced you. Kill faster than it can replace them.",
 		# Phase one only. As it seals, a tentacle sometimes grips the rim and is dragged back.
 		"glimpse": true,
+		# At Full Resonance this becomes the mission's "boss" and replaces the glimpse: phase one,
+		# then on a Maw that breaks (MawBoss.decide_break) the turn and the tentacles. Every other
+		# tier drops it. See DifficultyTier.apply_mission and MawBoss.
+		"tier_boss": _maw_boss_block(),
 		# One mouth, so its length comes from health rather than a second rift.
 		"rifts": [
 			_wave(1600, 0.875, 8, 1.0, 1.0, ["yellow", "blue", "green", "pink"], 2.0),
 		],
 	}
 
-## The Maw at the movement difficulty: phase one, and on a Maw that breaks, the turn and the
-## tentacles. Debug only until the war map's difficulties exist. See MawBoss and
+## The Maw's boss, at Full Resonance only. See MawBoss and
 ## development/Exercise_Mechanics_Exploration.md, "The Maw".
-static func _the_maw_boss() -> Dictionary:
-	var mission := _the_maw()
-	mission.erase("glimpse")
-	mission["id"] = "the_maw_boss"
-	mission["title"] = "THE MAW // FULL RESONANCE"
-	mission["summary"] = "The Maw at the movement difficulty. Sometimes something comes through after it."
-	# Covers both outcomes, a seal after phase one or a shortened phase one and the tentacles.
-	mission["expected_minutes"] = [4, 7]
-	mission["boss"] = {
+static func _maw_boss_block() -> Dictionary:
+	return {
 		"name": "THE MAW",
 		# On a Maw that breaks, phase one runs on this share of the rift's health, so the whole
 		# mission stays inside five to ten minutes. The bar does not show it.
@@ -276,9 +285,12 @@ static func _the_maw_boss() -> Dictionary:
 		"anchor": 840,
 		# With no hits taken and no work done, the anchor runs out in this many seconds.
 		"anchor_seconds": 210.0,
-		"squat_depth": 0.20,
+		"squat_depth": DifficultyTier.SQUAT_DEPTH,
+		# The card's range covers both outcomes, a seal after phase one or a shortened phase one
+		# and the tentacles, and does not say which.
+		"expected_minutes": [4, 7],
 	}
-	return mission
+
 ## Step 3 of the prototype plan in Exercise_Mechanics_Exploration.md: gold and blue lunges with a
 ## resonance sweep in the pool. One spawn in three is a sweep, every 4 s, so about one sweep every
 ## 12 s over roughly three minutes, which is what the Step 4 headset test asks for.
