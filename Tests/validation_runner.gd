@@ -1467,6 +1467,12 @@ func _validate_hand_tracking_probe() -> void:
 	_drive_palm(probe, hand, clock, rest + Vector3(0.0, 0.0, -1.0), rest + Vector3(0.0, 0.0, -1.0), 0.3, true)
 	if hand.jumps != 1 or hand.punches != 2:
 		failures.append("Hand tracking probe counted a pose jump as hand speed")
+	var held := rest + Vector3(0.0, 0.0, -1.0)
+	clock[0] += 1.0 / 72.0
+	probe.sample_hand(hand, clock[0], 1.0 / 72.0, true, held, Vector3(0.0, 0.0, -110.0), true)
+	_drive_palm(probe, hand, clock, held, held, 0.3, true)
+	if hand.jumps != 2 or hand.punches != 2:
+		failures.append("Hand tracking probe counted a reported velocity spike as a punch")
 	var straight := PackedVector3Array()
 	var curled := PackedVector3Array()
 	for index in 5:

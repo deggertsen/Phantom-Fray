@@ -42,6 +42,8 @@ const JOINTS_PER_FINGER := 5
 @export var fist_curl: float = 0.65
 ## Window for the peak speed readout.
 @export var peak_window_seconds: float = 1.0
+## How often both hands' state is printed to logcat.
+@export var state_log_seconds: float = 0.5
 
 class Hand:
 	var side: StringName
@@ -107,6 +109,7 @@ var hands: Array[Hand] = [Hand.new(&"left"), Hand.new(&"right")]
 var simultaneous_requested: bool = false
 var _label: Label3D
 var _time: float = 0.0
+var _state_timer: float = 0.0
 
 func _ready() -> void:
 	if not is_enabled():
@@ -145,6 +148,21 @@ func _process(delta: float) -> void:
 		_read_hand(hand, delta)
 	if _label:
 		_label.text = debug_text()
+	_state_timer -= delta
+	if _state_timer <= 0.0:
+		_state_timer = state_log_seconds
+		_log_state()
+
+## A steady readout of both hands (input, confidence, joints, curl, palm direction) so a held
+## fist, an open hand, or a hand near the face can be read from logcat.
+func _log_state() -> void:
+	var parts := PackedStringArray()
+	for hand in hands:
+		parts.append("%s %s %s j%d curl=%.2f view=%+.0f,%+.0f" % [
+			String(hand.side).left(1).to_upper(), hand.input_name(), _confidence_name(hand.confidence),
+			hand.joints_tracked, hand.curl, hand.view.x, hand.view.y,
+		])
+	print("HANDTEST state t=%.2f %s" % [_time, " | ".join(parts)])
 
 ## Reads one hand from XRServer and feeds the measurement.
 func _read_hand(hand: Hand, delta: float) -> void:
@@ -222,6 +240,11 @@ func sample_hand(hand: Hand, now: float, delta: float, tracked: bool, palm: Vect
 		_record(hand, now)
 		return
 	hand.lost_seconds = 0.0
+	# On Quest the runtime reports 50 to 130 m/s for a frame or two when it picks a hand up.
+	if reported_valid and reported.length() > jump_speed:
+		hand.jumps += 1
+		print("HANDTEST jump %s t=%.2f %.2f m/s reported" % [hand.side, now, reported.length()])
+		reported_valid = false
 	hand.reported_valid = reported_valid
 	hand.reported_speed = reported.length() if reported_valid else 0.0
 	hand.computed_speed = 0.0
