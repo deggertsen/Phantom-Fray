@@ -172,8 +172,8 @@
     },
     "boss_spent": {
       "priority": 2, "cooldown": 0, "tag": "[urgent, eager]",
-      "note": "The slam missed and the tentacle lies spent on the floor. Push-ups on it drain the boss.",
-      "lines": ["It's spent. Ground the gauntlets on it.", "It's down. Palms flat, drive it in.", "Now. Hands on the floor, put it through."]
+      "note": "The slam missed and the tentacle lies spent on the floor. Push-ups on it drain the boss. Say it plainly: the operator must know to do push-ups.",
+      "lines": ["Press your energy into the tentacle! Do some push-ups!", "It's down! Push-ups, now. Drive it in!", "Hands on the floor! Push-ups, pour it into the tentacle!", "It's down! Push-ups. Press your energy into it!", "Get on the floor. Push-ups, now!", "Push-ups! Every one drains it!"]
     },
     "boss_waking": {
       "priority": 3, "cooldown": 0, "tag": "[firm]",
