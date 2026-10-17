@@ -118,6 +118,19 @@ func grip_in_palm(side: StringName) -> Transform3D:
 	var hand: HandState = _hands.get(side)
 	return hand.grip_in_palm if hand else Transform3D.IDENTITY
 
+## The controller's position in play space, and whether it has a pose: held, hanging, or put down.
+func controller_position(side: StringName) -> Vector3:
+	var pose := _controller_pose(side)
+	return pose.transform.origin if pose else Vector3.ZERO
+
+func is_controller_tracked(side: StringName) -> bool:
+	return _controller_pose(side) != null
+
+func _controller_pose(side: StringName) -> XRPose:
+	var controller := XRServer.get_tracker(StringName("%s_hand" % side)) as XRPositionalTracker
+	var pose := controller.get_pose(&"default") if controller else null
+	return pose if pose and pose.has_tracking_data else null
+
 func is_palm_flat(side: StringName) -> bool:
 	return is_tracked(side) and palm_is_flat(palm(side), flat_palm_degrees)
 

@@ -17,11 +17,14 @@ class_name PushUpDetector
 ## plank dozens of times and lost count; the head height alone separates them.
 ## Head pose: XRCamera3D.position is in XROrigin3D space, floor at y = 0 (Stage reference space).
 ##
-## With both controllers hanging on their straps and both hands tracked (TrackedHands, decision 39),
-## getting into a plank also needs both palms flat and within `palm_floor_height` of the floor, so
-## a low crouch with the hands up is not a plank. Leaving the plank stays on head height alone, so
-## a hand the cameras lose for a frame cannot end a set. With a controller in either hand, the
-## head rule is all there is.
+## Getting into a plank also needs both hands down on the floor (TrackedHands, decision 39), so a
+## low crouch with the hands up is not a plank. A free hand (controller hanging on its strap) is
+## down when its palm lies flat within `palm_floor_height` of the floor; a hand on its controller
+## when the controller is within `controller_floor_height`. The second matters: on the floor the
+## runtime often takes a hanging controller that touches the hand for a held one (Quest 3,
+## 2026-10-17), and the gauntlets stay with the controllers. Leaving the plank stays on head height
+## alone, so a hand lost for a frame cannot end a set. With a hand known neither way, the head rule
+## is all there is.
 
 signal push_up_completed
 signal plank_changed(in_plank: bool)
@@ -37,6 +40,10 @@ enum Palms { UNKNOWN, ON_FLOOR, OFF_FLOOR }
 @export var rep_drop: float = 0.12
 ## A palm on the floor: its joint no higher than this above the floor (m). Flat palms sat 2 to 3 cm up.
 @export var palm_floor_height: float = 0.1
+## A hand on its controller is on the floor when the controller is no higher than this (m). Quest 3,
+## 2026-10-17, controllers hanging in two boss push-up sets: 0.04 to 0.24 m. Hands resting on the
+## knees in a crouch sit near 0.5 m.
+@export var controller_floor_height: float = 0.3
 ## Debug builds print a PUSHUP line for every plank and rep, for logcat.
 @export var log_reps: bool = true
 
@@ -51,6 +58,7 @@ var _top: float = 0.0
 var _bottom: float = 0.0
 var _going_down: bool = false
 var _log: bool = false
+var _refused: bool = false
 
 func _ready() -> void:
 	add_to_group("PushUpDetector")
@@ -66,17 +74,37 @@ func _physics_process(_delta: float) -> void:
 	var forward := -camera.transform.basis.z
 	sample(camera.position.y, rad_to_deg(asin(clampf(forward.y, -1.0, 1.0))), palms_state())
 
-## Where the palms are, when both controllers hang and the cameras see both hands.
+## Whether both hands are down on the floor, from the tracked palm of a free hand or the controller
+## of a held one.
 func palms_state() -> Palms:
 	if _hands == null:
 		return Palms.UNKNOWN
+	var state := Palms.ON_FLOOR
 	for side in TrackedHands.SIDES:
-		if not _hands.is_free(side) or not _hands.is_tracked(side):
+		var down: bool
+		if _hands.is_free(side) and _hands.is_tracked(side):
+			down = _hands.is_palm_flat(side) and _hands.palm(side).origin.y <= palm_floor_height
+		elif _hands.is_controller_tracked(side):
+			down = _hands.controller_position(side).y <= controller_floor_height
+		else:
 			return Palms.UNKNOWN
+		if not down:
+			state = Palms.OFF_FLOOR
+	return state
+
+## The hands' heights for the PUSHUP lines: "palm" for a free hand, "ctrl" for one on its controller.
+func hands_detail() -> String:
+	if _hands == null:
+		return ""
+	var parts := PackedStringArray()
 	for side in TrackedHands.SIDES:
-		if not _hands.is_palm_flat(side) or _hands.palm(side).origin.y > palm_floor_height:
-			return Palms.OFF_FLOOR
-	return Palms.ON_FLOOR
+		if _hands.is_free(side) and _hands.is_tracked(side):
+			parts.append("%s palm %.2f%s" % [String(side).left(1).to_upper(), _hands.palm(side).origin.y, "" if _hands.is_palm_flat(side) else " tilted"])
+		elif _hands.is_controller_tracked(side):
+			parts.append("%s ctrl %.2f" % [String(side).left(1).to_upper(), _hands.controller_position(side).y])
+		else:
+			parts.append("%s ?" % String(side).left(1).to_upper())
+	return " ".join(parts)
 
 ## One step. Split from _physics_process so the validation runner can feed it a motion.
 func sample(head_y: float, pitch_degrees: float, palms: Palms = Palms.UNKNOWN) -> void:
@@ -84,6 +112,9 @@ func sample(head_y: float, pitch_degrees: float, palms: Palms = Palms.UNKNOWN) -
 	var low := head_y < standing * (plank_exit_ratio if in_plank else plank_enter_ratio)
 	if low and not in_plank and palms == Palms.OFF_FLOOR:
 		low = false
+		if _log and not _refused:
+			print("PUSHUP plank refused head=%.3f hands off the floor: %s" % [head_y, hands_detail()])
+	_refused = head_y < standing * plank_enter_ratio and palms == Palms.OFF_FLOOR and not in_plank
 	if low != in_plank:
 		in_plank = low
 		_top = head_y
@@ -91,8 +122,8 @@ func sample(head_y: float, pitch_degrees: float, palms: Palms = Palms.UNKNOWN) -
 		_going_down = false
 		plank_changed.emit(in_plank)
 		if _log:
-			print("PUSHUP plank %s head=%.3f stand=%.3f pitch=%.0f palms=%s" % [
-				"on" if in_plank else "off", head_y, standing, pitch_degrees, Palms.keys()[palms],
+			print("PUSHUP plank %s head=%.3f stand=%.3f pitch=%.0f palms=%s %s" % [
+				"on" if in_plank else "off", head_y, standing, pitch_degrees, Palms.keys()[palms], hands_detail(),
 			])
 	if not in_plank:
 		return
