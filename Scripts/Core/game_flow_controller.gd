@@ -248,7 +248,7 @@ func _arm_menu_input_after_release() -> void:
 		return
 	for path in [NodePath("LeftHandController"), NodePath("RightHandController")]:
 		var controller := _player.get_node_or_null(path) as XRController3D
-		if controller and controller.is_button_pressed("trigger_click"):
+		if controller and _trigger_down(controller):
 			get_tree().create_timer(0.1).timeout.connect(_arm_menu_input_after_release)
 			return
 	_menu_input_armed = true
@@ -502,6 +502,13 @@ func _show_results() -> void:
 	_refresh_menu_pointers()
 	call_deferred("_reset_results_pointers_after_render")
 
+## The trigger, or a pinch while that hand's controller hangs on its strap (CombatHandController).
+func _trigger_down(controller: XRController3D) -> bool:
+	var combat := controller as CombatHandController
+	if combat:
+		return combat.is_menu_trigger_down()
+	return controller.is_button_pressed("trigger_click")
+
 func _poll_menu_trigger() -> void:
 	if _player == null or _presenter == null or not _presenter.is_menu_visible() or _state == STATE_PLAYING:
 		_menu_trigger_down = false
@@ -510,7 +517,7 @@ func _poll_menu_trigger() -> void:
 	var held: XRController3D = null
 	for path in [NodePath("LeftHandController"), NodePath("RightHandController")]:
 		var controller := _player.get_node_or_null(path) as XRController3D
-		if controller and controller.is_button_pressed("trigger_click"):
+		if controller and _trigger_down(controller):
 			down = true
 			held = controller
 	var released := _menu_trigger_down and not down
@@ -546,7 +553,7 @@ func _sync_menu_trigger_baseline() -> void:
 		return
 	for path in [NodePath("LeftHandController"), NodePath("RightHandController")]:
 		var controller := _player.get_node_or_null(path) as XRController3D
-		if controller and controller.is_button_pressed("trigger_click"):
+		if controller and _trigger_down(controller):
 			_menu_trigger_down = true
 
 func _activate_menu_from_controller(controller: XRController3D) -> void:

@@ -16,9 +16,17 @@ class_name PushUpDetector
 ## forward held the face at 29 to 31 degrees, right on that line, and it dropped in and out of the
 ## plank dozens of times and lost count; the head height alone separates them.
 ## Head pose: XRCamera3D.position is in XROrigin3D space, floor at y = 0 (Stage reference space).
+##
+## With both controllers hanging on their straps and both hands tracked (TrackedHands, decision 39),
+## getting into a plank also needs both palms flat and within `palm_floor_height` of the floor, so
+## a low crouch with the hands up is not a plank. Leaving the plank stays on head height alone, so
+## a hand the cameras lose for a frame cannot end a set. With a controller in either hand, the
+## head rule is all there is.
 
 signal push_up_completed
 signal plank_changed(in_plank: bool)
+
+enum Palms { UNKNOWN, ON_FLOOR, OFF_FLOOR }
 
 ## The head must fall below this share of standing eye height to enter a plank.
 @export var plank_enter_ratio: float = 0.38
@@ -27,6 +35,8 @@ signal plank_changed(in_plank: bool)
 ## A rep is a fall and a rise of at least this much, in metres. Quest 3, 2026-10-11: real reps moved
 ## the head 22 to 38 cm; getting into and out of the plank made 8 to 9 cm wobbles that 6 cm counted.
 @export var rep_drop: float = 0.12
+## A palm on the floor: its joint no higher than this above the floor (m). Flat palms sat 2 to 3 cm up.
+@export var palm_floor_height: float = 0.1
 ## Debug builds print a PUSHUP line for every plank and rep, for logcat.
 @export var log_reps: bool = true
 
@@ -35,6 +45,7 @@ var in_plank: bool = false
 var rep_count: int = 0
 
 var _squat: SquatDetector
+var _hands: TrackedHands
 var _standing_fallback: float = 1.6
 var _top: float = 0.0
 var _bottom: float = 0.0
@@ -46,18 +57,33 @@ func _ready() -> void:
 	var player := get_parent()
 	camera = player.get_node_or_null("XRCamera3D") as Node3D
 	_squat = player.get_node_or_null("SquatDetector") as SquatDetector
+	_hands = player.get_node_or_null("TrackedHands") as TrackedHands
 	_log = log_reps and OS.is_debug_build()
 
 func _physics_process(_delta: float) -> void:
 	if camera == null:
 		return
 	var forward := -camera.transform.basis.z
-	sample(camera.position.y, rad_to_deg(asin(clampf(forward.y, -1.0, 1.0))))
+	sample(camera.position.y, rad_to_deg(asin(clampf(forward.y, -1.0, 1.0))), palms_state())
+
+## Where the palms are, when both controllers hang and the cameras see both hands.
+func palms_state() -> Palms:
+	if _hands == null:
+		return Palms.UNKNOWN
+	for side in TrackedHands.SIDES:
+		if not _hands.is_free(side) or not _hands.is_tracked(side):
+			return Palms.UNKNOWN
+	for side in TrackedHands.SIDES:
+		if not _hands.is_palm_flat(side) or _hands.palm(side).origin.y > palm_floor_height:
+			return Palms.OFF_FLOOR
+	return Palms.ON_FLOOR
 
 ## One step. Split from _physics_process so the validation runner can feed it a motion.
-func sample(head_y: float, pitch_degrees: float) -> void:
+func sample(head_y: float, pitch_degrees: float, palms: Palms = Palms.UNKNOWN) -> void:
 	var standing := _standing_height(head_y)
 	var low := head_y < standing * (plank_exit_ratio if in_plank else plank_enter_ratio)
+	if low and not in_plank and palms == Palms.OFF_FLOOR:
+		low = false
 	if low != in_plank:
 		in_plank = low
 		_top = head_y
@@ -65,7 +91,9 @@ func sample(head_y: float, pitch_degrees: float) -> void:
 		_going_down = false
 		plank_changed.emit(in_plank)
 		if _log:
-			print("PUSHUP plank %s head=%.3f stand=%.3f pitch=%.0f" % ["on" if in_plank else "off", head_y, standing, pitch_degrees])
+			print("PUSHUP plank %s head=%.3f stand=%.3f pitch=%.0f palms=%s" % [
+				"on" if in_plank else "off", head_y, standing, pitch_degrees, Palms.keys()[palms],
+			])
 	if not in_plank:
 		return
 	if not _going_down:

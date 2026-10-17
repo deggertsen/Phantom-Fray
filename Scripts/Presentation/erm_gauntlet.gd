@@ -17,6 +17,8 @@ const GLOVE_COLOR := Color(0.045, 0.05, 0.07)
 const BEAT_RATE := {&"healthy": 1.0, &"caution": 1.15, &"danger": 1.4, &"critical": 1.8, &"depleted": 0.0}
 ## How far a half-closed hand warms the gauntlet before the grip clicks.
 const PRE_CHARGE := 0.25
+## A free hand (controller hanging) makes a fist at this finger curl.
+const FREE_FIST_CURL := 0.65
 const POWER_UP_RATE := 9.0
 const POWER_DOWN_RATE := 3.2
 ## On ignition a band of light runs down the bracer into the fist, then a ring snaps off it.
@@ -68,7 +70,14 @@ func _update_power(delta: float, dim: float) -> void:
 	var controller := get_parent() as XRController3D
 	var target := power_override
 	var gripped := power_override >= 1.0
-	if power_override < 0.0 and controller:
+	var combat := controller as CombatHandController
+	var free_curl := combat.free_hand_curl() if combat else -1.0
+	if power_override < 0.0 and free_curl >= 0.0:
+		# The controller hangs on its strap and the gauntlet rides the tracked hand: the fist is
+		# read from finger curl (held fists 0.97 to 1.00, open hands 0.08 to 0.14 on Quest 3).
+		gripped = free_curl >= FREE_FIST_CURL
+		target = 1.0 if gripped else free_curl * PRE_CHARGE
+	elif power_override < 0.0 and controller:
 		gripped = controller.is_button_pressed("grip_click")
 		target = 1.0 if gripped else clampf(controller.get_float("grip"), 0.0, 1.0) * PRE_CHARGE
 	if gripped and not _powered:
@@ -114,6 +123,10 @@ func show_ignition(age: float) -> void:
 func _ignite(controller: XRController3D) -> void:
 	_ignition_age = 0.0
 	if controller == null or power_override >= 0.0:
+		return
+	# No tick for a free hand: its controller hangs on the strap, nowhere near the palm.
+	var combat := controller as CombatHandController
+	if combat and combat.hand_free:
 		return
 	# A short tick in the palm: the gauntlet is armed.
 	var interface := XRServer.primary_interface

@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://cpty7xivtp6y2"]
+[gd_scene load_steps=14 format=3 uid="uid://cpty7xivtp6y2"]
 
 [ext_resource type="Script" path="res://Scripts/Player/hand_collision.gd" id="1_0pktb"]
 [ext_resource type="Script" path="res://Scripts/UI/round_hud.gd" id="2_iu2wh"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://Scripts/Player/squat_detector.gd" id="9_squat"]
 [ext_resource type="Script" path="res://Scripts/Player/hand_tracking_probe.gd" id="10_handprobe"]
 [ext_resource type="Script" path="res://Scripts/Player/push_up_detector.gd" id="11_pushup"]
+[ext_resource type="Script" path="res://Scripts/Player/tracked_hands.gd" id="12_hands"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_picfr"]
 
@@ -77,6 +78,9 @@ script = ExtResource("5_life")
 
 [node name="SquatDetector" type="Node" parent="."]
 script = ExtResource("9_squat")
+
+[node name="TrackedHands" type="Node" parent="."]
+script = ExtResource("12_hands")
 
 [node name="HandTrackingProbe" type="Node" parent="."]
 script = ExtResource("10_handprobe")

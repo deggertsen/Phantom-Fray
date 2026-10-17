@@ -21,9 +21,6 @@ class_name HandTrackingProbe
 ## https://github.com/GodotVR/godot_openxr_vendors/blob/5.1.0-stable/doc_classes/OpenXRMetaSimultaneousHandsAndControllersExtension.xml
 
 const SETTING := "phantom_fray/debug/hand_tracking_probe"
-const SIMULTANEOUS_SINGLETON := "OpenXRMetaSimultaneousHandsAndControllersExtension"
-const FINGER_COUNT := 4
-const JOINTS_PER_FINGER := 5
 
 @export var debug_enabled: bool = false
 ## A punch starts when the palm moves faster than this (m/s).
@@ -106,7 +103,7 @@ class Hand:
 		return "NONE"
 
 var hands: Array[Hand] = [Hand.new(&"left"), Hand.new(&"right")]
-var simultaneous_requested: bool = false
+var _tracked_hands: TrackedHands
 var _label: Label3D
 var _time: float = 0.0
 var _state_timer: float = 0.0
@@ -116,6 +113,7 @@ func _ready() -> void:
 		set_process(false)
 		return
 	var player := get_parent()
+	_tracked_hands = player.get_node_or_null("TrackedHands") as TrackedHands
 	_label = Label3D.new()
 	_label.name = "HandTrackingProbeLabel"
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -193,14 +191,7 @@ func _read_hand(hand: Hand, delta: float) -> void:
 		if camera:
 			var local := camera.global_transform.affine_inverse() * (get_parent() as Node3D).global_transform * palm
 			hand.view = Vector2(rad_to_deg(atan2(local.x, -local.z)), rad_to_deg(atan2(local.y, -local.z)))
-		var curls := PackedFloat32Array()
-		for finger in FINGER_COUNT:
-			var points := PackedVector3Array()
-			var first: int = XRHandTracker.HAND_JOINT_INDEX_FINGER_METACARPAL + finger * JOINTS_PER_FINGER
-			for joint in range(first, first + JOINTS_PER_FINGER):
-				points.append(tracker.get_hand_joint_transform(joint as XRHandTracker.HandJoint).origin)
-			curls.append(finger_curl(points))
-		set_curl(hand, curls)
+		set_curl(hand, PackedFloat32Array([TrackedHands.hand_curl(tracker, full_curl_degrees)]))
 	sample_hand(hand, _time, delta, tracked, palm, velocity, velocity_valid)
 	_log_changes(hand)
 
@@ -283,15 +274,7 @@ func set_curl(hand: Hand, curls: PackedFloat32Array) -> void:
 ## Curl of one finger from 0 (straight) to 1 (fully bent), from its metacarpal, proximal,
 ## intermediate, distal, and tip joint positions: the bend at its three knuckles, added up.
 func finger_curl(points: PackedVector3Array) -> float:
-	if points.size() < JOINTS_PER_FINGER:
-		return 0.0
-	var bend := 0.0
-	for i in range(1, JOINTS_PER_FINGER - 1):
-		var a := points[i] - points[i - 1]
-		var b := points[i + 1] - points[i]
-		if a.length_squared() > 0.0 and b.length_squared() > 0.0:
-			bend += rad_to_deg(a.angle_to(b))
-	return clampf(bend / full_curl_degrees, 0.0, 1.0)
+	return TrackedHands.finger_curl(points, full_curl_degrees)
 
 func reset_counters() -> void:
 	for hand in hands:
@@ -299,25 +282,19 @@ func reset_counters() -> void:
 	print("HANDTEST reset t=%.2f" % _time)
 
 func simultaneous_supported() -> bool:
-	if not Engine.has_singleton(SIMULTANEOUS_SINGLETON):
-		return false
-	return Engine.get_singleton(SIMULTANEOUS_SINGLETON).is_simultaneous_hands_and_controllers_supported()
+	return _tracked_hands != null and _tracked_hands.simultaneous_supported()
 
-## The runtime starts each session with simultaneous tracking paused.
+## TrackedHands resumes simultaneous tracking at every session start; this pauses it for a
+## hands-only run (test 7) and resumes it again.
 func toggle_simultaneous() -> void:
 	if not simultaneous_supported():
 		print("HANDTEST simultaneous not supported")
 		return
-	var extension := Engine.get_singleton(SIMULTANEOUS_SINGLETON)
-	simultaneous_requested = not simultaneous_requested
-	if simultaneous_requested:
-		extension.resume_simultaneous_hands_and_controllers_tracking()
-	else:
-		extension.pause_simultaneous_hands_and_controllers_tracking()
-	print("HANDTEST simultaneous %s t=%.2f" % ["on" if simultaneous_requested else "off", _time])
+	_tracked_hands.set_simultaneous(not _tracked_hands.simultaneous_running)
+	print("HANDTEST simultaneous %s t=%.2f" % ["on" if _tracked_hands.simultaneous_running else "off", _time])
 
 func debug_text() -> String:
-	var simultaneous := "ON" if simultaneous_requested else "off"
+	var simultaneous := "ON" if _tracked_hands and _tracked_hands.simultaneous_running else "off"
 	if not simultaneous_supported():
 		simultaneous = "unsupported"
 	var lines := PackedStringArray([
