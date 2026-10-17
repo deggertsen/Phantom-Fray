@@ -4,9 +4,13 @@ class_name Phantom
 const SfxVariations := preload("res://Scripts/Audio/sfx_variations.gd")
 const CREATURE_MATERIAL := preload("res://Resources/Materials/creature.tres")
 const GLOW_STRENGTH := 0.3
+## How much faster a phantom turns once it has flown past the head without biting.
+const TURN_BACK_BOOST := 4.0
 
 ## One continuous arc into reach. Speed ramps by acceleration, never a stop-then-dash.
 ## A punch counts once the body is in reach, because that is when the fist can meet it.
+## Close in it homes on the live head, and one that flies past turns on the spot and comes
+## back. It never floats beside a player who stepped out of its path.
 ## Movement uses CharacterBody3D.move_and_slide():
 ## https://docs.godotengine.org/en/stable/classes/class_characterbody3d.html#class-characterbody3d-method-move-and-slide
 
@@ -460,13 +464,28 @@ func _tick_arc(delta: float) -> void:
 		if through.length_squared() < 0.0001:
 			through = velocity if velocity.length_squared() > 0.01 else Vector3.FORWARD
 		desired = through.normalized() * speed
-	var to_player := _locked_target - global_position
+	# Close in, the live head is the target, not the point locked when the arc was built.
+	# A player who stepped aside is still the target.
+	var to_player := _live_target() - global_position
 	var camera_distance := global_position.distance_to(_player_camera.global_position)
-	if camera_distance < 3.2 and camera_distance > 0.02:
-		var homing := smoothstep(3.2, 0.55, camera_distance)
+	var homing := 0.0
+	if camera_distance < 3.2 and camera_distance > 0.02 and to_player.length_squared() > 0.0001:
+		homing = smoothstep(3.2, 0.55, camera_distance)
 		desired = desired.lerp(to_player.normalized() * speed, homing)
+	# Past the head without a bite: whip around at once and come straight back.
+	# It must never drift at the old target waiting for the player to walk into it.
+	var overshot := (
+		homing > 0.3
+		and velocity.length_squared() > 0.01
+		and to_player.length_squared() > 0.0001
+		and velocity.normalized().dot(to_player.normalized()) < 0.2
+	)
+	var turn_rate := acceleration
+	if overshot:
+		desired = to_player.normalized() * minf(speed, move_speed)
+		turn_rate *= TURN_BACK_BOOST
 	# https://docs.godotengine.org/en/stable/classes/class_characterbody3d.html#class-characterbody3d-method-move-and-slide
-	velocity = velocity.lerp(desired, clampf(acceleration * delta, 0.0, 1.0))
+	velocity = velocity.lerp(desired, clampf(turn_rate * delta, 0.0, 1.0))
 	_face_direction(desired)
 	move_and_slide()
 	camera_distance = global_position.distance_to(_player_camera.global_position)
@@ -565,7 +584,11 @@ func _tick_recover(delta: float) -> void:
 func _lock_target() -> void:
 	# Just under the eyes. High enough to punch, low enough to not be a bird.
 	_impact_drop = randf_range(0.18, 0.30)
-	_locked_target = _player_camera.global_position + Vector3.DOWN * _impact_drop
+	_locked_target = _live_target()
+
+## Where the head is right now, at the same drop the arc was aimed with.
+func _live_target() -> Vector3:
+	return _player_camera.global_position + Vector3.DOWN * _impact_drop
 
 func _flat_right() -> Vector3:
 	var right := _player_camera.global_transform.basis.x

@@ -36,7 +36,7 @@ A phantom picks a form at random unless `creature_form` is set. Materials come f
 1. **Approach.** On spawn the phantom locks a target just under the player's eyes (18 to 30 cm below the camera) and builds a cubic bezier from its position to that point. The bow is sideways: yellow bows left, blue bows right, green stays near center. Speed ramps from `move_speed` toward `pattern_commit_speed` along the curve. There is no stop-then-dash.
 2. **Commit.** Within `strike_reach` (1.7 m) the phase is COMMIT, the body shows its alert glow, and a punch counts. This is also when it homes on the head.
 3. **Possession.** If the phantom core passes within `possession_radius` (0.30 m) of the head, the lunge target point, or the body node, it possesses the player: it dissolves, plays the siphon, and emits `player_contact`.
-4. **Recover.** If it passes through without possessing, it retreats for `recover_seconds` and builds a new arc. A phantom that stalls twice or lives past 22 s cleans itself up.
+4. **Turn back.** Close in, the live head is the target, so a player who steps aside is still the target. One that flies past the head without biting turns on the spot (`TURN_BACK_BOOST` on its acceleration) and comes straight back; it never floats at the point where the head was. One that passes through without possessing recovers for `recover_seconds` and builds a new arc. A phantom that stalls twice or lives past 22 s cleans itself up.
 
 Strikes outside the window buzz the hand and return `not_open`. Wrong-hand strikes return `wrong_hand`, emit `strike_rejected`, and break the chain.
 

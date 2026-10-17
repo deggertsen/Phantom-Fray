@@ -52,7 +52,7 @@ Fourth round:
 25. **The tutorial keeps The Maw's phase one and ends on the tentacle glimpse.** The two-phase Maw is a war-map mission.
 26. **One movement difficulty for now.**
 27. **The five-to-ten-minute length applies from OP-02 onward;** OP-01 stays short.
-28. **Feeding (the boss eating its escort) is not decided.** Talk it through before committing.
+28. **Feeding (the boss eating its escort) is out.** Decided 2026-10-13: the boss never eats its escort. Only possessions and time move the anchor.
 
 Fifth round:
 
@@ -140,11 +140,11 @@ What a retreat means on the war map is open (decision 11).
 David's escort idea is the strongest of the options:
 
 - **A. Escort and volley.** Phantoms circle the boss in a ring. One of its attacks breaks the ring and flings them at the Striker, arriving one after another in a readable rhythm. The ring is the telegraph: the player can count the volley before it comes. This makes the phantoms part of the boss's pattern rather than a separate stream, keeps the arena readable, and scales by difficulty through volley size and speed.
-- **B. Feeding.** When its anchor runs low, the boss pulls an escort in and eats it to buy time. Clearing a volley quickly keeps it hungry. It fits the lore exactly, and it gives the player a reason to care about the escort.
+- **B. Feeding.** When its anchor runs low, the boss pulls an escort in and eats it to buy time. **Rejected (2026-10-13):** it makes a struggling player's fight longer, a punishment stacked on a punishment.
 - **C. Shield.** Escorts close around the spent tentacle and must be punched away before push-ups pay. **Reject:** it sends phantoms at a player on the floor.
 - **D. A stream from the rift,** as in an ordinary mission. The simplest, and the least boss-like.
 
-Recommended: A in every boss fight, since it is the boss's own attack, and D not at all for now. B is undecided (decision 28): it adds a reason to clear volleys fast, but it also makes a struggling player's fight longer, which may feel like a punishment stacked on a punishment. Talk it through before building it. The escort holds still while a tentacle is spent.
+Recommended: A in every boss fight, since it is the boss's own attack, and D not at all for now. B is out (decision 28). The escort holds still while a tentacle is spent.
 
 ### The Maw
 
@@ -671,15 +671,14 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 - **Comfort.** The world shakes and the view never does. The tentacle stops at least 2.3 m from the head during the turn and while idle, and the shockwave stays below the knees. Only the attacks themselves reach the player. Reduced Flashes halves the light shift, holds the pylons steady instead of flickering, and keeps the slam ring a steady, dimmer ramp. Nothing takes control: the player can look anywhere, and pause works at any point in the turn.
 - **Validation:** `_validate_maw_break_odds` covers the first-always rule, one in three, the pity rule over twelve unlucky rolls, persistence, and reset. `_validate_maw_boss` covers a breaking Maw's shortened phase one; zero health playing the turn instead of sealing; pause holding the turn; the survivors becoming the escort; the fight opening under the boss's name; the anchor refilling, draining 4 a second, feeding 20 on a possession, and draining on a resolve; push-ups counting only on a spent tentacle, ten pulses and no more, the escort holding still, and the tear-back; and an empty anchor retreating, sealing, and winning. `_validate_maw_glimpse` covers an ordinary mission leaving the boss asleep, the tutorial Maw sealing with the glimpse, no catalog mission carrying a boss of its own, and Chen's lines. `_validate_boss_only_at_full_resonance` forces a break at every tier and checks that only Full Resonance arms the rift and reaches the turn.
 - **Desktop stills:** `Godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/boss_capture.tscn` (`Scripts/Debug/boss_capture.gd`) presses Shift+B, cuts phase one short, and writes every beat of the turn, a sweep drawn back and crossing, a volley, a slam, a spent tentacle with push-ups, the retreat, and the bracer to `reports/boss/current/`.
-- **Not built yet:** the low sweep and real push-up detection (Step 7), feeding (decision 28), the readings hint, a war-map home. The torn Maw reads smaller than intended because the portal shader draws only the middle of its quad, and the RIFT beacon stays up through the fight. With Play My Own Music on, the silence is carried by the duck alone, as decision 31 accepts. This is the Phase 7 Maw finale.
+- **Not built yet:** the low sweep and real push-up detection (Step 7), the readings hint, a war-map home. The torn Maw reads smaller than intended because the portal shader draws only the middle of its quad, and the RIFT beacon stays up through the fight. With Play My Own Music on, the silence is carried by the duck alone, as decision 31 accepts. This is the Phase 7 Maw finale.
 
-**Step 7. The rest of the tentacle attacks. Built (2026-10-11 to 2026-10-13).** Push-ups on the spent tentacle count from head height (`PushUpDetector`), with controllers; since 2026-10-17 the controllers can hang with the hands tracked (decision 39, "Hand tracking"); a plank also needs both hands, or their hanging controllers, on the floor. The low sweep is `ResonanceSweep.low`, judged by `SquatDetector` jump tracking, as a jump pair at the end of the boss cycle. Feeding stays deferred (decision 28).
+**Step 7. The rest of the tentacle attacks. Built (2026-10-11 to 2026-10-13).** Push-ups on the spent tentacle count from head height (`PushUpDetector`), with controllers; since 2026-10-17 the controllers can hang with the hands tracked (decision 39, "Hand tracking"); a plank also needs both hands, or their hanging controllers, on the floor. The low sweep is `ResonanceSweep.low`, judged by `SquatDetector` jump tracking, as a jump pair at the end of the boss cycle. Feeding is out (decision 28).
 
 ---
 
 ## 6. Deferred questions
 
-Everything else is answered; see **Decisions** at the top. Two questions are deliberately deferred (David, 2026-10-09):
+Everything else is answered; see **Decisions** at the top. One question is deliberately deferred (David, 2026-10-09):
 
-1. **Feeding** (decision 28). Whether the boss eats its escort to buy time. Not decided yet; revisit once escort volleys can be played.
-2. **What a retreat means on the war map** beyond holding the line (decision 24). Unknowable until discovery on the war map starts.
+1. **What a retreat means on the war map** beyond holding the line (decision 24). Unknowable until discovery on the war map starts.
