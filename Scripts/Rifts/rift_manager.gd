@@ -30,6 +30,7 @@ var feed_enabled: bool = true
 ## How fast the seal dissolves the portal, per second. A glimpse slows it to leave room.
 var dissolve_rate: float = 0.75
 var _held: bool = false
+var _hologram: bool = false
 ## While 0 or more, the portal shows this much dissolve instead of the seal's own ramp.
 var _dissolve_override: float = -1.0
 var _closing: bool = false
@@ -76,6 +77,9 @@ func configure_wave(wave: Dictionary) -> void:
 	_speed_scale = float(wave.get("speed_scale", 1.0))
 	_telegraph_scale = float(wave.get("telegraph_scale", 1.0))
 	_contact_scale = float(wave.get("contact_scale", 1.0))
+	# Training: the rift sends only what spawn_variant asks for until its feed is turned on.
+	feed_enabled = bool(wave.get("feed", true))
+	set_hologram(bool(wave.get("hologram", false)))
 	_apply_rift_scale(float(wave.get("scale", 1.0)))
 	var pool: Array = wave.get("pool", [])
 	if not pool.is_empty():
@@ -155,19 +159,38 @@ func _on_spawn_timer_timeout() -> void:
 		return
 	_spawn_phantom()
 
-## `phantoms_only` leaves hazards such as the sweep out of the pick.
-func _spawn_phantom(phantoms_only: bool = false) -> Node3D:
-	if phantom_scenes.is_empty():
-		push_warning("RiftManager: no phantom scenes configured")
+## Training: one phantom of this variant (MissionCatalog ids: yellow, blue, green, pink) out of
+## the mouth now, whatever the feed or the spawn timer says.
+func spawn_variant(variant_id: String) -> Node3D:
+	if _closing:
 		return null
-	var scenes: Array[PackedScene] = _wave_scenes if not _wave_scenes.is_empty() else phantom_scenes
-	var scene := scenes[randi() % scenes.size()]
-	if phantoms_only and _is_sweep(scene):
-		# An escort is a phantom: pick one from the same pool.
-		var without_sweeps := scenes.filter(func(candidate: PackedScene) -> bool: return not _is_sweep(candidate))
-		if without_sweeps.is_empty():
+	var scene := load(MissionCatalog.scene_path(variant_id)) as PackedScene
+	if scene == null:
+		push_warning("RiftManager: no scene for variant %s" % variant_id)
+		return null
+	return _spawn_phantom(false, scene)
+
+## Training: the rift and everything it sends wear the chamber's hologram look.
+func set_hologram(enabled: bool) -> void:
+	_hologram = enabled
+	if _portal_material:
+		_portal_material.set_shader_parameter("hologram", 1.0 if enabled else 0.0)
+
+## `phantoms_only` leaves hazards such as the sweep out of the pick. A `scene` (training's
+## spawn_variant) skips the pick altogether.
+func _spawn_phantom(phantoms_only: bool = false, scene: PackedScene = null) -> Node3D:
+	if scene == null:
+		if phantom_scenes.is_empty():
+			push_warning("RiftManager: no phantom scenes configured")
 			return null
-		scene = without_sweeps[randi() % without_sweeps.size()]
+		var scenes: Array[PackedScene] = _wave_scenes if not _wave_scenes.is_empty() else phantom_scenes
+		scene = scenes[randi() % scenes.size()]
+		if phantoms_only and _is_sweep(scene):
+			# An escort is a phantom: pick one from the same pool.
+			var without_sweeps := scenes.filter(func(candidate: PackedScene) -> bool: return not _is_sweep(candidate))
+			if without_sweeps.is_empty():
+				return null
+			scene = without_sweeps[randi() % without_sweeps.size()]
 	if scene == null:
 		return null
 	var phantom := scene.instantiate() as Node3D
@@ -183,6 +206,8 @@ func _spawn_phantom(phantoms_only: bool = false) -> Node3D:
 	if phantom.has_method("apply_wave"):
 		phantom.apply_wave(_wave)
 	_scale_contact(phantom)
+	if _hologram and phantom.has_method("set_hologram"):
+		phantom.set_hologram(true)
 	_register(phantom)
 	return phantom
 
@@ -238,7 +263,8 @@ func apply_result(result: Dictionary) -> void:
 		return
 	var damage: int = result.get("rift_damage", 0)
 	rift_health = maxi(rift_health - damage, 0)
-	_damage_flash = 1.0
+	# A harder punch flashes the rift harder. Resolves with no punch behind them flash in full.
+	_damage_flash = lerpf(0.5, 1.0, float(result.get("power", 1.0)))
 	_update_health_shader()
 	health_changed.emit(rift_health, maximum_health)
 	phantom_resolved.emit(result)
@@ -254,6 +280,14 @@ func drain_health(amount: int) -> void:
 	health_changed.emit(rift_health, maximum_health)
 	if rift_health <= 0:
 		_reach_zero()
+
+## Training: sets the health outright, without a resolve, to shape how long the live wave runs.
+func set_health(amount: int) -> void:
+	if _closing or _held:
+		return
+	rift_health = clampi(amount, 1, maximum_health)
+	_update_health_shader()
+	health_changed.emit(rift_health, maximum_health)
 
 ## Gives health back: a boss's anchor feeding on a possession.
 func restore_health(amount: int) -> void:

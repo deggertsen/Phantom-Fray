@@ -6,7 +6,7 @@
 
 ## The short answer
 
-Bosses carry the movements. A boss attacks with its tentacles, and each attack has one physical answer: squat under a high sweep, jump a low sweep, and side-step out of a slam. A slam costs the boss so much that the tentacle lies spent on the floor afterwards, and the operator does push-ups on it to drive ERM resonance through the ground into it. A boss cannot hold its shape in our world for long, so the fight is a survival interval with a known length, which is exactly the shape of a workout block; it ends when the boss retreats through its rift. Bosses demand far more exertion than anything else in the game, so they appear only at the movement difficulties; Assist, Standard, and Operator never meet one. The current six operations become the tutorial that teaches the combat rules first, and missions run five to ten minutes.
+Bosses carry the movements. A boss attacks with its tentacles, and each attack has one physical answer: squat under a high sweep, jump a low sweep, and side-step out of a slam. A slam costs the boss so much that the tentacle lies spent on the floor afterwards, and the Striker does push-ups on it to drive ERM resonance through the ground into it. A boss cannot hold its shape in our world for long, so the fight is a survival interval with a known length, which is exactly the shape of a workout block; it ends when the boss retreats through its rift. Bosses demand far more exertion than anything else in the game, so they appear only at the movement difficulties; Assist, Standard, and Operator never meet one. The current six operations become the tutorial that teaches the combat rules first, and missions run five to ten minutes.
 
 Build squats first: the detector exists, the high sweep is the safest and most readable attack, and it fits the existing rules (it resolves like the pink dodge, so it scores, chains, and damages). Jumps are in scope and Full Resonance assumes the player can jump, but a headset test has to show head tracking can see a jump before the low sweep is built. Push-ups are done on hand tracking, which is required at Full Resonance as the first thing we try.
 
@@ -32,14 +32,14 @@ Second round, on bosses:
 11. **What a boss's retreat means on the war map is open.** Decide it while building the map.
 12. **One boss first,** with attacks later bosses can reuse.
 13. **The Maw is probably the first boss.** Described below. (Refined in decision 18.)
-14. **Phantoms during a boss fight: maybe at the highest difficulties.** David's idea to explore: phantoms circle the boss, and the boss sends them at the operator as one of its attacks.
+14. **Phantoms during a boss fight: maybe at the highest difficulties.** David's idea to explore: phantoms circle the boss, and the boss sends them at the Striker as one of its attacks.
 15. **Bosses never die.** A boss always retreats through the rift it came through, before that rift closes. Lore: bosses are gathering enough energy to establish a permanent presence in our world. No banish.
 16. **Hand tracking is required at Full Resonance, as the first try.** Decide after the headset tests. Losing haptics is acceptable. Simultaneous hands and controllers is an acceptable fallback.
 
 Third round:
 
 17. **Bosses only at the higher difficulties.** They require much more physical exertion, so Assist, Standard, and Operator never meet one. Every boss attack is answered with a detected movement; there is no punch-only version.
-18. **The Maw has two phases, and only its tentacles come through.** Phase one is today's behaviour: phantoms pour through and the operator fights them. Phase two is the tentacles.
+18. **The Maw has two phases, and only its tentacles come through.** Phase one is today's behaviour: phantoms pour through and the Striker fights them. Phase two is the tentacles.
 19. **A spent tentacle is down for up to 20 seconds or 10 push-ups,** whichever comes first.
 20. **Missions run five to ten minutes each.** Since `main` removed the time limit (missions now count elapsed time up and record the fastest victory), this is a target for actual play, set by rift health and spawns.
 
@@ -98,7 +98,7 @@ David's version is the right one: the slam is dodged, not caught, and the push-u
 
 **Why the tentacle is spent.** The drain lore answers this. Everything a boss does in our world costs it energy, and holding its shape here already costs almost everything it has. A slam is its most expensive move: it pours itself into one limb, and when the limb hits the ground there is nothing left in it. It lies limp until the boss can push energy back into it. That is the classic big-attack recovery window of every boss fight, explained by the same rule that forces the retreat. It also explains why the boss's other attacks hold back while the tentacle is spent: it cannot afford them.
 
-**Why push-ups hurt it.** Chen built the ERM to discharge through the ground, like a lightning rod. A spent tentacle lying in the breach floor is touching the operator's circuit. Palms flat on the floor, on or beside the tentacle, every push-up drives a pulse of resonance through the ground into it. The pulses drain the boss's anchor (below), so push-ups are how an operator makes it retreat sooner.
+**Why push-ups hurt it.** Chen built the ERM to discharge through the ground, like a lightning rod. A spent tentacle lying in the breach floor is touching the Striker's circuit. Palms flat on the floor, on or beside the tentacle, every push-up drives a pulse of resonance through the ground into it. The pulses drain the boss's anchor (below), so push-ups are how a Striker makes it retreat sooner.
 
 **Where it lands.** The slam comes down where the player was standing. After a side-step it lies about half a metre away, in reach, so the player turns to it and gets down. No walking.
 
@@ -118,12 +118,12 @@ Ideas set aside: an overhead two-hand brace to catch the slam (worth keeping for
 
 ### The drain and the retreat
 
-**Lore.** Bosses do not die. They are trying to gather enough energy to establish a permanent presence in our world, and every crossing is an attempt to hold on. A boss can only come through at all by draining a city's worth of life force first, which is why they rise at dead cities. Holding that shape here burns it out, so an operator who outlasts it forces it back through the rift it came from, and the rift closes behind it. Phantoms already "consume positive life energy to maintain their form in our dimension"; a boss is the extreme case.
+**Lore.** Bosses do not die. They are trying to gather enough energy to establish a permanent presence in our world, and every crossing is an attempt to hold on. A boss can only come through at all by draining a city's worth of life force first, which is why they rise at dead cities. Holding that shape here burns it out, so a Striker who outlasts it forces it back through the rift it came from, and the rift closes behind it. Phantoms already "consume positive life energy to maintain their form in our dimension"; a boss is the extreme case.
 
 **Mechanic.** The boss has an **anchor**. In a boss mission the rift's health bar is the anchor: the rift is open only because the boss is holding it open. That reuses the existing rift health, the rift hexes on the bracer, and the seal dissolve.
 
 - The anchor drains steadily on its own.
-- **Possessions feed it.** Every time the boss or its phantoms drain the operator, the anchor refills a little. Mistakes keep it here longer.
+- **Possessions feed it.** Every time the boss or its phantoms drain the Striker, the anchor refills a little. Mistakes keep it here longer.
 - **Work drains it faster.** Resolved phantoms (as they damage rifts today) and pulses into a spent tentacle take anchor directly.
 - **At zero it retreats** through the rift, the rift closes, and the mission is won. A faster retreat is a better score and medal (Phase 6 medals).
 
@@ -135,7 +135,7 @@ What a retreat means on the war map is open (decision 11).
 
 David's escort idea is the strongest of the options:
 
-- **A. Escort and volley.** Phantoms circle the boss in a ring. One of its attacks breaks the ring and flings them at the operator, arriving one after another in a readable rhythm. The ring is the telegraph: the player can count the volley before it comes. This makes the phantoms part of the boss's pattern rather than a separate stream, keeps the arena readable, and scales by difficulty through volley size and speed.
+- **A. Escort and volley.** Phantoms circle the boss in a ring. One of its attacks breaks the ring and flings them at the Striker, arriving one after another in a readable rhythm. The ring is the telegraph: the player can count the volley before it comes. This makes the phantoms part of the boss's pattern rather than a separate stream, keeps the arena readable, and scales by difficulty through volley size and speed.
 - **B. Feeding.** When its anchor runs low, the boss pulls an escort in and eats it to buy time. Clearing a volley quickly keeps it hungry. It fits the lore exactly, and it gives the player a reason to care about the escort.
 - **C. Shield.** Escorts close around the spent tentacle and must be punched away before push-ups pay. **Reject:** it sends phantoms at a player on the floor.
 - **D. A stream from the rift,** as in an ordinary mission. The simplest, and the least boss-like.
@@ -148,7 +148,7 @@ Recommended: A in every boss fight, since it is the boss's own attack, and D not
 
 **As the first boss.** The Maw is that wide because something enormous is trying to come through it. Only its tentacles reach out; the body stays on the far side, because it cannot yet afford our world. That gives the first boss one thing to read, limbs to dodge and punish, and keeps the full creature back for a later reveal. It also keeps the art cost to tentacles rather than a whole creature.
 
-**Phase one: the flood** (decision 18). Today's Maw: the vast rift pours phantoms and the operator fights them, each resolve damaging the rift as it does now.
+**Phase one: the flood** (decision 18). Today's Maw: the vast rift pours phantoms and the Striker fights them, each resolve damaging the rift as it does now.
 
 **Phase two: the tentacles.** High sweeps, low sweeps, slams, spent tentacles for push-ups, and escort volleys, on an authored pattern. The anchor drains; outlast it and the tentacles pull back, the Maw closes behind them, and the mission is won. Chen's current victory line ("It will remember how long you made it chew") already fits a retreat. Three to four minutes.
 
@@ -165,13 +165,13 @@ The turn has to land like the opening of a boss fight (decision 21). The trick i
 3. **They run (1 to 3 s).** The phantoms still out stop mid-lunge, turn, and flee back to the rift. The player sees the things they have been fighting for five minutes afraid of something. They settle into a slow ring around the Maw: the escort.
 4. **It tears (3 to 5 s).** The Maw rips wider than its 8 m. The sky crack spreads. The corruption veins in the floor race from the rift to the player and run under their feet. The pylons flicker and dim. The light shifts toward the boss's colour.
 5. **The first tentacle (5 to 8 s).** One tentacle slides out along the floor toward the player, slowly, and stops two or three metres away. Then it rises until the player has to tilt their head back to see the top of it. In VR, scale is the most powerful tool we have; this is the moment to use it.
-6. **Chen (8 to 10 s).** A breath, then quietly: "It's not closing. Something's holding it open." Then: "Operator. That is not a phantom."
+6. **Chen (8 to 10 s).** A breath, then quietly: "It's not closing. Something's holding it open." Then: "Striker. That is not a phantom."
 7. **The roar (10 to 11 s).** A sound from the rift, low and spatial. A shockwave ring rolls out across the arena, lifting dust and rubble. It is harmless, and it passes through the player.
 8. **The fight (12 s).** The boss music hits. The rift hex on the bracer refills and its label changes to the boss's name: the anchor. Chen: "Get ready to move." The first attack is always a slow high sweep with a long tell, so the first thing the boss asks is the easiest thing it asks.
 
 Why it works:
 
-- **The false seal.** Every operator has watched rifts seal dozens of times. Undoing that is the scare.
+- **The false seal.** Every Striker has watched rifts seal dozens of times. Undoing that is the scare.
 - **The phantoms flee.** Fear is shown, not told: the enemy the player has been beating is afraid.
 - **Silence before sound.** A hard cut to near-silence is more intense than any loud sting.
 - **Scale.** Looking up at something is the moment VR does better than any other medium.
@@ -347,7 +347,7 @@ Small ground-hugging phantoms run in along the floor in twos and threes, targeti
 
 ### D. Ground the gauntlets (floor touch or push-ups)
 
-The fiction is the best of the set: as a rift's health falls to zero, it fights the seal, and the operator has to ground the ERM through the breach floor itself. A glowing seal opens at the player's feet. Spawning stops and live phantoms hold back (the round pauses phantom physics, as pause does today) for the length of the ritual. Each rep pushes a pulse of resonance into the seal; the rep count drives the seal's progress bar on the floor and on the bracer.
+The fiction is the best of the set: as a rift's health falls to zero, it fights the seal, and the Striker has to ground the ERM through the breach floor itself. A glowing seal opens at the player's feet. Spawning stops and live phantoms hold back (the round pauses phantom physics, as pause does today) for the length of the ritual. Each rep pushes a pulse of resonance into the seal; the rep count drives the seal's progress bar on the floor and on the bracer.
 
 Two forms, by tier:
 
@@ -569,7 +569,7 @@ A boss mission adds a `boss` entry. Only the movement difficulties offer boss mi
 
 ### What Chen says
 
-Chen reads the operator's vitals through the gauntlets, so this tier is hers to explain. In her voice, short, under three seconds:
+Chen reads the Striker's vitals through the gauntlets, so this tier is hers to explain. In her voice, short, under three seconds:
 
 - **Tier select:** "Full resonance. The gauntlets draw on your whole body. Legs too." / "More power. More cost. Clear the space around you."
 - **First sweep:** "It's sweeping at head height. Get under it."
@@ -631,7 +631,7 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 - **Where it lives.** `Scripts/Bosses/maw_boss.gd` (`MawBoss`), a node the `RiftDirector` creates under itself and hands every mission in `start_round`. Nothing runs unless the mission carries `"boss"` (the boss Maw) or `"glimpse"` (the tutorial Maw). Since 2026-10-13 the boss Maw is OP-06 at Full Resonance (section 4, "As built"): the catalog Maw's `"tier_boss"` block (`name`, `phase_one_scale` 0.5, `anchor` 840, `anchor_seconds` 210, `squat_depth` 0.20) becomes its `"boss"` there and only there. Before that it was a debug-only mission, `the_maw_boss`, now retired. In debug builds start it from the main menu with **B** (**Shift+B** forces a break), or with `--mission=the_maw_boss`, adding `--maw-breaks` to make every boss Maw break (for headset sessions).
 - **Break odds** (decision 29), decided when the mission goes live: `MawBoss.decide_break(faced, without_boss, roll)`. The first boss Maw on a profile always breaks, then `roll < 1/3`, and two dry Maws in a row force the third. `GameSettings.boss_maws_faced` and `maws_without_boss` persist with progress (`record_maw`), and Reset Progress clears them. Note the pity rule lifts the long-run rate from one in three to 9 in 19 (about 47 %), since every third dry Maw is forced; if one in three should be the real rate, the base odds need to drop to about 0.2. The war map's readings hint is not built.
 - **Phase one** is the ordinary Maw, except that on a Maw that breaks its health is scaled by `phase_one_scale` (1600 to 800) so the whole mission fits five to ten minutes. The rift's `hold_open` flag makes zero health send `held_at_zero` instead of sealing.
-- **The turn**, twelve seconds, driven from the boss's own clock so pause holds it exactly: the false seal (0 s; the portal starts to dissolve, the music settles, Chen's caption starts "That's it, it's clos—"); the silence (0.5 s; `ChenComms.cut_off()` stops her mid-word, `music_intensity_controller.cut()` stops the music dead, the SFX bus ducks 24 dB, a procedural sub-bass rumble plays from the rift on the Critical bus, and the dissolve freezes, then runs backwards from 1.2 s); they run (1 s; every phantom still out turns and flees to a slot on an upright ring around the mouth); it tears (3 to 5 s; the portal grows 1.6x, the floor veins race out from the rift under the player's feet, the sky crack spreads, the pylons flicker and dim, and the ambient and sun light shift toward crimson, all through `ArenaPresentation.set_boss_mood`); the first tentacle (5 to 8 s; it slides out along the floor, stops 2.6 m short, and rises to 8 m); Chen (8 s, "It's not closing. Something's holding it open." then "Operator. That is not a phantom."); the roar (10 s; a procedural growl from the rift and a ground shockwave ring rolling out at shin height); the fight (12 s; the boss music, Chen's "Get ready to move.", the rift hex refilling as the anchor under the name THE MAW). While the turn plays, Chen says only the boss's lines (`ChenComms.scripted`).
+- **The turn**, twelve seconds, driven from the boss's own clock so pause holds it exactly: the false seal (0 s; the portal starts to dissolve, the music settles, Chen's caption starts "That's it, it's clos—"); the silence (0.5 s; `ChenComms.cut_off()` stops her mid-word, `music_intensity_controller.cut()` stops the music dead, the SFX bus ducks 24 dB, a procedural sub-bass rumble plays from the rift on the Critical bus, and the dissolve freezes, then runs backwards from 1.2 s); they run (1 s; every phantom still out turns and flees to a slot on an upright ring around the mouth); it tears (3 to 5 s; the portal grows 1.6x, the floor veins race out from the rift under the player's feet, the sky crack spreads, the pylons flicker and dim, and the ambient and sun light shift toward crimson, all through `ArenaPresentation.set_boss_mood`); the first tentacle (5 to 8 s; it slides out along the floor, stops 2.6 m short, and rises to 8 m); Chen (8 s, "It's not closing. Something's holding it open." then "Striker. That is not a phantom."); the roar (10 s; a procedural growl from the rift and a ground shockwave ring rolling out at shin height); the fight (12 s; the boss music, Chen's "Get ready to move.", the rift hex refilling as the anchor under the name THE MAW). While the turn plays, Chen says only the boss's lines (`ChenComms.scripted`).
 - **The anchor** is the rift's health bar. It refills over 1.5 s, then drains 4 a second (840 over 3:30 with no hits and no work). A possession feeds it 20 (five seconds). Any resolve drains its usual rift damage (a sweep or slam dodge 14, three and a half seconds). Each push-up pulse into a spent tentacle drains 12 and scores 60, so a full set of ten takes 30 s off. At zero: the sweep or slam in flight is cancelled, every phantom flees back through, the tentacle recoils over 2.2 s, the Maw shrinks back and seals the ordinary way, and the mission is won with OP-06's victory line.
 - **The pattern.** Opener: a slow sweep (2.2 s tell, blade 3.4 m/s), rest 4 s, a volley of whatever fled at the turn, rest 4 s. Then the cycle until the anchor runs out: sweep (1.5 s tell, 4.6 m/s), rest 3 s, slam (with its spent window), summon escort, rest 3.5 s, sweep (1.4 s, 5.0 m/s), rest 3 s, volley, rest 4 s. That is about three squats a minute plus the floor work, a starting point for the headset session to tune.
 - **High sweep.** Step 3's `ResonanceSweep`, added to the rift as an attacker (`RiftManager.add_attacker`) with `side` set, `squat_depth` 0.20, and `blade_visible` off. The rails still light the line; the tentacle draws back past where the blade starts, then lies along the line from the rift past the player and runs sideways with `blade_position()`, its underside on the blade's height.

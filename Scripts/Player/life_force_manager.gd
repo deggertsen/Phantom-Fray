@@ -17,6 +17,9 @@ enum State { HEALTHY, CAUTION, DANGER, CRITICAL, DEPLETED }
 @export var enable_debug_keys: bool = true
 
 var current_life_force: float = 100.0
+## Damage never takes life force below this. Zero in every operation; training sets it so the
+## failsafe never fires there. reset() clears it.
+var life_floor: float = 0.0
 var _time_since_hit: float = INF
 var _is_depleted: bool = false
 var _current_state: State = State.HEALTHY
@@ -57,7 +60,7 @@ func apply_damage(amount: float) -> void:
 		return
 
 	_time_since_hit = 0.0
-	current_life_force = clampf(current_life_force - amount, 0.0, max_life_force)
+	current_life_force = clampf(current_life_force - amount, minf(life_floor, current_life_force), max_life_force)
 	life_force_changed.emit(current_life_force, max_life_force)
 	damage_applied.emit(amount, current_life_force)
 	_update_state()
@@ -69,6 +72,7 @@ func apply_damage(amount: float) -> void:
 
 func reset() -> void:
 	_is_depleted = false
+	life_floor = 0.0
 	_time_since_hit = INF
 	current_life_force = max_life_force
 	life_force_changed.emit(current_life_force, max_life_force)

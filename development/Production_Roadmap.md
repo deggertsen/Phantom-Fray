@@ -1,6 +1,6 @@
 # Phantom Fray — Production Roadmap
 
-**Last updated:** 2026-10-09
+**Last updated:** 2026-10-13
 **Current stage:** Combat system complete and fun in headset. Chen fully voiced. The six operations play as an extended tutorial, which is what they will become: the on-ramp to a world map of missions the player picks by difficulty. Replay value and narrative hooks are the gap before launch.
 **Engine:** Godot 4.7.1 + OpenXR / godot-xr-tools 4.5.1
 **Target:** Meta Quest-class standalone headset
@@ -12,20 +12,22 @@ Ideas that are not scheduled live in [Ideas_Backlog.md](Ideas_Backlog.md).
 
 ## What the game is today
 
-`Main Menu → Training or Deploy → one of six operations at one of four difficulties (no time limit; the clock counts up) → After-action report → Next operation / Retry`
+`Main Menu → Training (Chen's chamber) or Deploy → one of six operations at one of four difficulties (no time limit; the clock counts up) → After-action report → Next operation / Retry`
 
 - Stationary, physical play: punch, two-hand block, side-step or duck. No artificial locomotion.
+- Training is a played scenario: Dr. Chen's training chamber, a holographic dome where she introduces herself and pauses each phantom's hologram in reach to teach it, lets one possession through, shows punch power with damage readouts, and ends on a live wave. It cannot fail and replaces the six text pages. Plan in [Tutorial_Plan.md](Tutorial_Plan.md).
+- Punch power: rift damage scales 0.85x to 1.3x with punch speed (2 to 6 m/s); score does not.
 - Four phantom rules on three creature species with three body forms each: Angler (yellow left, blue right, lure is the crit), Carapace (green, two-hand block), Spearfin (pink, floor lane, dodge).
 - Phantoms arrive on one continuous accelerating arc and lunge for the head. A strike counts once the body is in reach.
 - Rifts have health, a damage flash, a beacon column, and a dissolve on seal. Up to two can be open at once. The Maw is a double-size rift. Missions doubled in length on 2026-10-09: OP-01 to OP-05 run twice the rifts (4, 12, 12, 16, 16) and The Maw's single rift has twice the health (1600). A sealed rift's phantoms stay in play; the operation is won when the last one is dealt with.
-- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the operator out. Operators never die.
+- Life force: 100, minus 20 per possession, plus 1 per second after 3 clear seconds. Frost and veins close in, vision distorts on a hit, heartbeat and music duck by state. At zero the gauntlets' failsafe fires and the recovery team pulls the Striker out. Strikers never die.
 - Score with a chain multiplier up to 3x. Crit, on-arrival and dodge bonuses. Best score and fastest victory are stored per operation and difficulty; results show the completion time and call a new best time. Each Operations card shows an expected time range and the best time beside it.
 - Dr. Chen on comms: 33 moments, 4 to 5 takes each, voiced with ElevenLabs. Cooldown and max-wait pacing so she never cuts herself off. Opening line knows if this is a first attempt, a retry after the failsafe, or a replay; victory line knows if it was flawless, at critical, or a new best.
 - Play My Own Music: a settings switch silences the soundtrack so any music app plays through.
 - Four difficulties chosen on the Operations screen and saved: Assist, Standard (the game as tuned), Operator, and Full Resonance, the movement difficulty, where The Maw can break into its boss fight (high and low sweeps, slams, push-ups on a spent tentacle, escort volleys). `Scripts/Core/difficulty_tier.gd`.
 - Breach-site arena: hex floor with corruption veins that follow open rifts, RSF pylons, dead-city skyline, rubble, sky crack.
 - Bracer wrist panel: operation, elapsed time, life force, rift hexes, score, multiplier, Chen caption.
-- World-space menu with dual lasers: main (next mission with its expected time and difficulty), Operations (difficulty row, six contracts with lock state, expected time, and best time at that difficulty), six-page Training, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation.
+- World-space menu with dual lasers: main (next mission with its expected time and difficulty), Operations (difficulty row, six contracts with lock state, expected time, and best time at that difficulty), Training (the chamber) and Training Complete, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation and, after a defeat, Review Training.
 - Mission progress, best scores, best times, and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, own-music settings, rift stragglers, and the pink dodge.
 - Quest debug and release build scripts, signed-package evidence, export guide, ElevenLabs generation and transcription check for Chen's lines.
 
@@ -80,7 +82,7 @@ Fitness is the product. The tutorial operations are the on-ramp; the world map i
 
 ## Phase 7 — Narrative hooks and the war
 
-Give the sweat a purpose. The Overseer is winning unless operators show up.
+Give the sweat a purpose. The Overseer is winning unless Strikers show up.
 
 - [ ] Campaign restructure: the current six operations become the RSF tutorial. Together they teach the combat rules the world map uses, ending with The Maw's flood and a first glimpse of the tentacle holding it open. Each clear is also a story beat with a Chen debrief that reveals one thing about the Overseer.
 - [ ] War map: a world map of breach sites with a front line. After the tutorial this is how the game is played: the player picks a breach and a difficulty, not the next operation number. Sealing rifts pushes the line. Early version is local-only; later versions aggregate across players, in the spirit of Helldivers 2's galactic war.
@@ -93,8 +95,8 @@ Give the sweat a purpose. The Overseer is winning unless operators show up.
 ## Phase 8 — Location variety
 
 - [ ] Breach-site presets per operation: sky color and crack, pylon state, city density and height, floor palette, rubble. All of it is already procedural.
-- [ ] Remove the training-chamber briefing text from the dead-city arena, or make the first operation a chamber and move the rest outside.
-- [ ] Two or three distinct sites for the map: dead city, coastal breach, mountain relay, and a training chamber.
+- [x] Remove the training-chamber briefing text from the dead-city arena. Done 2026-10-13: the sign shows only inside the training chamber dome.
+- [ ] Two or three distinct sites for the map: dead city, coastal breach, mountain relay. (The training chamber exists as a dome over the breach site; a real chamber interior could replace it.)
 
 ## Phase 9 — Comfort and feel
 

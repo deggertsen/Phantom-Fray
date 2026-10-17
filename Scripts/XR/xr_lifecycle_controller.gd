@@ -63,7 +63,7 @@ func _suspend_gameplay() -> void:
 	if _suspended:
 		return
 	_suspended = true
-	_was_round_active = _round != null and _round.is_round_in_progress()
+	_was_round_active = (_round != null and _round.is_round_in_progress()) or (_flow != null and _flow.has_method("is_training") and _flow.is_training())
 	if _was_round_active:
 		_round.pause_round()
 		if _flow and _flow.has_method("show_suspended_pause"):

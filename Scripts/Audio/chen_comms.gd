@@ -20,11 +20,15 @@ class_name ChenComms
 signal line_started(speaker: String, text: String, seconds: float)
 ## She was cut off mid-line (cut_off). The caption should go too.
 signal line_cut
+## She finished a line, or was cut off. Training waits on this between lines.
+signal line_ended(event: String)
 
 const FOLDER := "res://Assets/Audio/VO/chen/"
 const SCRIPT := preload("res://Assets/Audio/VO/chen/chen_lines.json")
 const DEFAULT_MAX_WAIT := 3.0
 const MAX_QUEUE := 3
+## A captioned line with no recording holds this long per word, and never less than 2.2 s.
+const CAPTION_SECONDS_PER_WORD := 0.36
 ## Rifts this close to where the player is looking are "dead ahead"; wider ones get a clock bearing.
 const IN_VIEW_DEGREES := 50.0
 const LIFE_ORDER := {&"healthy": 0, &"caution": 1, &"danger": 2, &"critical": 3, &"depleted": 4}
@@ -43,10 +47,14 @@ var _ended_at: float = -INF
 var _speaking_until: float = -INF
 var _max_wait: float = DEFAULT_MAX_WAIT
 var _last_take: Dictionary = {}
-## Counts finished lines, so a caption timer from a line that was cut off cannot end the next one.
-var _line_serial: int = 0
 ## While a boss scene plays out (the turn), only its own lines get through.
 var scripted: bool = false
+## While set, only events starting with it get through. Training holds it at "tutorial_".
+var lock_prefix: String = ""
+var _paused: bool = false
+## The mission is training: the tutorial director speaks for it, so the mission's own
+## opening, sightings, rift bearings, and debrief stay quiet.
+var _training: bool = false
 
 var _round: RoundController
 var _director: Node
@@ -89,6 +97,8 @@ func say(event: String) -> void:
 	var info: Dictionary = _events.get(event, {})
 	if info.is_empty() or event == _playing_event or (scripted and not event.begins_with("boss_")):
 		return
+	if lock_prefix != "" and not event.begins_with(lock_prefix):
+		return
 	for queued in _queue:
 		if queued["event"] == event:
 			return
@@ -103,8 +113,18 @@ func say(event: String) -> void:
 	if _queue.size() > MAX_QUEUE:
 		_queue.resize(MAX_QUEUE)
 
+## Training's pause menu holds her mid-line and holds what she has waiting.
+func set_paused(paused: bool) -> void:
+	_paused = paused
+	_player.stream_paused = paused
+
 func _process(delta: float) -> void:
+	if _paused:
+		return
 	_clock += delta
+	# A captioned line with no recording ends when its time is up.
+	if _playing_event != "" and _player.stream == null and _clock >= _speaking_until:
+		_on_line_finished()
 	_watch_round(delta)
 	_queue = _queue.filter(_can_still_start)
 	# Speaking until her finished signal lands; the player reports not-playing a frame earlier.
@@ -156,20 +176,29 @@ func _play(event: String) -> void:
 		_player.play()
 		seconds = stream.get_length()
 	else:
-		# No recording yet: caption it and hold the line's time as if it were spoken.
-		get_tree().create_timer(seconds).timeout.connect(_on_caption_finished.bind(_line_serial))
+		# No recording yet: caption it and hold the line's time as if it were spoken. _process
+		# ends it on her clock, so a pause holds the caption too.
+		_player.stream = null
+		# About as long as she would take to say it: her introduction is a paragraph.
+		seconds = maxf(seconds, String(lines[take]).split(" ", false).size() * CAPTION_SECONDS_PER_WORD)
 	_speaking_until = _clock + seconds
 	line_started.emit(_speaker, String(lines[take]), seconds)
 
 func _on_line_finished() -> void:
+	var event := _playing_event
 	_ended_at = _clock
 	_playing_event = ""
-	_line_serial += 1
+	line_ended.emit(event)
 
-## A captioned line's time ran out, unless she was cut off and has started another since.
-func _on_caption_finished(serial: int) -> void:
-	if serial == _line_serial and _playing_event != "":
-		_on_line_finished()
+## True while she is saying something or has something waiting.
+func is_busy() -> bool:
+	return _playing_event != "" or not _queue.is_empty()
+
+## Counts these kinds as already introduced this session, so she does not introduce them again.
+func mark_introduced(kinds: Array) -> void:
+	for kind in kinds:
+		_introduced[String(kind)] = true
+
 
 ## Stops her mid-word and forgets what was waiting. Only the boss's turn does this: the one
 ## moment the script wants her cut off.
@@ -238,7 +267,10 @@ func _watch_round(delta: float) -> void:
 				say("first_" + kind)
 
 func _begin_mission() -> void:
-	_queue.clear()
+	_training = bool(_round.current_mission().get("tutorial", false))
+	# Training speaks for itself; what it has queued stays queued.
+	if not _training:
+		_queue.clear()
 	_jump_called = false
 	_rifts_this_mission = 0
 	_weakened.clear()
@@ -246,6 +278,8 @@ func _begin_mission() -> void:
 	_life_level = 0
 	_took_damage = false
 	_sweeps_since_bend_call = -1
+	if _training:
+		return
 	_mission_id = String(_round.current_mission().get("id", ""))
 	var settings := get_node_or_null("/root/GameSettings")
 	var cleared: bool = settings != null and settings.has_cleared_mission(_mission_id)
@@ -259,7 +293,7 @@ func _on_countdown_started(mission: Dictionary) -> void:
 	if event != "":
 		say(event)
 
-## The opening line knows the operator's history with this breach.
+## The opening line knows the Striker's history with this breach.
 func _mission_start_event(cleared: bool) -> String:
 	if _last_outcome.get(_mission_id, &"") == &"defeat":
 		return "mission_start_retry"
@@ -274,7 +308,7 @@ func _on_rift_spawned(rift_id: int, rift: Node3D) -> void:
 	if rift and rift.has_signal("health_changed"):
 		rift.health_changed.connect(_on_rift_health.bind(rift_id))
 	# The first rift opens as the mission starts; the mission line covers it.
-	if _rifts_this_mission == 1 or rift == null or _camera == null:
+	if _training or _rifts_this_mission == 1 or rift == null or _camera == null:
 		return
 	say(_bearing_event(rift.global_position))
 
@@ -350,8 +384,11 @@ func _on_damage_applied(_amount: float, _current: float) -> void:
 		say("possessed")
 
 ## Victory lines react to how it went: untouched, at critical, a new best, or simply sealed.
-## A defeat means the gauntlets' failsafe fired and the recovery team is pulling the operator out.
+## A defeat means the gauntlets' failsafe fired and the recovery team is pulling the Striker out.
 func _on_round_finished(outcome: StringName, score: int) -> void:
+	if _training:
+		_training = false
+		return
 	_queue.clear()
 	_last_outcome[_mission_id] = outcome
 	match outcome:

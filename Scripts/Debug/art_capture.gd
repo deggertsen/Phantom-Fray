@@ -46,7 +46,7 @@ func _ready() -> void:
 	_place_hands()
 	await _settle(30)
 
-	await _shot("operator", Vector3(0.0, 1.6, 0.0), Vector3(0.0, 1.4, -6.0))
+	await _shot("striker", Vector3(0.0, 1.6, 0.0), Vector3(0.0, 1.4, -6.0))
 	await _shot("wide", Vector3(7.5, 5.0, 5.5), Vector3(0.0, 1.2, -5.0))
 	await _shot("arena", Vector3(0.0, 1.6, 0.0), Vector3(-6.0, 1.9, 4.0))
 	for id in _phantoms:

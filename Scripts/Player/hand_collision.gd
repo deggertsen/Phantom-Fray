@@ -65,7 +65,8 @@ func _try_strike(body: Node3D) -> void:
 	elif result.get("valid", false):
 		var sweet: bool = result.get("sweet_spot", false)
 		var on_beat: bool = result.get("on_beat", false)
-		_pulse_hand(1.0, 0.22 if sweet or on_beat else 0.16)
+		# A harder punch lands harder in the hand, as it does in the rift.
+		_pulse_hand(lerpf(0.75, 1.0, float(result.get("power", 1.0))), 0.22 if sweet or on_beat else 0.16)
 	else:
 		_pulse_hand(0.4 if kind == &"not_open" else 0.55, 0.07)
 
