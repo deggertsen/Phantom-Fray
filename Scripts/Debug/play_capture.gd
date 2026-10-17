@@ -16,6 +16,10 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(_out_dir)
 	_main = (load("res://main.tscn") as PackedScene).instantiate() as Node3D
 	add_child(_main)
+	# A desktop window losing focus would suspend the run as a headset does. Not here.
+	var lifecycle := _main.get_node_or_null("XRLifecycleController")
+	if lifecycle:
+		lifecycle.queue_free()
 	await _wait(1.0)
 	# Stand the desktop camera at head height, as a player would be.
 	var camera := _main.get_node("Player/XRCamera3D") as Node3D
@@ -25,12 +29,11 @@ func _ready() -> void:
 		if arg == "--mission=sweep_drill":
 			await _capture_sweep(camera)
 			return
+		if arg == "--tutorial":
+			await _capture_tutorial(camera)
+			return
 	await _capture("01-menu")
-	_press(KEY_T)
-	await _wait(0.8)
-	await _capture("01b-tutorial")
-	_press(KEY_ESCAPE)
-	await _wait(0.5)
+	# Training is its own capture (-- --tutorial): T would start the whole chamber here.
 	_press(KEY_S)
 	await _wait(0.8)
 	await _capture("01c-settings")
@@ -86,6 +89,173 @@ func _capture_sweep(camera: Node3D) -> void:
 	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
 
+## Chen's training chamber, start to finish at real speed, with a stand-in recruit doing the
+## right thing at each paused hologram once she has finished explaining it.
+## Run: Godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/play_capture.tscn -- --tutorial --art-label=tutorial
+func _capture_tutorial(camera: Node3D) -> void:
+	var tutorial := get_tree().get_first_node_in_group("TutorialDirector") as TutorialDirector
+	var chen := get_tree().get_first_node_in_group("ChenComms") as ChenComms
+	var life := get_tree().get_first_node_in_group("LifeForceManager") as LifeForceManager
+	var done := [false]
+	tutorial.finished.connect(func() -> void: done[0] = true)
+	# A new recruit, saved to a scratch profile so the run leaves the real one alone.
+	var settings := get_node_or_null("/root/GameSettings")
+	if settings:
+		settings.settings_path = "user://play_capture_settings.cfg"
+		settings.tutorial_completed = false
+	_main.get_node("GameFlowController").restore_current_menu()
+	await _wait(0.5)
+	await _capture("t00-menu-new-recruit")
+	_press(KEY_T)
+	_watch_beats.call_deferred(tutorial)
+	await _wait(2.0)
+	await _capture("t01-intro")
+	_capture_bracer("t01a-intro-caption")
+	# The introduction is one long line; the wrist pages through it.
+	await _wait(12.0)
+	_capture_bracer("t01b-intro-caption-later")
+	await _until_beat(tutorial, &"play_space")
+	await _wait(1.5)
+	await _capture("t02-play-space")
+	while tutorial.beat == &"play_space":
+		_press(KEY_ENTER)
+		await _wait(0.5)
+	await _wait(1.2)
+	await _capture("t03-rift")
+	var shots := {
+		&"yellow": "t04-yellow-paused", &"blue": "t05-blue-paused", &"green": "t07-green-paused",
+		&"pink": "t08-pink-lane-locked", &"possession": "t09a-possession-paused",
+	}
+	var taken := {}
+	var tapped := false
+	var stepped := false
+	while not done[0]:
+		await get_tree().physics_frame
+		var beat := tutorial.beat
+		var phantom := tutorial.current_phantom()
+		var held := phantom != null and phantom.is_held()
+		if held and shots.has(beat) and not taken.has(beat):
+			taken[beat] = true
+			await _wait(0.6)
+			await _capture(shots[beat])
+			_capture_bracer(shots[beat] + "-bracer")
+		match beat:
+			&"yellow", &"blue", &"green", &"power":
+				if held and not chen.is_busy():
+					if beat == &"power":
+						_hit(phantom, &"left", 7.0 if tapped else 1.5)
+						var hard := tapped
+						tapped = true
+						if hard:
+							await _wait(0.35)
+							await _capture("t11-power-readout")
+					elif beat == &"green":
+						_hit(phantom, &"left", 4.0)
+						_hit(phantom, &"right", 4.0)
+					else:
+						_hit(phantom, &"left" if beat == &"yellow" else &"right", 4.0, true)
+			&"pink":
+				if held and not chen.is_busy() and not stepped:
+					stepped = true
+					camera.position.x = 0.6
+			&"possession":
+				camera.position.x = 0.0
+				# Desktop cannot raise a glove into view: Enter stands in for the look.
+				if not taken.has(&"glove") and "tutorial_glove_check" in tutorial.spoken and not chen.is_busy():
+					taken[&"glove"] = true
+					await _capture("t09c-glove-check")
+					_press(KEY_ENTER)
+				if not taken.has(&"frost") and life.current_life_force < life.max_life_force - 10.0:
+					taken[&"frost"] = true
+					await _wait(0.35)
+					await _capture("t09b-possession-frost")
+					_capture_bracer("t09b-possession-bracer")
+			&"rift_health":
+				if not taken.has(beat):
+					taken[beat] = true
+					await _wait(1.5)
+					await _capture("t10-rift-health")
+					_capture_bracer("t10-rift-health-bracer")
+			&"chain", &"live_wave":
+				_strike_in_reach(beat)
+				if beat == &"chain" and not taken.has(beat):
+					taken[beat] = true
+					await _wait(3.5)
+					await _capture("t06-chain")
+					_capture_bracer("t06-chain-bracer")
+				if beat == &"live_wave" and not taken.has(beat):
+					taken[beat] = true
+					await _wait(4.0)
+					await _capture("t12-live-wave")
+				if beat == &"live_wave" and not taken.has(&"seal") and "tutorial_last_one" in tutorial.spoken:
+					taken[&"seal"] = true
+					while tutorial.beat == &"live_wave" and not "tutorial_straggler" in tutorial.spoken and not "tutorial_sealed_clean" in tutorial.spoken:
+						_strike_in_reach(beat)
+						await get_tree().physics_frame
+					await _wait(0.4)
+					await _capture("t13-after-seal")
+	await _wait(1.0)
+	await _capture("t14-training-complete")
+	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
+	get_tree().quit()
+
+## If a beat runs past 60 s, print what is in play, once per beat, so a stalled run says why.
+func _watch_beats(tutorial: TutorialDirector) -> void:
+	var beat := &""
+	var since := 0.0
+	var reported := false
+	# Started from the T press, which the game reads a frame or two later.
+	while not tutorial.is_running():
+		await get_tree().process_frame
+	while tutorial.is_running():
+		await get_tree().process_frame
+		if tutorial.beat != beat:
+			beat = tutorial.beat
+			since = 0.0
+			reported = false
+		since += get_process_delta_time()
+		if since < 60.0 or reported:
+			continue
+		reported = true
+		var chen := get_tree().get_first_node_in_group("ChenComms") as ChenComms
+		var round := get_tree().get_first_node_in_group("RoundController") as RoundController
+		print("BEAT STALL %s chen=%s queue=%d voice_playing=%s round_active=%s spoken_last=%s" % [beat, chen._playing_event, chen._queue.size(), chen._player.playing, round.is_round_active(), tutorial.spoken.slice(-3)])
+		for rift in get_tree().get_nodes_in_group("active_rift"):
+			print("  rift health=%d feed=%s spawning=%s live=%d" % [rift.rift_health, rift.feed_enabled, rift.spawning_enabled, rift.live_phantoms().size()])
+		for node in get_tree().get_nodes_in_group("phantom"):
+			var p := node as Phantom
+			if p:
+				print("  %s held=%s phase=%d dist=%.2f alive=%.1f physics=%s terminal=%s" % [p.variant_id, p.is_held(), p._phase, p.global_position.distance_to(_main.get_node("Player/XRCamera3D").global_position), p._alive_time, p.is_physics_processing(), p._terminal])
+
+func _until_beat(tutorial: TutorialDirector, beat: StringName) -> void:
+	while tutorial.beat != beat:
+		await get_tree().process_frame
+
+## The stand-in recruit in a live beat: the matching hand on anything in reach.
+func _strike_in_reach(_beat: StringName) -> void:
+	for node in get_tree().get_nodes_in_group("phantom"):
+		var phantom := node as Phantom
+		if phantom == null or not phantom.shows_approach_cue() or not phantom.is_strike_window_open():
+			continue
+		match phantom.variant_id:
+			&"yellow":
+				_hit(phantom, &"left", 4.5)
+			&"blue":
+				_hit(phantom, &"right", 4.5)
+			&"green":
+				_hit(phantom, &"left", 4.5)
+				_hit(phantom, &"right", 4.5)
+
+func _hit(phantom: Phantom, hand: StringName, speed: float, on_lure: bool = false) -> void:
+	if not is_instance_valid(phantom) or not phantom.shows_approach_cue():
+		return
+	var at := phantom.global_position
+	var lure := phantom.get_node_or_null("SweetSpotVisual") as Node3D
+	if lure and on_lure:
+		at = lure.global_position
+	elif lure:
+		at += Vector3(0.0, -0.5, 0.0)
+	phantom.receive_strike({"hand_id": hand, "position": at, "direction": Vector3.FORWARD, "speed": speed})
 ## The Operations screen at the profile's difficulty, then at Full Resonance, then back to the
 ## main menu. The tier is switched in memory only, so the real profile keeps its choice.
 func _capture_operations() -> void:

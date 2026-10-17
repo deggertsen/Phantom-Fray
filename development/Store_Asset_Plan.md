@@ -11,7 +11,7 @@ Updated 2026-10-08. Copy below is a working draft for the fitness-combat positio
 
 ## Description draft
 
-In 2142 humanity's interdimensional experiments caused The Breach. Conventional weapons pass through the life-force-hungry Phantoms. As a Resonance Strike Force operator you wear Dr. Elara Chen's ERM gauntlets, the only thing that can break a Phantom's link to the Overseer.
+In 2142 humanity's interdimensional experiments caused The Breach. Conventional weapons pass through the life-force-hungry Phantoms. As a Striker of the Resonance Strike Force you wear Dr. Elara Chen's ERM gauntlets, the only thing that can break a Phantom's link to the Overseer.
 
 Every Phantom is a different movement. Yellow and blue Anglers take a left or right strike on their glowing lure. Green Carapaces crash your chest and need both fists. Pink Spearfins paint a lane and charge it, so step out of the line. Keep your chain alive, keep them out of your head, and seal every rift.
 

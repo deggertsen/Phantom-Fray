@@ -15,20 +15,20 @@ Player vitality and the stakes of a possession. Updated 2026-10-09 to match `Scr
 | Critical | 10% and below |
 | Depleted | 0, the failsafe fires and the operation is failed |
 
-Five possessions without recovery end a run. Recovery resets on every hit. Damage is ignored once depleted so the fail state fires once.
+Five possessions without recovery end a run. Recovery resets on every hit. Damage is ignored once depleted so the fail state fires once. In training, `life_floor` (20, from the training mission) keeps damage from taking life force any lower, so training cannot fail; `reset()` clears it.
 
 The original design had tiered drain (basic 5, elite 10, boss 20). The code settled on a flat 20 because the campaign's pressure comes from the number of phantoms, and a possession needs to hurt enough to matter. Tiers return if elite or boss phantoms arrive.
 
 ## Depletion: failsafe and recovery
 
-The operator never dies. Reaching 0 life force ends the mission as a failure, framed in the fiction like this:
+The Striker never dies. Reaching 0 life force ends the mission as a failure, framed in the fiction like this:
 
-- The gauntlets run on the operator's life force, which is also why Dr. Chen can read the operator's vitals live over comms.
-- At 0, the gauntlets' failsafe inverts the ERM and dumps its whole charge. The burst throws the phantoms off and stops the drain, but it knocks the operator out.
-- The RSF recovery team waiting at the pylon line goes in and drags the operator clear. The breach stays open.
+- The gauntlets run on the Striker's life force, which is also why Dr. Chen can read the Striker's vitals live over comms.
+- At 0, the gauntlets' failsafe inverts the ERM and dumps its whole charge. The burst throws the phantoms off and stops the drain, but it knocks the Striker out.
+- The RSF recovery team waiting at the pylon line goes in and drags the Striker clear. The breach stays open.
 - The next attempt starts with the failsafe recharged. Chen's retry lines acknowledge it ("Failsafe's recharged. Let's try that again.").
 
-A phantom getting into the operator ("possession" in code) is a hit that drains life force, not death. Chen's critical-life lines warn that the failsafe is about to fire, and her defeat lines are her calling in the recovery team. Results, debriefs, and voice lines should all keep to this framing.
+A phantom getting into the Striker ("possession" in code) is a hit that drains life force, not death. Chen's critical-life lines warn that the failsafe is about to fire, and her defeat lines are her calling in the recovery team. Results, debriefs, and voice lines should all keep to this framing.
 
 ## Signals
 

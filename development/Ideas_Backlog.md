@@ -34,7 +34,7 @@ Ideas worth keeping that are not on the roadmap yet. Nothing here is scheduled. 
 - **Intelligence-gathering operations.** Capture a specific phantom type, hold a position while Chen's team works, target relay phantoms that are feeding the Overseer.
 - **Checkpoints inside long operations.** For 8-minute operations, a mid-operation checkpoint after a seal so a failsafe does not cost the whole run.
 - **Earth mission replays and off-planet DLC.** From the original progression notes: replaying cleared breaches with modifiers; a later expansion through a rift to the phantom dimension.
-- **Multiplayer.** Co-op holds where two operators share a breach, and the original "life force sharing" idea where one operator can lend the other recovery.
+- **Multiplayer.** Co-op holds where two Strikers share a breach, and the original "life force sharing" idea where one Striker can lend the other recovery.
 - **Daily and weekly breach.** Scheduled in Phase 7; the seeded, shared version of it with modifiers is still an idea.
 
 ## Presentation and audio
@@ -51,7 +51,7 @@ Ideas worth keeping that are not on the roadmap yet. Nothing here is scheduled. 
 - **Achievements.** Flawless seals, maximum chain, all operations gold.
 - **Leaderboards.** Scheduled in Phase 7; friend leaderboards and weekly resets stay here.
 - **Mod support.** Custom wave tables and breach sites as data files, since operations are already dictionaries.
-- **Community features.** Shared war progress (Phase 7), clans or squads, operator profiles.
+- **Community features.** Shared war progress (Phase 7), clans or squads, Striker profiles.
 
 ## Lore and story
 

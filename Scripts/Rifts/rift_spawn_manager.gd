@@ -156,6 +156,9 @@ func _on_strike_rejected(reason: StringName) -> void:
 func _find_valid_position() -> Vector3:
 	var player_position := _player.global_position if _player else Vector3.ZERO
 	var forward := _player_forward()
+	# Training: one rift, straight ahead.
+	if bool(_mission.get("rift_ahead", false)):
+		return player_position + Vector3(forward.x * 11.0, rift_height, forward.z * 11.0)
 	if _arc_rifts:
 		return _position_on_arc(player_position, forward)
 	if _cluster_rifts and not rift_instances.is_empty():

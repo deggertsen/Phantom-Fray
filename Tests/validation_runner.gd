@@ -27,6 +27,9 @@ func _run_validation() -> void:
 	_validate_maw_break_odds()
 	await _validate_maw_boss()
 	await _validate_maw_glimpse()
+	await _validate_phantom_hold()
+	await _validate_punch_power()
+	await _validate_tutorial_flow()
 	await _validate_resonance_sweep()
 	_validate_hand_tracking_probe()
 	_validate_tracked_hands()
@@ -169,16 +172,32 @@ func _validate_menu_surface() -> void:
 		)
 		if not menu.activate_at_viewport_point(deploy.get_global_rect().get_center()) or not activated[0]:
 			failures.append("Pointing at a menu button did not activate it")
-	var tutorial_pages: Array[Dictionary] = [{
-		"eyebrow": "TEST",
-		"title": "WAIT FOR CONTINUE",
-		"body": "Tutorial content remains visible until Continue is selected.",
-		"callout": "CONTINUE",
-		"color": Color.CYAN,
-	}]
-	menu.show_tutorial(0, tutorial_pages)
-	if _find_button(menu, "COMPLETE TRAINING") == null:
-		failures.append("Tutorial continue action is missing")
+	# A new recruit: training is the highlighted button, and Deploy still works.
+	menu.show_main_menu("NEXT", true)
+	await process_frame
+	var new_training := _find_button(menu, "START TRAINING")
+	var new_deploy := _find_button(menu, "DEPLOY MISSION")
+	if new_training == null or not bool(new_training.get_meta(&"primary", false)) or new_deploy == null or bool(new_deploy.get_meta(&"primary", false)) or new_deploy.disabled:
+		failures.append("A new recruit's main menu does not lead with training")
+	elif not "TRAINING RECOMMENDED FIRST" in new_deploy.text:
+		failures.append("Deploy does not recommend training to a new recruit")
+	menu.show_training_complete("NEXT")
+	await process_frame
+	var complete_actions := _button_actions(menu)
+	if complete_actions != ["training_deploy", "training_replay", "training_menu"]:
+		failures.append("Training Complete offers %s" % [complete_actions])
+	menu.show_pause(true)
+	await process_frame
+	if _button_actions(menu) != ["resume", "pause_settings", "end_training"]:
+		failures.append("The training pause menu offers %s" % [_button_actions(menu)])
+	menu.show_results(&"defeat", 100, "", "", 0.0, 0.0, "", true)
+	await process_frame
+	if not "results_training" in _button_actions(menu):
+		failures.append("Defeat results do not offer Review Training")
+	menu.show_results(&"victory", 100, "", "NEXT", 60.0, 0.0, "", false)
+	await process_frame
+	if "results_training" in _button_actions(menu):
+		failures.append("Victory results offer Review Training")
 	menu.show_settings("75%", "50%", "100%", false, false)
 	await process_frame
 	var flashes_off := false
@@ -240,6 +259,12 @@ func _buttons_under(node: Node) -> Array[Button]:
 	for child in node.get_children():
 		found.append_array(_buttons_under(child))
 	return found
+
+func _button_actions(node: Node) -> Array[String]:
+	var actions: Array[String] = []
+	for button in _buttons_under(node):
+		actions.append(String(button.get_meta(&"menu_action", &"")))
+	return actions
 
 func _find_button(node: Node, text_fragment: String) -> Button:
 	if node is Button and text_fragment in node.text:
@@ -1506,6 +1531,9 @@ func _borrow_settings(scratch: bool, saved: Dictionary) -> void:
 		saved["faced"] = settings.boss_maws_faced
 		saved["dry"] = settings.maws_without_boss
 		saved["cleared"] = settings.cleared_missions
+		saved["tutorial"] = settings.tutorial_completed
+		saved["scores"] = settings.best_scores.duplicate()
+		saved["times"] = settings.best_times.duplicate()
 		settings.settings_path = "user://validation_boss_settings.cfg"
 		settings.cleared_missions = PackedStringArray()
 		return
@@ -1513,6 +1541,9 @@ func _borrow_settings(scratch: bool, saved: Dictionary) -> void:
 	settings.boss_maws_faced = saved["faced"]
 	settings.maws_without_boss = saved["dry"]
 	settings.cleared_missions = saved["cleared"]
+	settings.tutorial_completed = saved["tutorial"]
+	settings.best_scores = saved["scores"]
+	settings.best_times = saved["times"]
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://validation_boss_settings.cfg"))
 
 func _validate_maw_boss() -> void:
@@ -1940,3 +1971,302 @@ func _validate_low_sweep() -> void:
 		sweep.free()
 	player.free()
 	await process_frame
+
+## Training's paused hologram: a yellow told to hold stops in reach and stays there without
+## possessing, even with the head leaning into it; a wrong hand leaves it held, the right hand
+## resolves it, and a released one lunges and possesses. A pink holds at lane lock, shrugs off
+## a punch, and once the head is out of its lane and it is released, resolves as a dodge.
+func _validate_phantom_hold() -> void:
+	var head := Node3D.new()
+	root.add_child(head)
+	head.global_position = Vector3(0.0, 1.6, 0.0)
+	var yellow := await _held_yellow(head)
+	if yellow == null:
+		failures.append("A yellow told to hold never paused in reach")
+		head.queue_free()
+		return
+	var distance := yellow.global_position.distance_to(head.global_position)
+	if distance > 1.1 or distance < 0.8:
+		failures.append("A held yellow paused %.2f m from the head, not in punching reach" % distance)
+	var spot := yellow.global_position
+	for _step in 90:
+		await _physics_step(yellow)
+	head.global_position = spot + Vector3(0.0, 0.0, 0.2)
+	for _step in 30:
+		await _physics_step(yellow)
+	if yellow._terminal or yellow.global_position.distance_to(spot) > 0.01 or not yellow.is_held():
+		failures.append("A held yellow moved, ended, or possessed while paused")
+	head.global_position = Vector3(0.0, 1.6, 0.0)
+	var lure: Vector3 = yellow.sweet_spot_visual.global_position
+	var wrong: Dictionary = yellow.receive_strike({"hand_id": &"right", "position": lure, "direction": Vector3.FORWARD, "speed": 4.0})
+	if wrong.get("resolution_kind", &"") != &"wrong_hand" or not yellow.is_held():
+		failures.append("A wrong hand released a held yellow")
+	var right: Dictionary = yellow.receive_strike({"hand_id": &"left", "position": lure, "direction": Vector3.FORWARD, "speed": 4.0})
+	if not right.get("valid", false) or yellow.is_held():
+		failures.append("The right hand did not resolve a held yellow")
+	yellow.queue_free()
+	var lunger := await _held_yellow(head)
+	if lunger:
+		var bitten := [false]
+		lunger.player_contact.connect(func(_damage: float) -> void: bitten[0] = true)
+		lunger.release_hold()
+		for _step in 120:
+			if bitten[0]:
+				break
+			await _physics_step(lunger)
+		if not bitten[0]:
+			failures.append("A released yellow did not lunge in and possess")
+		lunger.queue_free()
+	var pink := (load("res://Scenes/Phantoms/pink_phantom.tscn") as PackedScene).instantiate() as SpearfinPhantom
+	root.add_child(pink)
+	await process_frame
+	pink.global_position = Vector3(0.0, 1.6, -9.0)
+	pink._player_camera = head
+	pink._lock_pink_target()
+	pink.set_physics_process(false)
+	pink.hold_at_lane_lock()
+	for _step in 240:
+		await _physics_step(pink)
+		if pink.is_held() or pink._terminal:
+			break
+	if not pink.is_held():
+		failures.append("A pink told to hold did not pause at lane lock")
+	else:
+		var punch: Dictionary = pink.receive_strike({"hand_id": &"left", "position": pink.global_position, "direction": Vector3.FORWARD, "speed": 4.0})
+		if punch.get("valid", true) or not pink.is_held():
+			failures.append("A punch moved a held pink")
+		head.global_position += Vector3(0.6, 0.0, 0.0)
+		var line := pink.charge_line()
+		if Geometry3D.get_closest_point_to_segment(head.global_position, line[0], line[1]).distance_to(head.global_position) <= TutorialDirector.LANE_CLEARANCE:
+			failures.append("A side-step did not leave the pink's lane")
+		var outcome := [&""]
+		pink.resolved.connect(func(result: Dictionary) -> void: outcome[0] = result.get("resolution_kind", &""))
+		pink.player_contact.connect(func(_damage: float) -> void: outcome[0] = &"possessed")
+		pink.release_hold()
+		for _step in 240:
+			if outcome[0] != &"":
+				break
+			await _physics_step(pink)
+		if outcome[0] != &"dodge":
+			failures.append("A released pink past an empty lane did not resolve as a dodge (%s)" % outcome[0])
+	pink.queue_free()
+	head.queue_free()
+	await process_frame
+
+func _held_yellow(head: Node3D) -> ResonancePhantom:
+	var yellow := (load("res://Scenes/Phantoms/yellow_phantom.tscn") as PackedScene).instantiate() as ResonancePhantom
+	root.add_child(yellow)
+	await process_frame
+	yellow.global_position = head.global_position + Vector3(0.0, -0.1, -3.0)
+	yellow._player_camera = head
+	yellow.set_physics_process(false)
+	yellow.place_sweet_spot(TutorialDirector.LURE_JAB)
+	yellow.hold_in_reach(TutorialDirector.HOLD_ANGLER)
+	var entered := [false]
+	yellow.held.connect(func() -> void: entered[0] = true)
+	for _step in 400:
+		await _physics_step(yellow)
+		if entered[0] or yellow._terminal:
+			break
+	if not entered[0] or not yellow.is_held():
+		yellow.queue_free()
+		return null
+	return yellow
+
+## Punch power: rift damage rises from 0.85x for a 2 m/s punch to 1.3x for a 6 m/s one, the score
+## does not move, and a soft lure hit still beats the hardest plain hit.
+func _validate_punch_power() -> void:
+	var soft := await _committed_strike(2.0, false)
+	var hard := await _committed_strike(6.0, false)
+	var harder := await _committed_strike(9.0, false)
+	var soft_crit := await _committed_strike(2.0, true)
+	if int(soft.get("rift_damage", 0)) != 10 or int(hard.get("rift_damage", 0)) != 15 or int(harder.get("rift_damage", 0)) != 15:
+		failures.append("Punch power is not 0.85x to 1.3x rift damage: %d, %d, %d" % [soft.get("rift_damage", 0), hard.get("rift_damage", 0), harder.get("rift_damage", 0)])
+	if int(soft.get("base_score", 0)) != int(hard.get("base_score", 0)):
+		failures.append("Punch power changed the score")
+	if int(soft_crit.get("rift_damage", 0)) <= int(hard.get("rift_damage", 0)):
+		failures.append("A soft lure hit no longer beats the hardest plain hit")
+	if not is_equal_approx(float(soft.get("power", -1.0)), 0.0) or not is_equal_approx(float(hard.get("power", -1.0)), 1.0):
+		failures.append("Punch power is not carried on the result")
+
+func _committed_strike(speed: float, on_lure: bool) -> Dictionary:
+	var yellow := (load("res://Scenes/Phantoms/yellow_phantom.tscn") as PackedScene).instantiate() as ResonancePhantom
+	root.add_child(yellow)
+	await process_frame
+	yellow.place_sweet_spot(TutorialDirector.LURE_JAB)
+	yellow._phase = Phantom.Phase.COMMIT
+	var at: Vector3 = yellow.sweet_spot_visual.global_position if on_lure else yellow.global_position + Vector3(0.0, -0.5, -0.4)
+	var result: Dictionary = yellow.receive_strike({"hand_id": &"left", "position": at, "direction": Vector3.FORWARD, "speed": speed})
+	yellow.queue_free()
+	return result
+
+## The training run, beat by beat, on the real round, rift, and life force, with the tutorial
+## director's fast mode. The recruit is played by hand: a wrong hand first on the Anglers, one
+## hand first on the green, a punch and then a side-step on the pink, hands down on the
+## possession, a tap then a hard hit for power, and every phantom of the live wave.
+func _validate_tutorial_flow() -> void:
+	var saved := {}
+	_borrow_settings(true, saved)
+	var settings := root.get_node_or_null("GameSettings")
+	if settings:
+		settings.tutorial_completed = false
+		settings.best_scores = {}
+		settings.best_times = {}
+	var player := Node3D.new()
+	player.add_to_group("Player")
+	root.add_child(player)
+	var camera := Node3D.new()
+	camera.name = "XRCamera3D"
+	player.add_child(camera)
+	camera.position = Vector3(0.0, 1.6, 0.0)
+	var container := Node3D.new()
+	container.add_to_group("PhantomContainer")
+	root.add_child(container)
+	var director := RiftDirector.new()
+	director.rift_manager_scene = load("res://Scenes/Rifts/rift_manager.tscn")
+	root.add_child(director)
+	var life := LifeForceManager.new()
+	root.add_child(life)
+	var round_controller := RoundController.new()
+	root.add_child(round_controller)
+	var tutorial := TutorialDirector.new()
+	tutorial.fast = true
+	root.add_child(tutorial)
+	await process_frame
+	await process_frame
+	await process_frame
+	var beats: Array[StringName] = []
+	tutorial.beat_started.connect(func(beat: StringName) -> void: beats.append(beat))
+	var done := [false]
+	tutorial.finished.connect(func() -> void: done[0] = true)
+	tutorial.start()
+	# What the stand-in recruit has done in each beat.
+	var acted := {}
+	var drains: Array[float] = []
+	life.damage_applied.connect(func(amount: float, _current: float) -> void:
+		if tutorial.beat == &"possession":
+			drains.append(amount))
+	var wrong_held := {}
+	for _frame_index in 6000:
+		if done[0]:
+			break
+		await process_frame
+		var phantom := tutorial.current_phantom()
+		match tutorial.beat:
+			&"yellow", &"blue":
+				if phantom and phantom.is_held():
+					var right_hand: StringName = &"left" if tutorial.beat == &"yellow" else &"right"
+					var wrong_hand: StringName = &"right" if right_hand == &"left" else &"left"
+					if not acted.has(tutorial.beat):
+						acted[tutorial.beat] = true
+						_hit(phantom, wrong_hand, 4.0, true)
+						wrong_held[tutorial.beat] = phantom.is_held() and tutorial.beat in [&"yellow", &"blue"]
+					elif tutorial.spoken.count("tutorial_wrong_hand") >= (1 if tutorial.beat == &"yellow" else 2):
+						_hit(phantom, right_hand, 4.0, true)
+			&"chain":
+				for node in container.get_children():
+					var live := node as Phantom
+					if live and live.shows_approach_cue() and live.is_strike_window_open():
+						_hit(live, &"left" if live.variant_id == &"yellow" else &"right", 4.0, false)
+			&"green":
+				if phantom and phantom.is_held():
+					if not acted.has(&"green"):
+						acted[&"green"] = true
+						_hit(phantom, &"left", 4.0, false)
+						if not phantom.is_held():
+							failures.append("One hand broke a held green")
+					elif "tutorial_green_one" in tutorial.spoken:
+						_hit(phantom, &"left", 4.0, false)
+						_hit(phantom, &"right", 4.0, false)
+			&"pink":
+				if phantom and phantom.is_held():
+					if not acted.has(&"pink"):
+						acted[&"pink"] = true
+						_hit(phantom, &"left", 4.0, false)
+						if not phantom.is_held():
+							failures.append("A punch released a held pink")
+					elif not acted.has(&"pink_step") and "tutorial_pink_punch" in tutorial.spoken:
+						acted[&"pink_step"] = true
+						camera.position = Vector3(0.6, 1.6, 0.0)
+			&"possession":
+				camera.position = Vector3(0.0, 1.6, 0.0)
+			&"power":
+				if phantom and phantom.is_held() and phantom.shows_approach_cue():
+					var first := not acted.has(&"tap")
+					acted[&"tap"] = true
+					_hit(phantom, &"left", 1.5 if first else 7.0, false)
+			&"live_wave":
+				if not acted.has(&"floor"):
+					acted[&"floor"] = true
+					life.apply_damage(500.0)
+					if life.is_depleted() or not is_equal_approx(life.current_life_force, 20.0):
+						failures.append("Training's life floor did not hold the recruit at 20: %.0f" % life.current_life_force)
+				for node in container.get_children():
+					var live := node as Phantom
+					if live == null or not live.shows_approach_cue() or not live.is_strike_window_open():
+						continue
+					match live.variant_id:
+						&"yellow":
+							_hit(live, &"left", 4.0, false)
+						&"blue":
+							_hit(live, &"right", 4.0, false)
+						&"green":
+							_hit(live, &"left", 4.0, false)
+							_hit(live, &"right", 4.0, false)
+	if not done[0]:
+		failures.append("Training did not finish; it stopped in beat %s" % tutorial.beat)
+	if beats != TutorialDirector.BEATS:
+		failures.append("Training beats ran out of order: %s" % [beats])
+	for beat in [&"yellow", &"blue"]:
+		if not wrong_held.get(beat, false):
+			failures.append("A wrong hand moved training past the %s beat" % beat)
+	if drains != [20.0]:
+		failures.append("The possession beat did not drain exactly 20 once: %s" % [drains])
+	for event in ["tutorial_wrong_hand", "tutorial_green_one", "tutorial_pink_punch", "tutorial_pink_done", "tutorial_possessed", "tutorial_glove_seen", "tutorial_power_seen", "tutorial_last_one", "tutorial_straggler", "tutorial_signoff_comms"]:
+		if not event in tutorial.spoken:
+			failures.append("Training never said %s" % event)
+	if not tutorial.spoken.has("tutorial_chain_done") and not tutorial.spoken.has("tutorial_chain_enough"):
+		failures.append("The chain beat never finished")
+	var lines: Dictionary = (load("res://Assets/Audio/VO/chen/chen_lines.json") as JSON).data.get("events", {})
+	for event in tutorial.spoken:
+		if not lines.has(event):
+			failures.append("Training says %s, which chen_lines.json does not have" % event)
+	if settings:
+		if not settings.tutorial_completed:
+			failures.append("Finishing training did not mark it complete")
+		if not settings.cleared_missions.is_empty() or not settings.best_scores.is_empty() or not settings.best_times.is_empty():
+			failures.append("Training recorded a clear, a score, or a time")
+	# End Training from the pause menu stops it anywhere and still counts it as done.
+	var flow = load("res://Scripts/Core/game_flow_controller.gd").new()
+	flow._tutorial = tutorial
+	flow._round = round_controller
+	flow._settings = settings
+	if settings:
+		settings.tutorial_completed = false
+	round_controller.abandon_round()
+	tutorial.start()
+	for _i in 3:
+		await process_frame
+	flow._end_training()
+	if tutorial.is_running():
+		failures.append("End Training left the simulation running")
+	if settings and not settings.tutorial_completed:
+		failures.append("End Training did not count training as done")
+	flow.free()
+	tutorial.stop()
+	round_controller.abandon_round()
+	for node in [tutorial, round_controller, life, director, container, player]:
+		node.queue_free()
+	await process_frame
+	_borrow_settings(false, saved)
+
+func _hit(phantom: Phantom, hand: StringName, speed: float, on_lure: bool) -> void:
+	if not is_instance_valid(phantom) or not phantom.shows_approach_cue():
+		return
+	var at := phantom.global_position
+	var lure := phantom.get_node_or_null("SweetSpotVisual") as Node3D
+	if lure and on_lure:
+		at = lure.global_position
+	elif lure:
+		at += Vector3(0.0, -0.5, 0.0)
+	phantom.receive_strike({"hand_id": hand, "position": at, "direction": Vector3.FORWARD, "speed": speed})

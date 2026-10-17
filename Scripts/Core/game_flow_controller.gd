@@ -1,7 +1,10 @@
 extends Node
 
 const STATE_MENU := &"menu"
+## The Training Complete panel, in the chamber.
 const STATE_TUTORIAL := &"tutorial"
+## Chen's training chamber is running; the menu is hidden.
+const STATE_TRAINING := &"training"
 const STATE_PLAYING := &"playing"
 const STATE_PAUSED := &"paused"
 const STATE_SETTINGS := &"settings"
@@ -16,7 +19,9 @@ var _previous_state: StringName = STATE_MENU
 var _round: RoundController
 var _player: Node3D
 var _presenter: VRMenuPresenter
-var _tutorial_step: int = 0
+var _tutorial: TutorialDirector
+## The pause menu is up over training, not over an operation.
+var _paused_training: bool = false
 var _settings: Node
 var _last_outcome: StringName = &""
 var _last_score: int = 0
@@ -45,6 +50,9 @@ func _ready() -> void:
 	_player = get_tree().get_first_node_in_group("Player") as Node3D
 	_presenter = get_tree().get_first_node_in_group("VRMenuPresenter") as VRMenuPresenter
 	_settings = get_node_or_null("/root/GameSettings")
+	_tutorial = get_tree().get_first_node_in_group("TutorialDirector") as TutorialDirector
+	if _tutorial:
+		_tutorial.finished.connect(_on_training_finished)
 	if _round:
 		_round.round_finished.connect(_on_round_finished)
 	if _presenter:
@@ -120,6 +128,8 @@ func _on_controller_button_pressed(button: String, controller: XRController3D = 
 	# The Meta system button owns recentering. We only consume the app-menu action for pause.
 	if button == "menu_button" and _state == STATE_PLAYING and _round and _round.is_round_in_progress():
 		_pause_game()
+	elif button == "menu_button" and _state == STATE_TRAINING:
+		_pause_training()
 
 func _on_menu_action(action: StringName) -> void:
 	if _menu_action_cooldown > 0.0 or not _action_belongs_to_state(action):
@@ -145,8 +155,13 @@ func _on_menu_action(action: StringName) -> void:
 			_show_operations()
 		&"operations_back":
 			_show_main_menu()
-		&"training", &"results_training":
-			_start_tutorial()
+		&"training":
+			_start_training()
+		&"results_training":
+			if _results_action_locked:
+				return
+			_results_action_locked = true
+			_start_training()
 		&"settings":
 			_show_settings(STATE_MENU)
 		&"music_down":
@@ -207,13 +222,18 @@ func _on_menu_action(action: StringName) -> void:
 				_show_results()
 			else:
 				_show_main_menu()
-		&"tutorial_continue":
-			_advance_tutorial()
-		&"tutorial_back":
-			_tutorial_step = maxi(_tutorial_step - 1, 0)
-			_render_tutorial()
-		&"tutorial_exit":
+		&"training_deploy":
+			if _tutorial:
+				_tutorial.stop()
+			_start_mission("")
+		&"training_replay":
+			_start_training()
+		&"training_menu":
+			if _tutorial:
+				_tutorial.stop()
 			_show_main_menu()
+		&"end_training":
+			_end_training()
 		&"resume":
 			_resume_game()
 		&"pause_settings":
@@ -260,7 +280,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				if _state == STATE_MENU:
 					_on_menu_action(&"deploy")
 				elif _state == STATE_TUTORIAL:
-					_on_menu_action(&"tutorial_continue")
+					_on_menu_action(&"training_deploy")
+				elif _state == STATE_TRAINING and OS.is_debug_build() and _tutorial:
+					# Desktop stand-in for squeezing both grips.
+					_tutorial.confirm()
 				elif _state == STATE_PAUSED:
 					_on_menu_action(&"resume")
 			KEY_T:
@@ -277,18 +300,25 @@ func _unhandled_input(event: InputEvent) -> void:
 					if boss:
 						boss.register_push_up()
 			KEY_S:
-				_show_settings(_state)
+				# Not over a running simulation; pause it first.
+				if _state != STATE_TRAINING:
+					_show_settings(_state)
 			KEY_ESCAPE:
 				if _state == STATE_PLAYING:
 					_pause_game()
-				elif _state in [STATE_TUTORIAL, STATE_SETTINGS, STATE_RESULTS]:
+				elif _state == STATE_TRAINING:
+					_pause_training()
+				elif _state == STATE_TUTORIAL:
+					_on_menu_action(&"training_menu")
+				elif _state in [STATE_SETTINGS, STATE_RESULTS] and not _paused_training:
 					_show_main_menu()
 
 func _show_main_menu() -> void:
 	_state = STATE_MENU
 	_set_menu_visible(true)
 	if _presenter:
-		_presenter.show_main_menu(MissionCatalog.deploy_detail(_settings))
+		var training_first: bool = _settings != null and not _settings.tutorial_completed
+		_presenter.show_main_menu(MissionCatalog.deploy_detail(_settings), training_first)
 
 func _show_operations() -> void:
 	_state = STATE_MENU
@@ -327,73 +357,57 @@ func _start_boss_shortcut() -> void:
 		return
 	_start_mission("the_maw", DifficultyTier.FULL_RESONANCE, true)
 
-func _start_tutorial() -> void:
-	_state = STATE_TUTORIAL
-	_tutorial_step = 0
-	_set_menu_visible(true)
-	_render_tutorial()
-
-func _advance_tutorial() -> void:
-	_tutorial_step += 1
-	if _tutorial_step >= _tutorial_pages().size():
-		if _settings:
-			_settings.tutorial_completed = true
-			_settings.save_settings()
-		_show_main_menu()
+## Chen's training chamber, from the top. The menu hides; the director runs the beats.
+func _start_training() -> void:
+	if _tutorial == null:
 		return
-	_render_tutorial()
+	_paused_training = false
+	if _round:
+		_round.abandon_round()
+	_state = STATE_TRAINING
+	_set_menu_visible(false)
+	_tutorial.start()
 
-func _render_tutorial() -> void:
+## Chen signed off. The panel comes up in the chamber; leaving it turns the chamber off.
+func _on_training_finished() -> void:
+	if _round:
+		_round.abandon_round()
 	_state = STATE_TUTORIAL
+	_menu_input_armed = false
+	_render_training_complete()
+	_arm_menu_input_after_release()
+
+func _render_training_complete() -> void:
 	_set_menu_visible(true)
 	if _presenter:
-		_presenter.show_tutorial(_tutorial_step, _tutorial_pages())
+		_presenter.show_training_complete(MissionCatalog.deploy_detail(_settings))
 
-func _tutorial_pages() -> Array[Dictionary]:
-	return [
-		{
-			"eyebrow": "MODULE 01 // SAFE PLAY SPACE",
-			"title": "CENTER YOUR OPERATING AREA",
-			"body": "Stay inside the cyan floor ring. Clear room to punch, duck, and take one small step left or right.",
-			"callout": "Hold Meta to recenter. This page waits until you select Continue.",
-			"color": Color("56dff5"),
-		},
-		{
-			"eyebrow": "MODULE 02 // ERM GAUNTLETS",
-			"title": "GRIP, THEN STRIKE",
-			"body": "Hold Grip, then punch. Release Grip when you are not striking.",
-			"callout": "Jabs, hooks, and uppercuts work. Never punch outside your boundary.",
-			"color": Color("5cf2ae"),
-		},
-		{
-			"eyebrow": "MODULE 03 // RESONANCE PHANTOMS",
-			"title": "MATCH THE GAUNTLET",
-			"body": "YELLOW arcs in from your LEFT. BLUE arcs from the RIGHT. They speed up as they arrive. Punch when they reach you. The bright point is a crit.",
-			"callout": "An edge marker tells you where to turn. A clean hit keeps your chain. The wrong hand breaks it.",
-			"color": Color("a26cff"),
-		},
-		{
-			"eyebrow": "MODULE 04 // DEFENSIVE RESPONSES",
-			"title": "BLOCK GREEN • DODGE PINK",
-			"body": "GREEN widens, then crashes your chest. Catch it with both hands on that beat. PINK paints a lane, then charges it.",
-			"callout": "The first hand on a Green is a catch, not a miss. Pink cannot be punched. Leave the lane.",
-			"color": Color("ffc85a"),
-		},
-		{
-			"eyebrow": "MODULE 05 // LIFE FORCE",
-			"title": "DO NOT LET THEM INSIDE",
-			"body": "If a phantom reaches your head, it possesses you: it vanishes and drains a chunk of life force. Your vision blurs for a moment and the wrist meter drops.",
-			"callout": "Life recovers when the air is clear. Low life raises the heartbeat.",
-			"color": Color("ff5d78"),
-		},
-		{
-			"eyebrow": "MODULE 06 // MISSION OBJECTIVE",
-			"title": "SEAL THE RIFT, THEN THE NEXT",
-			"body": "A column of light marks each open rift. If it is outside your view, a RIFT chevron sits at the edge of your sight until you turn to face it.",
-			"callout": "Each rift hits harder than the last. Deploy First Light when you are ready.",
-			"color": Color("56dff5"),
-		},
-	]
+## End Training from pause. Nobody is made to sit through all of it: ending counts as done.
+func _end_training() -> void:
+	_paused_training = false
+	if _tutorial:
+		_tutorial.stop()
+	if _round:
+		_round.abandon_round()
+	_mark_training_complete()
+	_show_main_menu()
+
+func _mark_training_complete() -> void:
+	if _settings:
+		_settings.tutorial_completed = true
+		_settings.save_settings()
+
+func is_training() -> bool:
+	return _state == STATE_TRAINING or (_state in [STATE_PAUSED, STATE_SETTINGS] and _paused_training)
+
+func _pause_training() -> void:
+	_paused_training = true
+	_state = STATE_PAUSED
+	if _tutorial:
+		_tutorial.set_paused(true)
+	if _round and _round.is_round_in_progress():
+		_round.pause_round()
+	_show_pause_menu()
 
 func _pause_game() -> void:
 	_state = STATE_PAUSED
@@ -401,7 +415,14 @@ func _pause_game() -> void:
 		_round.pause_round()
 	_show_pause_menu()
 
+## The headset came off or lost focus. The lifecycle controller has already paused a live round.
 func show_suspended_pause() -> void:
+	if _state == STATE_TRAINING:
+		_paused_training = true
+		if _tutorial:
+			_tutorial.set_paused(true)
+		if _round and _round.is_round_in_progress():
+			_round.pause_round()
 	_state = STATE_PAUSED
 	_set_menu_visible(true)
 	if _presenter:
@@ -411,9 +432,18 @@ func _show_pause_menu() -> void:
 	_state = STATE_PAUSED
 	_set_menu_visible(true)
 	if _presenter:
-		_presenter.show_pause()
+		_presenter.show_pause(_paused_training)
 
 func _resume_game() -> void:
+	if _paused_training:
+		_paused_training = false
+		_state = STATE_TRAINING
+		_set_menu_visible(false)
+		if _round and _round.can_resume_round():
+			_round.resume_round()
+		if _tutorial:
+			_tutorial.set_paused(false)
+		return
 	if _round == null or not _round.can_resume_round():
 		return
 	_state = STATE_PLAYING
@@ -446,7 +476,7 @@ func restore_current_menu() -> void:
 		STATE_MENU:
 			_show_main_menu()
 		STATE_TUTORIAL:
-			_render_tutorial()
+			_render_training_complete()
 		STATE_SETTINGS:
 			_render_settings()
 		STATE_PAUSED:
@@ -469,6 +499,9 @@ func recenter_current_panel() -> void:
 		_presenter.recenter()
 
 func _on_round_finished(outcome: StringName, score: int) -> void:
+	# Training ends through its director, after Chen signs off.
+	if _round and bool(_round.current_mission().get("tutorial", false)):
+		return
 	_last_outcome = outcome
 	_last_score = score
 	_last_debrief = _round.get_debrief(outcome) if _round else ""
@@ -498,7 +531,7 @@ func _show_results() -> void:
 	_menu_input_armed = false
 	_results_pointer_warmup = 0.35
 	if _presenter:
-		_presenter.show_results(_last_outcome, _last_score, _last_debrief, _next_mission_title, _last_seconds, _previous_best_time, DifficultyTier.label(_active_tier))
+		_presenter.show_results(_last_outcome, _last_score, _last_debrief, _next_mission_title, _last_seconds, _previous_best_time, DifficultyTier.label(_active_tier), _last_outcome == &"defeat")
 	_refresh_menu_pointers()
 	call_deferred("_reset_results_pointers_after_render")
 
@@ -510,7 +543,7 @@ func _trigger_down(controller: XRController3D) -> bool:
 	return controller.is_button_pressed("trigger_click")
 
 func _poll_menu_trigger() -> void:
-	if _player == null or _presenter == null or not _presenter.is_menu_visible() or _state == STATE_PLAYING:
+	if _player == null or _presenter == null or not _presenter.is_menu_visible() or _state in [STATE_PLAYING, STATE_TRAINING]:
 		_menu_trigger_down = false
 		return
 	var down := false
@@ -531,7 +564,7 @@ func _poll_menu_trigger() -> void:
 func _action_belongs_to_state(action: StringName) -> bool:
 	match _state:
 		STATE_RESULTS:
-			return action in [&"retry", &"next_mission", &"results_menu"]
+			return action in [&"retry", &"next_mission", &"results_menu", &"results_training"]
 		STATE_SETTINGS:
 			return action in [&"music_down", &"music_up", &"effects_down", &"effects_up", &"haptics_down", &"haptics_up", &"own_music_off", &"own_music_on", &"settings_flashes_off", &"settings_flashes_on", &"reset_progress", &"settings_back"]
 		STATE_RESET_CONFIRM:
@@ -539,8 +572,10 @@ func _action_belongs_to_state(action: StringName) -> bool:
 		STATE_MENU:
 			return String(action).begins_with("mission_") or String(action).begins_with("tier_") or action in [&"deploy", &"operations", &"operations_back", &"training", &"settings"]
 		STATE_TUTORIAL:
-			return action in [&"tutorial_continue", &"tutorial_back", &"tutorial_exit", &"results_training"]
+			return action in [&"training_deploy", &"training_replay", &"training_menu"]
 		STATE_PAUSED:
+			if _paused_training:
+				return action in [&"resume", &"pause_settings", &"end_training"]
 			return action in [&"resume", &"pause_settings", &"abort"]
 		STATE_ABORT_CONFIRM:
 			return action in [&"abort_cancel", &"abort_confirm"]
