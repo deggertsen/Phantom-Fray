@@ -60,7 +60,7 @@ adb logcat -c
 adb logcat | grep -i -E "godot|openxr|phantom"
 ```
 
-`powershell -File tools/build_quest_debug.ps1 -HandTrackingTest` builds `builds/phantom-fray-handtest.apk`, the hand tracking measurement build for tests 7 and 8 in `development/Exercise_Mechanics_Exploration.md` (section 3, "Running tests 7 and 8"). It turns hand tracking on in `project.godot` for that export only and restores the file afterwards.
+`powershell -File tools/build_quest_debug.ps1 -HandTrackingTest` builds `builds/phantom-fray-handtest.apk`, the hand tracking measurement build for tests 7 and 8 in `development/Exercise_Mechanics_Exploration.md` (section 3, "Running tests 7 and 8"). It turns hand tracking on in `project.godot` for that export only and restores the file afterwards. The export stops the adb server, which ends any running `adb logcat`; start the capture again after a build. The device keeps its own log buffer, so `adb logcat -d` recovers what was missed.
 
 ## Required package checks
 

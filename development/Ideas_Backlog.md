@@ -47,7 +47,7 @@ Ideas worth keeping that are not on the roadmap yet. Nothing here is scheduled. 
 
 ## Platform and community
 
-- **Hand tracking as an input option.** Research gesture recognition for punches without controllers. Direction as of 2026-10-09: move off controllers; hand tracking required at Full Resonance as the first try. Tests for punch speed and simultaneous hands and controllers are on the roadmap in Phase 9.
+- **Hand tracking as an input option.** Research gesture recognition for punches without controllers. Direction as of 2026-10-09: move off controllers; hand tracking required at Full Resonance as the first try. Tested 2026-10-14 and 2026-10-17: tracked hands lose too many punches and lag at full speed, so the fighting stays on controllers; simultaneous hands and controllers is the Full Resonance input, with hands for push-ups (decision 39 in Exercise_Mechanics_Exploration.md). Gesture punches without controllers stay an idea for a future headset or runtime.
 - **Achievements.** Flawless seals, maximum chain, all operations gold.
 - **Leaderboards.** Scheduled in Phase 7; friend leaderboards and weekly resets stay here.
 - **Mod support.** Custom wave tables and breach sites as data files, since operations are already dictionaries.

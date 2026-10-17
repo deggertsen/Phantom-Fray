@@ -1,6 +1,6 @@
 # Exercise Mechanics Exploration: Squats, Jumps, Push-ups
 
-**Written:** 2026-10-09. **Updated** through 2026-10-13 with six rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit).
+**Written:** 2026-10-09. **Updated** through 2026-10-13 with six rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit), and on 2026-10-17 with the hand tracking tests (7 and 8).
 **Status:** Exploration, partly built. The squat detector runs in every build (`Scripts/Player/squat_detector.gd`), the resonance sweep is built (`Scripts/Hazards/resonance_sweep.gd`, prototype plan Step 3), The Maw's boss phase is built (`Scripts/Bosses/maw_boss.gd`, Steps 6 and 7), and the four difficulties are built (`Scripts/Core/difficulty_tier.gd`, section 4): at Full Resonance the campaign Maw plays the boss fight.
 **Question:** How could Phantom Fray require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
 
@@ -8,7 +8,7 @@
 
 Bosses carry the movements. A boss attacks with its tentacles, and each attack has one physical answer: squat under a high sweep, jump a low sweep, and side-step out of a slam. A slam costs the boss so much that the tentacle lies spent on the floor afterwards, and the operator does push-ups on it to drive ERM resonance through the ground into it. A boss cannot hold its shape in our world for long, so the fight is a survival interval with a known length, which is exactly the shape of a workout block; it ends when the boss retreats through its rift. Bosses demand far more exertion than anything else in the game, so they appear only at the movement difficulties; Assist, Standard, and Operator never meet one. The current six operations become the tutorial that teaches the combat rules first, and missions run five to ten minutes.
 
-Build squats first: the detector exists, the high sweep is the safest and most readable attack, and it fits the existing rules (it resolves like the pink dodge, so it scores, chains, and damages). Jumps are in scope and Full Resonance assumes the player can jump, but a headset test has to show head tracking can see a jump before the low sweep is built. Push-ups are done on hand tracking, which is required at Full Resonance as the first thing we try.
+Build squats first: the detector exists, the high sweep is the safest and most readable attack, and it fits the existing rules (it resolves like the pink dodge, so it scores, chains, and damages). Jumps are in scope and Full Resonance assumes the player can jump, but a headset test has to show head tracking can see a jump before the low sweep is built. Push-ups use tracked hands with the controllers hanging on their straps; the fighting stays on the controllers, because hand tracking lost too many punches and lagged at full speed (decision 39).
 
 The one design fact that shapes everything below: **a target's position cannot force a squat.** A phantom at knee height can be reached by bending at the waist, which is worse exercise and harder on the back. What we can measure is the head. So every mechanic here is a rule about where the head is, not where the fist lands, and the detector's job is to tell a squat from a bend.
 
@@ -34,7 +34,7 @@ Second round, on bosses:
 13. **The Maw is probably the first boss.** Described below. (Refined in decision 18.)
 14. **Phantoms during a boss fight: maybe at the highest difficulties.** David's idea to explore: phantoms circle the boss, and the boss sends them at the operator as one of its attacks.
 15. **Bosses never die.** A boss always retreats through the rift it came through, before that rift closes. Lore: bosses are gathering enough energy to establish a permanent presence in our world. No banish.
-16. **Hand tracking is required at Full Resonance, as the first try.** Decide after the headset tests. Losing haptics is acceptable. Simultaneous hands and controllers is an acceptable fallback.
+16. **Hand tracking is required at Full Resonance, as the first try.** Decide after the headset tests. Losing haptics is acceptable. Simultaneous hands and controllers is an acceptable fallback. (Settled by decision 39: the fallback.)
 
 Third round:
 
@@ -70,6 +70,10 @@ Sixth round, from the headset sessions of 2026-10-11 and 2026-10-13 (details in 
 37. **Jumps are in the fight:** a jump pair of low sweeps along the floor ends each attack cycle, judged by takeoff speed and head rise.
 38. **Chen is voiced** for every boss and sweep line (ElevenLabs, her usual voice).
 
+Seventh round, from the hand tracking tests of 2026-10-14 and 2026-10-17 (tests 7 and 8):
+
+39. **Hand tracking alone is out for the fighting; simultaneous hands and controllers is the input at Full Resonance.** It dropped 4 to 10 punches in 20 against a bar of 2, lost the hands at the face and on wide hooks, and lagged visibly ("hand tracking alone is a no go"). The player fights on controllers and lets them hang on their straps for push-ups, where the tracked hands held perfectly. Plan under "Hand tracking" in the boss section.
+
 ---
 
 ## Bosses carry the movements
@@ -81,7 +85,7 @@ Sixth round, from the headset sessions of 2026-10-11 and 2026-10-13 (details in 
 | **High sweep** | The tentacle draws back to one side; the pylons light a line at the sweep height; Chen: "Low!" | Squat under it | Head below `standing_height * (1 - 0.20)` as it crosses. A bend survives but loses the bonus. |
 | **Low sweep** | It runs in along the floor from one side, so its arrival is visible, like a skipping rope | Jump it | The detected flight covers the moment `T` it crosses the player, or takeoff happened in the 0.35 s before. Runs of up to three, then a rest. |
 | **Slam** | The tentacle rises overhead and an impact ring paints the floor around the player, the way the pink lane paints a line | Side-step out of the ring | The pink dodge rule: the head leaves the ring before impact |
-| **Spent tentacle** | After a slam it lies on the floor, dimmed, for up to 20 seconds | Push-ups on it | Push-up rule, palms flat, hand tracking. The window ends at 20 seconds or the 10th push-up, whichever comes first. |
+| **Spent tentacle** | After a slam it lies on the floor, dimmed, for up to 20 seconds | Push-ups on it | Push-up rule, palms flat, controllers hanging on their straps, hands tracked (decision 39). The window ends at 20 seconds or the 10th push-up, whichever comes first. |
 | **Escort volley** | The phantoms circling the boss break formation | The existing phantom rules | Strikes, blocks, and dodges as today |
 
 The boss frame beats my first pass for three reasons:
@@ -208,14 +212,35 @@ Missions have no time limit now, so players need a sense of how long a mission t
 
 ### Hand tracking
 
-Decision 16: required at Full Resonance as the first try. For push-ups it is plainly the right input: palms flat with nothing in them, and the palm joints on the floor give a precise floor height. For the fighting, the headset tests in section 3 (tests 7 and 8) decide it:
+Decision 16 made hand tracking the first try at Full Resonance. Tests 7 and 8 ran on 2026-10-14 and 2026-10-17 (section 3; numbers in [Playtest_Log.md](Playtest_Log.md)). **Verdict (decision 39): tracked hands cannot replace the controllers for the fighting. The fallback works: fight on controllers, let them hang on their straps for the floor, and the hands are tracked for push-ups with no menu.**
 
-- **Punch speed.** Strikes need hand velocity up to 10 m/s (`hand_collision.gd`). Hand tracking is weakest on fast motion; a full-speed hook may lose the hand or arrive late.
-- **Field of view.** Hands are only tracked where the headset cameras see them. Wide hooks and blocks close to the face are at the edges.
-- **The strike rule.** "Grip held and moving fast" becomes "fist closed and moving fast", read from finger curl.
-- **Haptics.** Lost, and that is accepted. Audio and VFX carry the strike feedback tiers.
+**Why hands fail for the fighting.**
 
-The fallback is `XR_META_simultaneous_hands_and_controllers`, which the bundled `godotopenxrvendors` 5.1.0 lists in its changelog: fight with controllers, let them hang on the straps for the floor, hands tracked, no menu switch. Untested. `tools/build_quest_debug.ps1 -HandTrackingTest` builds it in for tests 7 and 8 (section 3, "Running tests 7 and 8").
+- **Drops.** 4 dropped in 20 full-speed punches on the right hand, 6 to 10 on the left, against a bar of 2. Jabs are clean (right 7 of 7, no drops). Hooks and uppercuts are not.
+- **It is where the hand goes, not how fast.** Jabs at 7.9 m/s and open swipes at 12 m/s held. The hand is lost at the top of an uppercut, close under the headset (3 or 4 of 6). It is lost on the wind-up of a wide hook, outside the cameras: 11 drops per hand in about six wide hooks. And it is lost with the fists up at the face in a cover block, about 32 drops per hand in 19 s, flickering twice a second. Arms crossed in front of the chest or the face hold.
+- **Pose jumps.** When a hand is picked up again, its palm teleports for a frame or two: 25 to 99 m/s computed, 50 to 135 m/s reported. A hook or uppercut has several such frames, plus impossible 12 to 24 m/s readings. A speed gate would fire on them.
+- **Latency.** David, watching the tracked palm beside his fist: "definitely enough latency that I'm thinking hand tracking alone is a no go." The probe cannot time it; it was judged by eye, with a controller-held fist alongside for comparison.
+- **Haptics.** Lost. That was accepted, but it is moot now.
+
+**What would have to be true for hands-only fighting to become yes:** a runtime or headset that keeps hands at the face and under the headset, keeps them through the wind-up of a wide hook (2 or fewer drops per 20 at full speed, with hooks and uppercuts included), and makes the palm lag invisible next to the real fist. Or a fighting style with no uppercuts, no wide hooks, and no cover blocks, which is not this game. Re-run test 7 on any new headset or a major Quest runtime update. Fast Motion Mode (`hand_tracking_frequency` high) was on for test 7; low frequency can only be slower, so it was not re-run.
+
+**What did hold, for later use.**
+
+- **Finger curl separates a fist from an open hand cleanly.** Held fists read 0.97 to 1.00 and open hands 0.08 to 0.14. Fast open-hand swipes (up to 12 m/s) stayed at 0.07 to 0.08, and jabs never fell below 0.76. If strikes ever come from tracked hands, the grip gate becomes `curl >= 0.65` (the probe's `fist_curl`), with wide margins on both sides.
+- **The speed gate would need three guards.** Computed palm speed, not the reported velocity: on Quest `rep` always equalled `calc`, and the reported value spikes on pick-up. Ignore any frame over 25 m/s. Ignore the first 0.1 s after a hand is picked up. Today's 1.0 m/s threshold would stand: tracked jabs peaked at 3.3 to 10 m/s, controller jabs at 5.4 to 8.2.
+
+**The fallback, `XR_META_simultaneous_hands_and_controllers` (test 8).** Supported on Quest 3, and resuming it raises no error. The runtime starts every launch with it paused, so the game has to resume it. Let a controller hang and that hand is tracked within 0.43 s; grip it again and it is back on the controller at once. With both hanging, palms flat and three slow push-ups gave zero drops, `conf HIGH`, and 26 of 26 joints. Without the extension, a released controller leaves that hand untracked while the other holds its controller. Meta says Fast Motion Mode cannot run alongside simultaneous tracking, so it plays no part in the fallback.
+
+**Plan: hands on the floor, controllers for the fight.**
+
+1. **Turn hand tracking on for real builds.** Move the `[xr]` settings that `-HandTrackingTest` appends (hand tracking, both data sources, simultaneous) into `project.godot`. Set `meta_xr_features/hand_tracking=1` (optional, so controller-only players are not blocked) and `hand_tracking_frequency=0` in both presets. `-HandTrackingTest` then only turns the probe on.
+2. **Resume simultaneous tracking** at the start of every OpenXR session (the interface's `session_begun`), in a small autoload. Pause it when the game quits.
+3. **Pick each hand's input from the hand tracker, not the controller.** A controller lying on a table still reports a tracked pose (the probe showed `BOTH` with both controllers put down). So a hand is "hands" when `/user/hand_tracker/<side>` has `hand_tracking_source == HAND_TRACKING_SOURCE_UNOBSTRUCTED`, and "controller" otherwise.
+4. **`hand_collision.gd`: a hand on its strap cannot strike.** While that hand is optical, `_strike_active` is false; a hanging controller swings, but its grip is not pressed, so this only makes it explicit. Strikes, haptics, and the grip gate stay as they are for held controllers.
+5. **The gauntlet follows the tracked hand while the controller hangs.** Today the gauntlet and the XR Tools glove hang with the controller. Move them to an `XRNode3D` on `/user/hand_tracker/<side>`, palm pose, while the hand is optical, and drive `erm_gauntlet.gd`'s power from curl instead of grip.
+6. **Push-ups read the palms.** `PushUpDetector` keeps counting from head height and adds the plank rule from section 1: both palms within 8 cm of the floor and flat, when both hands are optical. With controllers held it falls back to the head rule alone. Chen's push-up call tells the player to let the gauntlets hang.
+7. **Menus.** Pinch does not press menu buttons; the menus listen only to the controller trigger. Add pinch-to-select if a menu can come up while the controllers hang (the results screen after a boss fight). Until then, Chen's line or the results prompt asks the player to grip again.
+8. **Headset check.** One boss fight at Full Resonance: hang the controllers at the first spent tentacle, do the push-ups, grip again, and fight on. Count drops, and check that no strike fires from a hanging hand.
 
 ### Where bosses sit
 
@@ -303,7 +328,7 @@ Recommended, and what the prototype does:
 
 **False positives:** kneeling and bobbing the head will count. So will knee push-ups. Without body tracking we cannot tell the difference, and I recommend not trying: knee push-ups are a legitimate easier form, and the player who bobs is only cheating their own workout.
 
-**Unknowns (all need the headset):** whether Quest 3 holds 6DoF tracking with the headset pointed at a featureless floor from 30 to 50 cm, whether the controllers stay tracked on the floor directly under the headset, and whether Quest's automatic switch to hand tracking fires when the controllers are let go. The project does not enable the hand tracking extension (validation logs `Property not found: 'xr/openxr/extensions/hand_tracking'`), so I expect the app to keep seeing controllers, but that is a guess.
+**Unknowns (all need the headset):** whether Quest 3 holds 6DoF tracking with the headset pointed at a featureless floor from 30 to 50 cm, whether the controllers stay tracked on the floor directly under the headset, and whether Quest's automatic switch to hand tracking fires when the controllers are let go. The project does not enable the hand tracking extension (validation logs `Property not found: 'xr/openxr/extensions/hand_tracking'`), so I expect the app to keep seeing controllers, but that is a guess. **Answered for the hands (test 8, 2026-10-17):** the app does not switch to hand tracking on its own when a controller is let go (that hand goes untracked); with simultaneous hands and controllers on, it does, and both palms flat on the floor held with no drops.
 
 **With hand tracking** (the direction since the update): the same head rule counts reps, and the plank test becomes "both palms within 8 cm of the floor and flat", read from the hand joints. The palm joints at rest give the local floor directly. Godot 4.7 exposes tracked hands through `XRHandTracker` (from `XRServer.get_tracker(&"/user/hand_tracker/left")` and `right`, confirmed on 4.7.1). It gives per-joint flags (position tracked or only valid) and one tracking confidence for the hand, not a confidence per joint; `Scripts/Player/hand_tracking_probe.gd` reads both.
 
@@ -416,8 +441,8 @@ Meta's store comfort ratings (Comfortable, Moderate, Intense) describe **motion*
 4. **Push-up tracking:** palms flat, first with the gauntlets resting on their straps, then with controllers put aside and hand tracking on. Log `tracking_confidence` for the head and both hands or controllers through 10 reps, on carpet and on a plain floor. Any `NONE` or position jump over 5 cm kills that form.
 5. **Landing comfort:** 10 jumps in the stock strap. Does the view blur, does the headset shift, does it hurt?
 6. **Fatigue:** one 20-minute run of the movement tier draft. Heart rate if a watch is handy, and a written note on what hurt.
-7. **Hand tracking at punch speed:** 20 full-speed jabs, hooks, and uppercuts with hand tracking. Count dropped or late hand poses, and log the hand velocity the tracker reports. If more than 2 in 20 drop, hand tracking cannot be required for combat. Build and procedure: "Running tests 7 and 8" below.
-8. **Simultaneous hands and controllers:** enable `XR_META_simultaneous_hands_and_controllers` from `godotopenxrvendors` and check whether letting the controllers hang on their straps switches those hands to tracked hands without a menu, and back again on grip.
+7. **Hand tracking at punch speed:** 20 full-speed jabs, hooks, and uppercuts with hand tracking. Count dropped or late hand poses, and log the hand velocity the tracker reports. If more than 2 in 20 drop, hand tracking cannot be required for combat. Build and procedure: "Running tests 7 and 8" below. **Ran 2026-10-14: failed** (right 4, left 6 to 10 per 20; decision 39).
+8. **Simultaneous hands and controllers:** enable `XR_META_simultaneous_hands_and_controllers` from `godotopenxrvendors` and check whether letting the controllers hang on their straps switches those hands to tracked hands without a menu, and back again on grip. **Ran 2026-10-14 and 2026-10-17: works** (hand tracked 0.43 s after the controller is let go, back on the controller at once on grip, no menu).
 
 ### Running tests 7 and 8: the hand tracking build
 
@@ -452,13 +477,13 @@ Before the session: turn on hand tracking in the Quest settings (Movement tracki
 | `drops  jumps` | Times tracking was lost; times the palm moved over 25 m/s between two frames (a teleport, not a hand). |
 | `controller` | Whether the controller tracker has a pose, and its interaction profile. |
 
-Each punch, drop, jump, reset, and simultaneous toggle is also printed to logcat as a `HANDTEST` line with its time and speeds, so the numbers can be copied afterwards.
+Each punch, drop, jump, reset, and simultaneous toggle is also printed to logcat as a `HANDTEST` line with its time and speeds. Punch and drop lines also carry the lowest finger curl during the punch and the palm's direction from the head (`view=` degrees right, up); `input` and `conf` lines time every switch between `HAND`, `CONTROLLER`, and `BOTH`; and a `state` line twice a second gives both hands' input, confidence, joints, curl, and direction. The runtime's reported palm velocity jumps to 50 to 135 m/s on the frame a hand is picked up; any reported speed over 25 m/s counts as a pose jump. Resetting the counters needs a controller in the hand, so with the controllers put down, read the numbers from logcat by time instead.
 
 **Test 7 procedure.** Simultaneous off. Put both controllers down on a surface (not on the straps) and check that both hands show `using HAND`, `optical`, `conf HIGH`. Reset. With one hand, throw 20 full-speed punches with a closed fist: 7 jabs, 7 hooks, 6 uppercuts, a second's pause between them so each counts on its own. Read that hand's `punches` and `dropped`, then reset and do the other hand. Missed punches count as dropped or late: a hand fails if `dropped` plus `20 − punches` is more than 2. Also note the typical `peak 1s` for each punch type, whether `FIST` held through the punch, and whether the palm sphere lagged behind the fist by eye. The overlay cannot time lag; that one is a judgement. For a baseline, five jabs holding the controllers (source `from-controller`) show the speed the controllers would have reported.
 
 **Test 8 procedure.** Hold both controllers (`using CONTROLLER`). Click the left stick: the header must read `simultaneous: ON`. If it reads `unsupported`, the runtime does not offer the extension in this build: write that down, and the fallback is out. Let the right controller hang on its strap and open the hand: it should reach `using BOTH` with an `optical` hand within about a second, with no system menu. Make a few slow punches and watch the sphere follow. Grip the controller again and note how long it takes to go back to `CONTROLLER` and whether it needs anything else. Then let both controllers hang, put both palms flat on the floor in a push-up position for 10 seconds, and note `drops` and `conf`. Last, click the left stick to turn simultaneous off and repeat the strap test, to see what the headset does without it.
 
-**What could not be checked without the headset.** The build, the settings, and the counting logic are checked on the desktop (`_validate_hand_tracking_probe` in `Tests/validation_runner.gd` drives a clean punch, a dropped punch, a pose jump, and finger curls through it). These are still unknown until the first session: whether the Quest runtime reports a palm velocity at all (`rep` stays `--` if not), whether it supports the hand tracking data source extension (the source then shows `source?`), whether `is_simultaneous_hands_and_controllers_supported()` is true on Quest 3 with this runtime, whether resuming it succeeds (a failure shows only in logcat as a Godot error), and whether the 65% fist threshold matches a real fist.
+**What could not be checked without the headset.** The build, the settings, and the counting logic are checked on the desktop (`_validate_hand_tracking_probe` in `Tests/validation_runner.gd` drives a clean punch, a dropped punch, a pose jump, and finger curls through it). These are still unknown until the first session: whether the Quest runtime reports a palm velocity at all (`rep` stays `--` if not), whether it supports the hand tracking data source extension (the source then shows `source?`), whether `is_simultaneous_hands_and_controllers_supported()` is true on Quest 3 with this runtime, whether resuming it succeeds (a failure shows only in logcat as a Godot error), and whether the 65% fist threshold matches a real fist. **Answered on 2026-10-14:** the runtime reports a palm velocity, but it always equals the calculated one; the data source extension works (`optical`, `from-controller`); simultaneous is supported and resumes without error; and 65% splits a fist (0.97 to 1.00) from an open hand (0.08 to 0.14) with room to spare. The `drop` and `jump` lines need no change; the `punch` lines are useful on jabs, but on hooks and uppercuts pose jumps make extra punch events, so count hooks and uppercuts from the drops.
 
 **What to write in `development/Playtest_Log.md`.** One entry under Sessions:
 
@@ -483,7 +508,7 @@ Test 8:
 Odd readings or crashes:
 ```
 
-Then record the outcome as a decision here: test 7 decides whether decision 16 holds for the fighting, and test 8 whether the fallback exists.
+Then record the outcome as a decision here: test 7 decides whether decision 16 holds for the fighting, and test 8 whether the fallback exists. Recorded as decision 39 (2026-10-17): it does not hold for the fighting, and the fallback exists.
 
 ---
 
@@ -511,7 +536,7 @@ The difficulties exist, chosen on the Operations screen until the war map does, 
 - **The debug boss mission is retired.** `the_maw_boss` is gone from `MissionCatalog.debug_missions()`. In debug builds, B in the main menu (Shift+B forces the break) and `--mission=the_maw_boss` still deploy The Maw at Full Resonance whatever is unlocked; that shortcut records no clear, score, or time, though it counts toward the break odds. `--tier=<id>` sets the difficulty of any other command-line deploy without saving it.
 - **Selection and records.** The Operations screen has a row of four above the contracts; the chosen one is marked, colours the page, and the line under the title says what it asks for (Full Resonance: "Bosses that demand squats, jumps, and push-ups. Clear room to jump."). The choice is `GameSettings.difficulty_tier`, saved, default Standard, kept by Reset Progress, Full Resonance open from the start. Deploy ends with the tier's name, results add it to the outcome line, and Retry and Next keep it. Best score and best time are kept per mission and tier (`DifficultyTier.record_key`: the bare mission id at Standard, so earlier records stay where they were, `<id>@<tier>` otherwise). A clear at any tier unlocks the next operation.
 - **Chen.** "Tier select" is said at deploy, in the countdown: `deploy_full_resonance`, both lines below, voiced with ElevenLabs and checked with `tools/check_vo.ps1`. The bend correction is the existing `sweep_bend`. The boss lines are already voiced as boss events; brace, seal ritual, and the debrief counts wait for their mechanics.
-- **Not built, or deviating.** The tutorial operations are not locked to Standard: until the war map exists they are the only missions, so every tier applies to them. Hand tracking is not required at Full Resonance (push-ups count from head height with controllers; tests 7 and 8 are still to run). The sweep's bend check still runs below Full Resonance, where a duck should clear with the bonus; only the debug Sweep Drill has sweeps there today. The war map's readings hint and per-tier time ranges on the cards are not built.
+- **Not built, or deviating.** The tutorial operations are not locked to Standard: until the war map exists they are the only missions, so every tier applies to them. Tracked hands are not used yet at Full Resonance: push-ups count from head height with controllers held. Tests 7 and 8 settled the input as simultaneous hands and controllers (decision 39); the plan under "Hand tracking" is not built. The sweep's bend check still runs below Full Resonance, where a duck should clear with the bonus; only the debug Sweep Drill has sweeps there today. The war map's readings hint and per-tier time ranges on the cards are not built.
 
 The proposal as written on 2026-10-09:
 
@@ -565,7 +590,7 @@ A boss mission adds a `boss` entry. Only the movement difficulties offer boss mi
 ### The difficulties
 
 - **Assist, Standard, Operator** stay about speed, tell length, health, and damage, as the roadmap says. No detected movement is required. Sweeps appear at duck depth (12 %), which any duck or bend clears, the same as the pink lane today (decision 2). They never meet a boss (decision 17).
-- **Full Resonance** (new, top): the movement difficulty. It is an intensity, not a harder Operator: speed and tells stay at Standard so the extra work is the body, not reaction time. Squat-depth sweeps, low sweeps to jump, push-ups on spent tentacles. Available from the start of the world map (decision 8) and labelled with what it asks for, jumps included. Hand tracking required as the first try (decision 16), pending tests 7 and 8 in section 3.
+- **Full Resonance** (new, top): the movement difficulty. It is an intensity, not a harder Operator: speed and tells stay at Standard so the extra work is the body, not reaction time. Squat-depth sweeps, low sweeps to jump, push-ups on spent tentacles. Available from the start of the world map (decision 8) and labelled with what it asks for, jumps included. The fight is on controllers; push-ups are done with the controllers hanging and the hands tracked (decision 39, after tests 7 and 8).
 
 ### What Chen says
 
@@ -625,7 +650,7 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 
 **Step 4. Headset test of the sweep.** Ready to run: build Quest Debug with `--mission=sweep_drill` in Extra Args, and turn on the Player's `SquatDetector.debug_enabled` to see the bend check and the standing height on the wrist. The sweep now has its tell, whoosh, Chen's "Low!" and her bend correction (Step 3). Chen's call does tell the player what to do, so "without being told" means without a menu or a demonstration; note whether players react to the rails or to her voice, and whether the call lands in time (it is dropped when she is mid-line). Listen for whether the tell reads as "it's coming from that side". Success looks like: first-time players read the telegraph and get under it without being told, in at least 4 of 5 first encounters; nobody bends at the waist more than once after Chen's correction; a three-minute debug operation with a sweep every 10 to 15 seconds leaves the player breathing hard and wanting another go; nobody reports dizziness.
 
-**Step 5, if step 4 passes.** Run the jump signal test (section 3, test 3) and the hand tracking tests (7 and 8). They decide whether the low sweep and the push-ups on a spent tentacle can be built at all.
+**Step 5, if step 4 passes.** Run the jump signal test (section 3, test 3) and the hand tracking tests (7 and 8). They decide whether the low sweep and the push-ups on a spent tentacle can be built at all. Both ran: the jump signal on 2026-10-09 (viable), the hand tracking tests on 2026-10-14 and 2026-10-17 (hands for push-ups only, decision 39).
 
 **Step 6. The Maw as the first boss. Built; reached at Full Resonance since 2026-10-13 (section 4).** Plays phase one, the turn, and a tentacle phase to a retreat on desktop. Not yet tried on a headset.
 - **Where it lives.** `Scripts/Bosses/maw_boss.gd` (`MawBoss`), a node the `RiftDirector` creates under itself and hands every mission in `start_round`. Nothing runs unless the mission carries `"boss"` (the boss Maw) or `"glimpse"` (the tutorial Maw). Since 2026-10-13 the boss Maw is OP-06 at Full Resonance (section 4, "As built"): the catalog Maw's `"tier_boss"` block (`name`, `phase_one_scale` 0.5, `anchor` 840, `anchor_seconds` 210, `squat_depth` 0.20) becomes its `"boss"` there and only there. Before that it was a debug-only mission, `the_maw_boss`, now retired. In debug builds start it from the main menu with **B** (**Shift+B** forces a break), or with `--mission=the_maw_boss`, adding `--maw-breaks` to make every boss Maw break (for headset sessions).
@@ -646,7 +671,7 @@ Jumps are cheap to detect if the signal holds but have the worst safety case. Pu
 - **Desktop stills:** `Godot --path . --xr-mode off --resolution 1600x900 res://Scenes/Debug/boss_capture.tscn` (`Scripts/Debug/boss_capture.gd`) presses Shift+B, cuts phase one short, and writes every beat of the turn, a sweep drawn back and crossing, a volley, a slam, a spent tentacle with push-ups, the retreat, and the bracer to `reports/boss/current/`.
 - **Not built yet:** the low sweep and real push-up detection (Step 7), feeding (decision 28), the readings hint, a war-map home. The torn Maw reads smaller than intended because the portal shader draws only the middle of its quad, and the RIFT beacon stays up through the fight. With Play My Own Music on, the silence is carried by the duck alone, as decision 31 accepts. This is the Phase 7 Maw finale.
 
-**Step 7. The rest of the tentacle attacks. Built (2026-10-11 to 2026-10-13).** Push-ups on the spent tentacle count from head height (`PushUpDetector`), with controllers; hand tracking (tests 7 and 8) is still to run. The low sweep is `ResonanceSweep.low`, judged by `SquatDetector` jump tracking, as a jump pair at the end of the boss cycle. Feeding stays deferred (decision 28).
+**Step 7. The rest of the tentacle attacks. Built (2026-10-11 to 2026-10-13).** Push-ups on the spent tentacle count from head height (`PushUpDetector`), with controllers; tracked hands for the plank (decision 39) are the next step, planned under "Hand tracking". The low sweep is `ResonanceSweep.low`, judged by `SquatDetector` jump tracking, as a jump pair at the end of the boss cycle. Feeding stays deferred (decision 28).
 
 ---
 
