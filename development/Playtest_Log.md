@@ -92,3 +92,12 @@ Training played start to finish once, Chen voiced; about 4 minutes 10 seconds fr
 - **Felt wrong:** Chen's instruction came too late to follow. Each line waited for the phantom to fly in and pause, so the recruit could act before hearing it. The log shows it: "Tap this one" came 6 s after the previous line and was followed by "Lighter than that" (the tap landed hard before it was heard), the hard hit was followed by "Harder than that", and "This next one, I'm letting through" was followed by "I said let it in" (the phantom was struck before "hands down" was heard).
 - **Fix:** Chen now gives each instruction while the phantom is still flying in (`approach_lines` in `TutorialDirector._send_held`), and the cue to act comes last: the tap and hard-hit instructions, hands down before the possession phantom arrives (it is released once she has said it), green's both-hands line, the yellow and blue hand lines, and the pink lane lines during its tell. **Not yet re-checked on the headset.**
 - **Not yet checked:** hold distance against a real jab, the glove check, the punch power band at real speeds.
+
+### 2026-10-24 — self, Quest 3, debug build of merged main (4cdbf27)
+
+Training, a Standard operation for the fly-past fix, and the Full Resonance Maw, on the build that merged the tutorial, difficulty tiers, hand tracking fallback, and the turn-back fix.
+
+- **Felt good:** training "feels good" with Chen's instructions now arriving while the phantom flies in. Phantom behavior is where it should be; the turn-back after a dodge reads right. The boss fight "feels quite good."
+- **Felt wrong:** every boss fight runs the same order of attacks. The cycle should be randomized so a second fight does not play like the first.
+- **Numbers:** operations finish well under the expected-time ranges on the cards. Not retuning yet; the ranges are still wave-table estimates (Known Issues 6).
+- **Next:** the developer wants to get the build in front of a broader group of testers.
