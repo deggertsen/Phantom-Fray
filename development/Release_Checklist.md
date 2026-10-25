@@ -58,6 +58,7 @@
 ## Store submission
 
 - [ ] Release package is ARM64, signed, versioned, built from the tagged commit, and installs cleanly.
+- [ ] Version code bumped and the build uploaded to a release channel with `tools/upload_quest_build.ps1`; testers added in the dashboard.
 - [ ] Meta Quest VRC test plan is completed against the exact release build.
 - [ ] Privacy declaration matches local-only settings and no telemetry (revisit when leaderboards or the war map ship).
 - [ ] Age rating notes mention fantasy violence and physical exertion.

@@ -62,6 +62,25 @@ adb logcat | grep -i -E "godot|openxr|phantom"
 
 `powershell -File tools/build_quest_debug.ps1 -HandTrackingTest` builds `builds/phantom-fury-handtest.apk`, the hand tracking measurement build for tests 7 and 8 in `development/Exercise_Mechanics_Exploration.md` (section 3, "Running tests 7 and 8"). Hand tracking and simultaneous hands and controllers are on in every build; the switch adds only the probe overlay setting to `project.godot` for that export and restores the file afterwards. The export stops the adb server, which ends any running `adb logcat`; start the capture again after a build. The device keeps its own log buffer, so `adb logcat -d` recovers what was missed.
 
+## Credentials
+
+Every secret lives outside Git, in one of two places that the scripts already read:
+
+- `export_credentials.cfg` in the project root (ignored; `export_credentials.example.cfg` shows the keys). It holds the release keystore path, user, and password for `tools/build_quest_release.ps1`, and the Meta App ID and App Secret (or a user token) for `tools/upload_quest_build.ps1`.
+- `%APPDATA%\PhantomFray\` for machine-wide tools: `elevenlabs_key.txt` for Chen's voice, and `ovr-platform-util.exe` if it is not on PATH.
+
+Environment variables `META_APP_ID`, `META_APP_SECRET`, and `META_TOKEN` override the file, which is the path to use from CI. The App ID and App Credentials come from the Meta Horizon developer dashboard, under your app, Development, API. Treat the App Credentials like a password: it lets anyone upload builds as you.
+
+## Release channel upload
+
+1. Bump `version/code` in `export_presets.cfg` under the Quest Release preset. Meta rejects an upload whose version code is not higher than the last one on any channel.
+2. Build: `powershell -File tools/build_quest_release.ps1`.
+3. Upload: `powershell -File tools/upload_quest_build.ps1 -Channel alpha -Notes "what changed"`. The script passes `--age-group TEENS_AND_ADULTS`; without an age group Meta leaves the build in draft.
+4. In the dashboard, add testers to the channel by email. They install from Library, My Preview Apps.
+5. Record the version code, commit, and channel in `development/Playtest_Log.md` so tester reports can be matched to a build.
+
+Production goes through the same utility with `--channel store`, but only after the VRC pass and store listing in [Release_Checklist.md](Release_Checklist.md).
+
 ## Required package checks
 
 - Immersive HMD launch intent is present.
