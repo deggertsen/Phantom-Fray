@@ -93,6 +93,7 @@ Production goes through the same utility with `--channel store`, but only after 
 
 - Immersive HMD launch intent is present.
 - OpenXR loader is version 1.0.34 or later.
+- Android target SDK is 34 or lower (`gradle_build/target_sdk="34"` in both presets). Meta's upload check rejected target SDK 36 on 2026-10-25; the Godot 4.7 template defaults to 36, so the preset must override it.
 - ARM64 native libraries are present.
 - Debug symbols and signing credentials are absent from the release package.
 - Music under `Assets/Audio/Music/` and Chen takes under `Assets/Audio/VO/chen/` are included by the export preset.
