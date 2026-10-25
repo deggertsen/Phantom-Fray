@@ -160,8 +160,7 @@ func hide_menu() -> void:
 	for screen in _all_screens():
 		_set_screen_active(screen, false)
 
-## Puts the panels in front of the head. Only holding the Meta button calls this once they are
-## placed (XRLifecycleController), so choosing something on a menu never moves them.
+## Puts the panels in front of the head, where the camera says it is: the first placement.
 func recenter() -> void:
 	if _player == null:
 		_player = get_tree().get_first_node_in_group("Player") as Node3D
@@ -169,10 +168,27 @@ func recenter() -> void:
 		return
 	var camera := _player.get_node_or_null("XRCamera3D") as Node3D
 	var anchor := camera if camera else _player
-	var forward := -anchor.global_transform.basis.z
-	forward.y = 0.0
+	_place(anchor.global_position, -anchor.global_transform.basis.z)
+
+## Holding the Meta button, the only thing that moves placed panels. XRLifecycleController has just
+## moved the play space so the head stands over its origin, facing its forward, at the same height.
+## The camera node shows that only a few frames later, and panels aimed by it then landed off to
+## the side, one press closer each time. So they go where the head now is, read off the origin.
+func recenter_on_play_space() -> void:
+	if _player == null:
+		_player = get_tree().get_first_node_in_group("Player") as Node3D
+	if _player == null:
+		return
+	var camera := _player.get_node_or_null("XRCamera3D") as Node3D
+	var head := _player.global_position
+	if camera:
+		head.y = camera.global_position.y
+	_place(head, -_player.global_transform.basis.z)
+
+func _place(head: Vector3, facing: Vector3) -> void:
+	var forward := Vector3(facing.x, 0.0, facing.z)
 	forward = forward.normalized() if forward.length_squared() > 0.001 else Vector3.FORWARD
-	global_position = anchor.global_position + forward * panel_distance + Vector3.UP * panel_height_offset
+	global_position = head + forward * panel_distance + Vector3.UP * panel_height_offset
 	global_transform.basis = Basis.looking_at(forward, Vector3.UP)
 	_placed = _head_tracked()
 

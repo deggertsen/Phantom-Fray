@@ -743,6 +743,16 @@ func _validate_results_menu() -> void:
 	to_panel.y = 0.0
 	if presenter.global_transform.is_equal_approx(placed) or facing.dot(-camera.global_transform.basis.z) < 0.99 or to_panel.normalized().dot(-camera.global_transform.basis.z) < 0.99:
 		failures.append("Recentering did not bring the panels in front of the head")
+	# The Meta recenter: the play space has just moved under the head, but the camera still shows
+	# the old pose (turned and stepped). One press puts the panels ahead of the origin, at head height.
+	presenter.recenter_on_play_space()
+	var expected := Vector3(0.0, 1.6 + presenter.panel_height_offset, -presenter.panel_distance)
+	if not presenter.global_position.is_equal_approx(expected) or (-presenter.global_transform.basis.z).dot(Vector3.FORWARD) < 0.999:
+		failures.append("The Meta recenter followed the stale camera instead of the play space: %s" % presenter.global_position)
+	var first_press := presenter.global_transform
+	presenter.recenter_on_play_space()
+	if not presenter.global_transform.is_equal_approx(first_press):
+		failures.append("A second Meta recenter moved the panels again")
 	presenter.queue_free()
 	await process_frame
 	# Shown before tracking (the camera still on the floor), then placed once the head is up.

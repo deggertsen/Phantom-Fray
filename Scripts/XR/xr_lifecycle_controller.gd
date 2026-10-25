@@ -49,11 +49,11 @@ func _on_xr_started() -> void:
 
 ## Holding the Meta button. Under the Stage reference space the runtime leaves the origin where
 ## it was, so the game moves it: the head lands over the safe ring, facing the arena, at its own
-## height. The camera picks up the new frame on the next frame, so the panel follows after it.
+## height. The panels go there straight away, from the origin rather than the camera, which
+## catches up with the new frame a few frames later.
 ## https://docs.godotengine.org/en/stable/tutorials/xr/openxr_settings.html#reference-space
 func _on_pose_recentered() -> void:
 	XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT, true)
-	await get_tree().process_frame
 	_recenter_panel()
 
 func _recenter_panel() -> void:

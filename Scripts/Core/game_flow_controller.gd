@@ -495,9 +495,10 @@ func restore_current_menu() -> void:
 		_:
 			pass
 
+## The Meta recenter, after XRLifecycleController has moved the play space under the head.
 func recenter_current_panel() -> void:
 	if _presenter:
-		_presenter.recenter()
+		_presenter.recenter_on_play_space()
 
 func _on_round_finished(outcome: StringName, score: int) -> void:
 	# Training ends through its director, after Chen signs off.
