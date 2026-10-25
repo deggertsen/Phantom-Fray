@@ -26,6 +26,7 @@ func _run_validation() -> void:
 	await _validate_low_sweep()
 	_validate_maw_break_odds()
 	await _validate_maw_boss()
+	_validate_maw_cycle_variety()
 	await _validate_maw_glimpse()
 	await _validate_phantom_hold()
 	await _validate_punch_power()
@@ -1968,6 +1969,40 @@ func _validate_jump_detection() -> void:
 	detector.free()
 
 ## A low sweep along the floor: standing still takes the hit; a jump timed to the pass clears it.
+## The first cycle is the authored one; after that the blocks shuffle, the summon still comes
+## before the volley, the jump pair still closes, and no two cycles in a row share an order.
+func _validate_maw_cycle_variety() -> void:
+	var boss := MawBoss.new()
+	var first: Array = boss._build_cycle()
+	if first != MawBoss.CYCLE:
+		failures.append("The boss's first cycle is not the authored one")
+	boss._cycles = 1
+	var orders: Dictionary = {}
+	var previous: Array = []
+	for _i in 16:
+		var steps: Array = boss._build_cycle()
+		var does: Array = []
+		for step in steps:
+			does.append(String(step.get("do", "")))
+		if does.count("slam") != 1 or does.count("summon") != 1 or does.count("volley") != 1 or does.count("sweep") != 2:
+			failures.append("A shuffled boss cycle lost or doubled an attack: %s" % [does])
+			break
+		if does.find("summon") > does.find("volley"):
+			failures.append("A shuffled boss cycle throws its volley before summoning an escort")
+			break
+		if does.slice(-4) != ["low_sweep", "rest", "low_sweep", "rest"]:
+			failures.append("A shuffled boss cycle does not end on the jump pair: %s" % [does])
+			break
+		var order: Array = boss._last_order.duplicate()
+		if order == previous:
+			failures.append("Two boss cycles in a row used the same order")
+			break
+		previous = order
+		orders[str(order)] = true
+	if orders.size() < 2:
+		failures.append("Boss cycles did not vary")
+	boss.free()
+
 func _validate_low_sweep() -> void:
 	var sweep_scene := load(MissionCatalog.scene_path("sweep")) as PackedScene
 	var player := Node3D.new()

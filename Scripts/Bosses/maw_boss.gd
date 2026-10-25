@@ -82,6 +82,60 @@ const CYCLE := [
 	{"do": "rest", "seconds": 2.2},
 ]
 
+## The first cycle of a fight is CYCLE as authored, so the fight teaches its attacks in a fixed
+## order once. Every cycle after that is the same four blocks in a shuffled order, so two fights
+## never play the same: a high sweep, the slam with its summon, a second high sweep from the
+## other side, and the volley. The slam's summon always comes before the volley, so the volley has
+## an escort to throw; the jump pair always closes the cycle; and the order never repeats the
+## previous cycle's. Tells, speeds, and rests stay the authored numbers, so the exertion per
+## minute is unchanged (Playtest_Log.md, 2026-10-24).
+func _build_cycle() -> Array:
+	if _cycles == 0:
+		return CYCLE.duplicate(true)
+	var first_side := -1.0 if randf() < 0.5 else 1.0
+	var blocks := {
+		"sweep_a": [
+			{"do": "sweep", "tell": 1.1, "speed": 8.0, "side": first_side},
+			{"do": "rest", "seconds": 1.6},
+		],
+		"slam": [
+			{"do": "slam"},
+			{"do": "summon"},
+			{"do": "rest", "seconds": 2.0},
+		],
+		"sweep_b": [
+			{"do": "sweep", "tell": 1.0, "speed": 8.5, "side": -first_side},
+			{"do": "rest", "seconds": 1.6},
+		],
+		"volley": [
+			{"do": "volley"},
+			{"do": "rest", "seconds": 1.8},
+		],
+	}
+	var order := _cycle_order()
+	var steps: Array = []
+	for name in order:
+		steps.append_array((blocks[name] as Array).duplicate(true))
+	var jump_side := -1.0 if randf() < 0.5 else 1.0
+	steps.append_array([
+		{"do": "low_sweep", "tell": 1.2, "speed": 7.0, "side": jump_side},
+		{"do": "rest", "seconds": 0.8},
+		{"do": "low_sweep", "tell": 1.0, "speed": 7.5, "side": -jump_side},
+		{"do": "rest", "seconds": 2.2},
+	])
+	_last_order = order
+	return steps
+
+## A shuffle of the four blocks with the summon before the volley, different from last time.
+func _cycle_order() -> Array:
+	var order: Array = ["sweep_a", "slam", "sweep_b", "volley"]
+	for _attempt in 24:
+		order.shuffle()
+		if order.find("slam") < order.find("volley") and order != _last_order:
+			return order
+	# Only reached if the dice keep landing on the last order; a legal fallback either way.
+	return ["slam", "volley", "sweep_a", "sweep_b"] if _last_order != ["slam", "volley", "sweep_a", "sweep_b"] else ["sweep_a", "slam", "volley", "sweep_b"]
+
 ## Set by a debug key (Shift+B): the next mission's Maw breaks whatever the odds say.
 static var force_next_break: bool = false
 ## Set by --maw-breaks on the command line (debug builds): every boss Maw breaks, for headset tests.
@@ -110,6 +164,10 @@ var _blackout_amount: float = 0.0
 ## Phantoms circling the rift. Untyped: a freed one must not trip a typed assignment.
 var _escorts: Array = []
 var _steps: Array = []
+## Cycles started this fight. The first plays CYCLE as authored; later ones are shuffled.
+var _cycles: int = 0
+## The block order the last shuffled cycle used, so the next one differs.
+var _last_order: Array = []
 var _step: Dictionary = {}
 var _step_time: float = 0.0
 var _step_phase: StringName = &""
@@ -578,6 +636,8 @@ func _begin_fight() -> void:
 		comms.scripted = false
 	phase_two_started.emit(String(boss_config.get("name", "THE MAW")), _rift.rift_id)
 	_steps = OPENER.duplicate(true)
+	_cycles = 0
+	_last_order = []
 	_from_pose = _tentacle.path().duplicate() if _tentacle else []
 	# The first attack waits for the bar to fill and Chen to finish.
 	_steps.push_front({"do": "rest", "seconds": REFILL_SECONDS + 1.5})
@@ -606,7 +666,8 @@ func _tick_fight(delta: float) -> void:
 
 func _next_step() -> void:
 	if _steps.is_empty():
-		_steps = CYCLE.duplicate(true)
+		_steps = _build_cycle()
+		_cycles += 1
 	_step = _steps.pop_front()
 	_step_time = 0.0
 	_phase_time = 0.0
