@@ -101,3 +101,9 @@ Training, a Standard operation for the fly-past fix, and the Full Resonance Maw,
 - **Felt wrong:** every boss fight runs the same order of attacks. The cycle should be randomized so a second fight does not play like the first.
 - **Numbers:** operations finish well under the expected-time ranges on the cards. Not retuning yet; the ranges are still wave-table estimates (Known Issues 6).
 - **Next:** the developer wants to get the build in front of a broader group of testers.
+
+### 2026-10-25 — alpha channel build, v1.0.0 code 2, commit a379373
+
+First build uploaded to Meta. Channel alpha, app 1380039785197018, build ID 1381106231757040, APK sha256 ebb6b42a198577c5243eb3b514aedafe1964c4223cbb334b2d22a8ad5ee6f83b (124.1 MB). Notes: first tester build with the Phantom Fury rename, wraparound city map, shuffled boss cycle, dodged phantoms turning back. Target SDK 34 (Meta rejected 36 on the first attempt); the export warned that no build tools match SDK 34 and used 35.0.0, which Meta accepted. Meta's own validation and compatibility tests were still running at upload time.
+
+Testers added to the channel see it under Library, My Preview Apps. Tester reports go in entries below, each naming this build.
