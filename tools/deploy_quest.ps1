@@ -51,10 +51,20 @@ try {
 
     # Validation on the exact tree that ships.
     if (-not $SkipValidation) {
-        & $godot --headless --xr-mode off --editor --path $projectRoot --quit 2>$null | Out-Null
+        # Godot writes harmless "Viewport Texture" lines to stderr. Under 'Stop', PowerShell 5.1 turns
+        # a native command's stderr into a terminating error, so these two calls run with 'Continue'
+        # and the result is judged from the runner's own output and banner.
+        $strict = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & cmd /c "`"$godot`" --headless --xr-mode off --editor --path `"$projectRoot`" --quit >nul 2>&1"
+        } finally { $ErrorActionPreference = $strict }
         $passed = $false
         for ($attempt = 1; $attempt -le 2 -and -not $passed; $attempt++) {
-            $out = & $godot --headless --xr-mode off --path $projectRoot --script res://Tests/validation_runner.gd 2>&1 | Out-String
+            $ErrorActionPreference = 'Continue'
+            try {
+                $out = (& cmd /c "`"$godot`" --headless --xr-mode off --path `"$projectRoot`" --script res://Tests/validation_runner.gd 2>&1") | Out-String
+            } finally { $ErrorActionPreference = $strict }
             $passed = $out -match 'VALIDATION PASSED'
             if (-not $passed) {
                 $errors = ($out -split "`n" | Where-Object { $_ -match '^ERROR: [A-Z][a-z]' }) -join "`n"
@@ -62,7 +72,7 @@ try {
             }
         }
         if (-not $passed) { throw 'Validation failed twice.' }
-        git checkout -- addons icon.svg.import 2>$null
+        & cmd /c "git checkout -- addons icon.svg.import 2>nul"
         Write-Host 'Validation passed'
     }
 
