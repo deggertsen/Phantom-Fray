@@ -4,7 +4,7 @@ Updated 2026-10-08. Copy below is a working draft for the fitness-combat positio
 
 ## Positioning
 
-**Title:** Phantom Fray: Resonance Rising
+**Title:** Phantom Fury: Resonance Rising
 **Short pitch:** A boxing workout with a world to save. Punch, block, and dodge the phantoms pouring out of dimensional rifts, and seal the breach before it drains you.
 **Category:** Fitness and action. Stationary room-scale, standing, physical dodging, no artificial locomotion.
 **Comparable titles for the listing:** Supernatural, Les Mills Bodycombat, Thrill of the Fight. The difference is the stakes: creatures, a life force that drains, Dr. Chen on comms, and a war that needs you back tomorrow.

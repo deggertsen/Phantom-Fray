@@ -1,6 +1,6 @@
 ---
 globs: *.gd,*XR*,*vr*,*VR*
-description: VR and XR-specific development guidelines for Phantom-Fray
+description: VR and XR-specific development guidelines for Phantom Fury
 ---
 
 # VR/XR Development Guidelines

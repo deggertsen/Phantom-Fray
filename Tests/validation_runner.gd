@@ -36,7 +36,7 @@ func _run_validation() -> void:
 	_validate_tracked_hands()
 	await process_frame
 	if failures.is_empty():
-		print("PHANTOM FRAY VALIDATION PASSED")
+		print("PHANTOM FURY VALIDATION PASSED")
 		quit(0)
 	else:
 		for failure in failures:

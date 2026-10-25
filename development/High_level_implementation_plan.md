@@ -1,4 +1,4 @@
-# Phantom Fray Implementation Checklist
+# Phantom Fury Implementation Checklist
 
 Master checklist across systems, as of 2026-10-08. Phase ownership is in [Production_Roadmap.md](Production_Roadmap.md).
 

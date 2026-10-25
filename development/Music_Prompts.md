@@ -1,6 +1,6 @@
 > **Status (2026-10-08):** Six tracks ship in `Assets/Audio/Music/` (galactic_dawn, galactic_shadows, galactic_showdown, galactic_showdown_2, phantom_fall, starlight_clash) and `Scripts/Audio/music_intensity_controller.gd` raises volume and pitch with rift pressure and ducks under Chen and at low life. Dynamic layering described below is not implemented. These prompts are kept for commissioning or generating further tracks.
 
-# Combat Music Prompts for Phantom Fray
+# Combat Music Prompts for Phantom Fury
 
 ## Epic Orchestral Combat (Duel of Fates Style)
 "Create an orchestral piece with a dark, intense choir and driving percussion. Begin with a haunting choir introduction that builds into a full orchestral battle theme. Include:

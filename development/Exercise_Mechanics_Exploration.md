@@ -2,7 +2,7 @@
 
 **Written:** 2026-10-09. **Updated** through 2026-10-13 with six rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit), and on 2026-10-17 with the hand tracking tests (7 and 8).
 **Status:** Exploration, partly built. The squat detector runs in every build (`Scripts/Player/squat_detector.gd`), the resonance sweep is built (`Scripts/Hazards/resonance_sweep.gd`, prototype plan Step 3), The Maw's boss phase is built (`Scripts/Bosses/maw_boss.gd`, Steps 6 and 7), and the four difficulties are built (`Scripts/Core/difficulty_tier.gd`, section 4): at Full Resonance the campaign Maw plays the boss fight.
-**Question:** How could Phantom Fray require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
+**Question:** How could Phantom Fury require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
 
 ## The short answer
 
@@ -401,7 +401,7 @@ A possession that pins the player until they do push-ups. The player goes to the
 
 ### What Meta's guidance covers
 
-Meta's store comfort ratings (Comfortable, Moderate, Intense) describe **motion**: camera movement, player motion, and disorienting effects. They do not describe physical exertion ([Meta Help: comfort ratings](https://www.meta.com/help/quest/331713305046406/)). I found no Meta developer policy that sets limits on exertion or requires an exertion warning ([Meta Horizon developer policies](https://developers.meta.com/horizon/policy/)). That is my reading of what I could find, not a confirmed absence; ask Meta developer support before submission. Phantom Fray is stationary with no artificial locomotion, so the comfort rating should stay where it is whatever we add here. What protects players is our own design: opt-in, warned, and capped.
+Meta's store comfort ratings (Comfortable, Moderate, Intense) describe **motion**: camera movement, player motion, and disorienting effects. They do not describe physical exertion ([Meta Help: comfort ratings](https://www.meta.com/help/quest/331713305046406/)). I found no Meta developer policy that sets limits on exertion or requires an exertion warning ([Meta Horizon developer policies](https://developers.meta.com/horizon/policy/)). That is my reading of what I could find, not a confirmed absence; ask Meta developer support before submission. Phantom Fury is stationary with no artificial locomotion, so the comfort rating should stay where it is whatever we add here. What protects players is our own design: opt-in, warned, and capped.
 
 ### Squats
 

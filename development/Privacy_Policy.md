@@ -1,13 +1,13 @@
-# Phantom Fray Privacy Policy
+# Phantom Fury Privacy Policy
 
 **Effective date:** 2026-10-24
-**Applies to:** Phantom Fray: Resonance Rising for Meta Quest (package `com.phantomfray.resonancerising`), including test builds distributed through Meta release channels.
+**Applies to:** Phantom Fury: Resonance Rising for Meta Quest (package `com.phantomfray.resonancerising`), including test builds distributed through Meta release channels.
 
 This policy describes what the game does with information on your headset. It is written to match the game as built; the "What would change this" section at the end lists the features that would require an update.
 
 ## The short version
 
-Phantom Fray does not collect, transmit, sell, or share any personal information. It has no account system, no analytics, no advertising, and makes no network connections. Everything it saves stays on your headset, and uninstalling the game removes all of it.
+Phantom Fury does not collect, transmit, sell, or share any personal information. It has no account system, no analytics, no advertising, and makes no network connections. Everything it saves stays on your headset, and uninstalling the game removes all of it.
 
 ## Information the game stores on your headset
 
@@ -43,7 +43,7 @@ Development and test builds distributed to testers write diagnostic lines to the
 
 ## Children
 
-Phantom Fray is a physical exertion game intended for adults and is not directed at children under 13. The game does not knowingly collect information from anyone, including children.
+Phantom Fury is a physical exertion game intended for adults and is not directed at children under 13. The game does not knowingly collect information from anyone, including children.
 
 ## Your choices
 

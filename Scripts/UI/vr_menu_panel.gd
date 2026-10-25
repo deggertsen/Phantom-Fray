@@ -58,7 +58,7 @@ func _update_thumbstick_scroll(delta: float) -> void:
 ## training_first: training has not been finished on this profile, so it is the highlighted
 ## button and Deploy says so. Deploy still works.
 func show_main_menu(deploy_detail: String = "Seal the next live rift", training_first: bool = false) -> void:
-	_begin_view(&"DEPLOYMENT", "RSF // STRIKER INTERFACE", "PHANTOM FRAY", "RESONANCE RISING", COLOR_CYAN)
+	_begin_view(&"DEPLOYMENT", "RSF // STRIKER INTERFACE", "PHANTOM FURY", "RESONANCE RISING", COLOR_CYAN)
 	# The deploy, operations, and training rows plus the footer only fit the 780 px panel with tighter rows.
 	_content.add_theme_constant_override("separation", 8)
 	if training_first:

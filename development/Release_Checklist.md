@@ -1,4 +1,4 @@
-# Phantom Fray Release Checklist
+# Phantom Fury Release Checklist
 
 ## Automated and desktop validation
 
