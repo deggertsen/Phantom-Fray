@@ -18,6 +18,8 @@ func _run_validation() -> void:
 	await _validate_rift_stragglers()
 	await _validate_elapsed_timer()
 	await _validate_menu_surface()
+	await _validate_city_menu()
+	_validate_front_lines()
 	await _validate_results_menu()
 	await _validate_pink_dodge()
 	_validate_squat_detector()
@@ -159,46 +161,22 @@ func _validate_menu_surface() -> void:
 	var menu := menu_scene.instantiate() as VRMenuPanel
 	root.add_child(menu)
 	await process_frame
-	menu.show_main_menu()
-	await process_frame
-	var deploy := _find_button(menu, "DEPLOY MISSION")
-	var training := _find_button(menu, "START TRAINING")
-	var settings := _find_button(menu, "OPEN SETTINGS")
-	if deploy == null or training == null or settings == null:
-		failures.append("Main menu mission/training/settings actions are not all present")
-	else:
-		var activated := [false]
-		menu.action_requested.connect(func(action: StringName) -> void:
-			activated[0] = action == &"deploy"
-		)
-		if not menu.activate_at_viewport_point(deploy.get_global_rect().get_center()) or not activated[0]:
-			failures.append("Pointing at a menu button did not activate it")
-	# A new recruit: training is the highlighted button, and Deploy still works.
-	menu.show_main_menu("NEXT", true)
-	await process_frame
-	var new_training := _find_button(menu, "START TRAINING")
-	var new_deploy := _find_button(menu, "DEPLOY MISSION")
-	if new_training == null or not bool(new_training.get_meta(&"primary", false)) or new_deploy == null or bool(new_deploy.get_meta(&"primary", false)) or new_deploy.disabled:
-		failures.append("A new recruit's main menu does not lead with training")
-	elif not "TRAINING RECOMMENDED FIRST" in new_deploy.text:
-		failures.append("Deploy does not recommend training to a new recruit")
 	menu.show_training_complete("NEXT")
 	await process_frame
 	var complete_actions := _button_actions(menu)
 	if complete_actions != ["training_deploy", "training_replay", "training_menu"]:
 		failures.append("Training Complete offers %s" % [complete_actions])
+	var complete_deploy := _find_button(menu, "DEPLOY")
+	var activated := [false]
+	menu.action_requested.connect(func(action: StringName) -> void:
+		activated[0] = action == &"training_deploy"
+	)
+	if complete_deploy == null or not menu.activate_at_viewport_point(complete_deploy.get_global_rect().get_center()) or not activated[0]:
+		failures.append("Pointing at a menu button did not activate it")
 	menu.show_pause(true)
 	await process_frame
 	if _button_actions(menu) != ["resume", "pause_settings", "end_training"]:
 		failures.append("The training pause menu offers %s" % [_button_actions(menu)])
-	menu.show_results(&"defeat", 100, "", "", 0.0, 0.0, "", true)
-	await process_frame
-	if not "results_training" in _button_actions(menu):
-		failures.append("Defeat results do not offer Review Training")
-	menu.show_results(&"victory", 100, "", "NEXT", 60.0, 0.0, "", false)
-	await process_frame
-	if "results_training" in _button_actions(menu):
-		failures.append("Victory results offer Review Training")
 	menu.show_settings("75%", "50%", "100%", false, false)
 	await process_frame
 	var flashes_off := false
@@ -471,6 +449,181 @@ func _validate_green_arrival() -> void:
 	head.queue_free()
 	await process_frame
 
+## The city map and results are three wrap panels, each checked laid flat at its headset size.
+func _validate_city_menu() -> void:
+	var left := _wrap_panel(Vector2(VRWrapPanel.SIDE_PIXELS))
+	var center := _wrap_panel(Vector2(VRWrapPanel.CENTER_PIXELS))
+	var right := _wrap_panel(Vector2(VRWrapPanel.SIDE_PIXELS))
+	await process_frame
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.cleared_missions = PackedStringArray(["first_light", "widen_the_ring"])
+	profile.best_times = {"first_light": 94.0, "widen_the_ring": 342.0}
+	var entries := MissionCatalog.operation_entries(profile)
+	left.show_city_status(entries, false)
+	center.show_city_map(entries, "chens_gambit")
+	right.show_site_detail(entries[2], DifficultyTier.STANDARD, false)
+	for _frame in 3:
+		await process_frame
+	if _button_actions(left) != ["training", "settings"]:
+		failures.append("The city's left panel offers %s" % [_button_actions(left)])
+	elif bool(_find_button(left, "TRAINING").get_meta(&"primary", false)):
+		failures.append("Training leads the city map for a trained Striker")
+	if not _has_label(left, "33%"):
+		failures.append("The city does not show how much of it is reclaimed")
+	var sites := {}
+	for button in _buttons_under(center):
+		sites[String(button.get_meta(&"menu_action", &""))] = button
+	for entry in entries:
+		var site: Button = sites.get("site_%s" % entry.get("id", ""))
+		if site == null:
+			failures.append("The city map has no site for %s" % entry.get("id", ""))
+		elif site.disabled == bool(entry.get("unlocked", false)):
+			failures.append("Site %s is %s" % [entry.get("id", ""), "locked" if site.disabled else "open"])
+	var picked := [&""]
+	center.action_requested.connect(func(action: StringName) -> void: picked[0] = action)
+	var gambit: Button = sites.get("site_chens_gambit")
+	if gambit == null or not center.activate_at_viewport_point(gambit.get_global_rect().get_center()) or picked[0] != &"site_chens_gambit":
+		failures.append("Pointing at a site did not pick it")
+	var deploy := _find_button(right, "DEPLOY")
+	var deployed := [false]
+	right.action_requested.connect(func(action: StringName) -> void: deployed[0] = action == &"deploy")
+	if deploy == null or not bool(deploy.get_meta(&"primary", false)) or not "STANDARD" in deploy.text:
+		failures.append("Deploy does not lead the site panel or name the difficulty")
+	elif not right.activate_at_viewport_point(deploy.get_global_rect().get_center()) or not deployed[0]:
+		failures.append("Pointing at Deploy did not activate it")
+	if not _has_label(right, "6 TO 8 MIN"):
+		failures.append("The site panel does not show the expected time")
+	_check_fits(left, "city panel")
+	_check_fits(right, "site panel")
+	right.show_site_detail(entries[1], DifficultyTier.STANDARD, false)
+	await process_frame
+	if not _has_label(right, "6 TO 8 MIN  •  YOUR BEST 5:42"):
+		failures.append("The site panel does not show the best time beside the range")
+	# Every difficulty, the chosen one marked, and Full Resonance says what it asks before Deploy.
+	right.show_site_detail(entries[2], DifficultyTier.FULL_RESONANCE, false)
+	await process_frame
+	var tiers := 0
+	for button in _buttons_under(right):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action.begins_with("tier_"):
+			tiers += 1
+			if button.text.begins_with("●") != (action == "tier_full_resonance"):
+				failures.append("The site panel marks the wrong difficulty: %s" % button.text)
+	if tiers != 4:
+		failures.append("The site panel offers %d difficulties, not four" % tiers)
+	if not _has_label(right, DifficultyTier.blurb(DifficultyTier.FULL_RESONANCE)):
+		failures.append("Full Resonance does not say what it asks before Deploy")
+	_check_fits(right, "Full Resonance site panel")
+	# A new recruit: training leads, and Deploy still works.
+	var recruit := MissionCatalog.operation_entries(null)
+	left.show_city_status(recruit, true)
+	right.show_site_detail(recruit[0], DifficultyTier.STANDARD, true)
+	for _frame in 2:
+		await process_frame
+	var new_training := _find_button(left, "TRAINING")
+	var new_deploy := _find_button(right, "DEPLOY")
+	if new_training == null or not bool(new_training.get_meta(&"primary", false)) or new_deploy == null or bool(new_deploy.get_meta(&"primary", false)) or new_deploy.disabled:
+		failures.append("A new recruit's city map does not lead with training")
+	elif not "TRAINING RECOMMENDED FIRST" in new_deploy.text:
+		failures.append("Deploy does not recommend training to a new recruit")
+	_check_fits(left, "new recruit's city panel")
+	_check_fits(right, "new recruit's site panel")
+	# Results: the front moves, the time and tier show, and the actions follow the outcome.
+	profile.cleared_missions = PackedStringArray(["first_light", "widen_the_ring", "chens_gambit"])
+	var after := MissionCatalog.operation_entries(profile)
+	var victory := {
+		"outcome": &"victory",
+		"score": 12840,
+		"debrief": "Chen: It knows your resonance now. This was the opening move. Not the end of the war.",
+		"seconds": 252.4,
+		"previous_best": 280.0,
+		"best_seconds": 252.4,
+		"tier": DifficultyTier.FULL_RESONANCE,
+		"mission": after[2],
+		"next": after[3],
+		"sealed_before": 2,
+		"entries": after,
+		"offer_training": false,
+	}
+	left.show_city_report(victory)
+	center.show_results_map(victory)
+	right.show_results_actions(victory)
+	for _frame in 2:
+		await process_frame
+	if not _has_label(left, "THE LINE MOVED") or not _has_label(left, "UP FROM 33%"):
+		failures.append("Results do not show the front moving")
+	if not _has_label(center, "ALL RIFTS SEALED  •  FULL RESONANCE"):
+		failures.append("Results do not name the difficulty")
+	if not _has_label(center, "4:12") or not _has_label(center, "NEW BEST TIME"):
+		failures.append("Victory results do not show the completion time")
+	if _button_actions(right) != ["next_mission", "retry", "results_menu"]:
+		failures.append("Victory results offer %s" % [_button_actions(right)])
+	_check_fits(left, "results city panel")
+	_check_fits(right, "results action panel")
+	var defeat := victory.duplicate()
+	defeat["outcome"] = &"defeat"
+	defeat["next"] = {}
+	defeat["offer_training"] = true
+	left.show_city_report(defeat)
+	right.show_results_actions(defeat)
+	await process_frame
+	if _button_actions(right) != ["retry", "results_training", "results_menu"]:
+		failures.append("Defeat results offer %s" % [_button_actions(right)])
+	elif not bool(_find_button(right, "RETRY").get_meta(&"primary", false)):
+		failures.append("Retry does not lead after a defeat")
+	if _has_label(left, "THE LINE MOVED"):
+		failures.append("A defeat moved the front")
+	profile.free()
+	for panel in [left, center, right]:
+		panel.get_parent().queue_free()
+	await process_frame
+
+## At every sealed count the sealed sites sit behind the front and the rest in front of it.
+func _validate_front_lines() -> void:
+	var map := CityMap.new()
+	map.size = Vector2(VRWrapPanel.CENTER_PIXELS)
+	var order := MissionCatalog.all_missions()
+	for sealed in range(CityMap.FRONT_LINES.size()):
+		var line := map._front_points(sealed)
+		for index in range(order.size()):
+			var mission_id := String(order[index].get("id", ""))
+			var site := map._site_point(mission_id)
+			if (index < sealed) != (site.x < _line_x_at(line, site.y)):
+				failures.append("With %d sealed, %s sits on the wrong side of the front" % [sealed, mission_id])
+	map.free()
+
+func _line_x_at(line: PackedVector2Array, y: float) -> float:
+	for index in range(line.size() - 1):
+		if y >= line[index].y and y <= line[index + 1].y:
+			return lerpf(line[index].x, line[index + 1].x, inverse_lerp(line[index].y, line[index + 1].y, y))
+	return line[line.size() - 1].x
+
+func _wrap_panel(panel_size: Vector2) -> VRWrapPanel:
+	var holder := Control.new()
+	holder.size = panel_size
+	root.add_child(holder)
+	var panel := VRWrapPanel.new()
+	holder.add_child(panel)
+	return panel
+
+## Every visible button and label sits inside the panel.
+func _check_fits(panel: Control, what: String) -> void:
+	var bounds := panel.get_global_rect().grow(1.0)
+	for node in _controls_under(panel):
+		if (node is Button or node is Label) and node.is_visible_in_tree() and not bounds.encloses(node.get_global_rect()):
+			failures.append("The %s runs off the panel at '%s' %s" % [what, node.get("text"), node.get_global_rect()])
+			return
+
+func _controls_under(node: Node) -> Array[Control]:
+	var found: Array[Control] = []
+	if node is Control:
+		found.append(node as Control)
+	for child in node.get_children():
+		found.append_array(_controls_under(child))
+	return found
+
+## The presenter in 3D: results and the city map wrap around the player, the side panels turn to
+## face them, and a ray presses the button it meets on whichever panel it hits.
 func _validate_results_menu() -> void:
 	var player := Node3D.new()
 	player.add_to_group("Player")
@@ -483,54 +636,60 @@ func _validate_results_menu() -> void:
 	root.add_child(presenter)
 	for _frame in 3:
 		await process_frame
-	presenter.show_results(
-		&"victory",
-		12840,
-		"Chen: It knows your resonance now. This was the opening move. Not the end of the war.",
-		"WIDEN THE RING"
-	)
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.cleared_missions = PackedStringArray(["first_light", "widen_the_ring"])
+	var entries := MissionCatalog.operation_entries(profile)
+	profile.free()
+	presenter.show_results({
+		"outcome": &"victory",
+		"score": 12840,
+		"debrief": "Chen: A signal rode the last seal. Whatever is on the other side looked back.",
+		"seconds": 300.0,
+		"previous_best": 0.0,
+		"best_seconds": 300.0,
+		"tier": DifficultyTier.STANDARD,
+		"mission": entries[1],
+		"next": entries[2],
+		"sealed_before": 1,
+		"entries": entries,
+		"offer_training": false,
+	})
 	for _frame in 4:
 		await process_frame
-	var panel_rect := Rect2(Vector2.ZERO, Vector2(1280, 780))
-	for label in ["NEXT OPERATION", "RETRY MISSION", "MAIN MENU"]:
-		var button := _find_button(presenter, label)
-		if button == null:
-			failures.append("Results action missing: %s" % label)
-			continue
-		var rect := button.get_global_rect()
-		if rect.size.y < 20.0 or not panel_rect.encloses(rect):
-			failures.append("Results button %s sits outside the panel %s" % [label, rect])
-		elif rect.position.y + rect.size.y > 680.0:
-			failures.append("Results button %s is pinned to the bottom edge %s" % [label, rect])
-	var retry := _find_button(presenter, "RETRY MISSION")
-	var body := presenter.get_node_or_null("MenuScreen/StaticBody3D")
+	var single := presenter.get_node_or_null("Single/MenuScreen") as XRToolsViewport2DIn3D
+	var right_screen := presenter.get_node_or_null("Wrap/WrapRight") as XRToolsViewport2DIn3D
+	var center_screen := presenter.get_node_or_null("Wrap/WrapCenter") as XRToolsViewport2DIn3D
+	if single == null or right_screen == null or center_screen == null:
+		failures.append("The presenter is missing its single or wrap screens")
+		presenter.queue_free()
+		player.queue_free()
+		await process_frame
+		return
+	if single.enabled or not right_screen.enabled or not center_screen.enabled:
+		failures.append("Results did not switch to the wrap panels")
+	var to_player := (camera.global_position - right_screen.global_position).normalized()
+	if right_screen.global_transform.basis.z.normalized().dot(to_player) < 0.8:
+		failures.append("The right panel does not turn to face the player")
+	var activated := [&""]
+	presenter.action_requested.connect(func(action: StringName) -> void: activated[0] = action)
+	var retry := _find_button(right_screen, "RETRY")
+	var body := right_screen.get_node_or_null("StaticBody3D")
 	if retry == null or body == null or not body.has_method("global_to_viewport"):
 		failures.append("Results pointer target is missing")
 	else:
-		var screen_size: Vector2 = body.get("screen_size")
-		var viewport_size: Vector2 = body.get("viewport_size")
-		var center: Vector2 = retry.get_global_rect().get_center()
-		var local := Vector3(
-			(center.x / viewport_size.x - 0.5) * screen_size.x,
-			(0.5 - center.y / viewport_size.y) * screen_size.y,
-			0.0
-		)
-		var shape := body.get_node("CollisionShape3D") as Node3D
-		var world_point: Vector3 = shape.global_transform * local
+		var world_point := _screen_point(right_screen, retry.get_global_rect().get_center())
 		var mapped: Vector2 = body.call("global_to_viewport", world_point)
-		if mapped.distance_to(center) > 24.0:
-			failures.append("Results pointer map missed retry by %s px" % mapped.distance_to(center))
-		var activated := [false]
-		presenter.action_requested.connect(func(action: StringName) -> void:
-			activated[0] = action == &"retry"
-		)
-		if not presenter.activate_at_viewport_point(mapped) or not activated[0]:
+		if mapped.distance_to(retry.get_global_rect().get_center()) > 24.0:
+			failures.append("Results pointer map missed retry by %s px" % mapped.distance_to(retry.get_global_rect().get_center()))
+		if not presenter.activate_on_body(body, world_point) or activated[0] != &"retry":
 			failures.append("Pointing at retry did not activate it")
-		activated[0] = false
-		var aim_origin: Vector3 = world_point + shape.global_transform.basis.z * 1.2
-		var aim_direction: Vector3 = world_point - aim_origin
-		if not presenter.activate_from_aim(aim_origin, aim_direction) or not activated[0]:
+		activated[0] = &""
+		var aim_origin: Vector3 = world_point + right_screen.global_transform.basis.z * 1.2
+		if not presenter.activate_from_aim(aim_origin, world_point - aim_origin) or activated[0] != &"retry":
 			failures.append("Aiming at retry did not activate it")
+		activated[0] = &""
+		if not presenter.activate_from_aim(camera.global_position, world_point - camera.global_position) or activated[0] != &"retry":
+			failures.append("Aiming at retry from the head did not activate it")
 		var screen_shape := body.get_node_or_null("CollisionShape3D") as CollisionShape3D
 		if screen_shape == null:
 			failures.append("Results screen has no collision shape")
@@ -540,45 +699,46 @@ func _validate_results_menu() -> void:
 			await process_frame
 			if screen_shape.disabled:
 				failures.append("Results screen collider stayed disabled")
-	var profile = load("res://Scripts/Core/game_settings.gd").new()
-	profile.cleared_missions = PackedStringArray(["first_light"])
-	profile.best_times = {"first_light": 342.0}
-	var entries := MissionCatalog.operation_entries(profile)
-	profile.free()
-	presenter.show_operations(entries)
+	presenter.show_city_map(entries, "chens_gambit", DifficultyTier.STANDARD, false)
 	for _frame in 4:
 		await process_frame
-	for entry in entries:
-		var card := _find_button(presenter, "%s  %s" % [entry.get("codename", ""), entry.get("title", "")])
-		var expected := MissionCatalog.expected_minutes_text(entry)
-		if card == null or expected == "" or expected not in card.text:
-			failures.append("Operations card for %s does not show its expected time" % entry.get("id", ""))
-		elif entry.get("id", "") == "first_light" and "%s  •  YOUR BEST 5:42" % expected not in card.text:
-			failures.append("Operations card does not show the best time beside the range: %s" % card.text)
-		elif entry.get("id", "") != "first_light" and "YOUR BEST" in card.text:
-			failures.append("Operations card shows a best time it does not have: %s" % card.text)
-	var operation_buttons := 0
-	var operation_panel := Rect2(Vector2.ZERO, Vector2(1280, 780))
-	var stack := presenter.get_node("MenuScreen/Viewport").get_child(0)
-	for button in _buttons_under(stack):
-		operation_buttons += 1
-		var op_rect := button.get_global_rect()
-		if op_rect.size.y < 20.0 or not operation_panel.encloses(op_rect):
-			failures.append("Operations button sits outside the panel %s" % op_rect)
-	if operation_buttons < 7:
-		failures.append("Operations list is missing a contract or the back button")
-	var operations_footer := _find_label(stack, "LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
-	if operations_footer == null or operations_footer.get_global_rect().end.y > 750.0:
-		failures.append("Operations footer runs off the bottom of the panel")
-	presenter.show_main_menu(MissionCatalog.deploy_detail(null))
-	for _frame in 4:
+	var deploy := _find_button(right_screen, "DEPLOY")
+	activated[0] = &""
+	if deploy == null:
+		failures.append("The city map has no Deploy on the right panel")
+	else:
+		var deploy_point := _screen_point(right_screen, deploy.get_global_rect().get_center())
+		if not presenter.activate_from_aim(camera.global_position, deploy_point - camera.global_position) or activated[0] != &"deploy":
+			failures.append("Aiming at Deploy from the head did not activate it")
+	var gambit: Button = null
+	for button in _buttons_under(center_screen):
+		if button.get_meta(&"menu_action", &"") == &"site_chens_gambit":
+			gambit = button
+	activated[0] = &""
+	if gambit == null:
+		failures.append("The city map has no Chen's Gambit site")
+	else:
+		var site_point := _screen_point(center_screen, gambit.get_global_rect().get_center())
+		if not presenter.activate_from_aim(camera.global_position, site_point - camera.global_position) or activated[0] != &"site_chens_gambit":
+			failures.append("Aiming at a site from the head did not pick it")
+	presenter.show_pause()
+	for _frame in 2:
 		await process_frame
-	var main_footer := _find_label(stack, "POINT AT A BUTTON  •  PULL TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
-	if main_footer == null or main_footer.get_global_rect().end.y > 750.0:
-		failures.append("Main menu footer runs off the bottom of the panel")
+	if not single.enabled or right_screen.enabled or center_screen.enabled:
+		failures.append("Pause did not switch back to the single panel")
 	presenter.queue_free()
 	player.queue_free()
 	await process_frame
+
+## The world point on a screen for a pixel of its viewport.
+func _screen_point(screen: XRToolsViewport2DIn3D, pixel: Vector2) -> Vector3:
+	var local := Vector3(
+		(pixel.x / screen.viewport_size.x - 0.5) * screen.screen_size.x,
+		(0.5 - pixel.y / screen.viewport_size.y) * screen.screen_size.y,
+		0.0
+	)
+	var shape := screen.get_node("StaticBody3D/CollisionShape3D") as Node3D
+	return shape.global_transform * local
 
 func _validate_possession(yellow_scene: PackedScene) -> void:
 	var yellow := yellow_scene.instantiate()
@@ -864,35 +1024,18 @@ func _validate_difficulty_tiers() -> void:
 	levels.free()
 	reloaded.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
-	# The Operations screen offers all four, marks the choice, and still fits; results name the tier.
-	var menu := (load("res://Scenes/UI/vr_menu_panel.tscn") as PackedScene).instantiate() as VRMenuPanel
-	root.add_child(menu)
+	# The site panel marks the chosen difficulty and says what it asks. (More in _validate_city_menu.)
+	var site_panel := _wrap_panel(Vector2(VRWrapPanel.SIDE_PIXELS))
 	await process_frame
-	menu.show_operations(MissionCatalog.operation_entries(null), DifficultyTier.OPERATOR)
+	site_panel.show_site_detail(MissionCatalog.operation_entries(null)[0], DifficultyTier.OPERATOR)
 	await process_frame
-	await process_frame
-	var tier_buttons := 0
-	for button in _buttons_under(menu):
+	for button in _buttons_under(site_panel):
 		var action := String(button.get_meta(&"menu_action", &""))
-		if action.begins_with("tier_"):
-			tier_buttons += 1
-			var marked := button.text.begins_with("●")
-			if marked != (action == "tier_operator"):
-				failures.append("Operations marks the wrong difficulty: %s" % button.text)
-			if not Rect2(Vector2.ZERO, Vector2(1280, 780)).encloses(button.get_global_rect()):
-				failures.append("A difficulty button sits outside the panel")
-	if tier_buttons != 4:
-		failures.append("Operations offers %d difficulties, not four" % tier_buttons)
-	var footer := _find_label(menu, "LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
-	if footer == null or footer.get_global_rect().end.y > 750.0:
-		failures.append("The difficulty row pushed the Operations footer off the panel")
-	if _find_label(menu, "OPERATOR  •  %s" % DifficultyTier.blurb(DifficultyTier.OPERATOR).to_upper()) == null:
-		failures.append("Operations does not say what the chosen difficulty asks")
-	menu.show_results(&"victory", 4000, "", "", 300.0, 0.0, DifficultyTier.label(DifficultyTier.FULL_RESONANCE))
-	await process_frame
-	if not _has_label(menu, "ALL RIFTS SEALED  •  FULL RESONANCE"):
-		failures.append("Results do not name the difficulty")
-	menu.queue_free()
+		if action.begins_with("tier_") and button.text.begins_with("●") != (action == "tier_operator"):
+			failures.append("The site panel marks the wrong difficulty: %s" % button.text)
+	if not _has_label(site_panel, DifficultyTier.blurb(DifficultyTier.OPERATOR)):
+		failures.append("The site panel does not say what the chosen difficulty asks")
+	site_panel.get_parent().queue_free()
 	await process_frame
 	await _validate_boss_only_at_full_resonance()
 
@@ -1128,14 +1271,13 @@ func _validate_elapsed_timer() -> void:
 		failures.append("Reset progress kept the best time")
 	levels.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://validation_settings.cfg"))
-	var menu := (load("res://Scenes/UI/vr_menu_panel.tscn") as PackedScene).instantiate() as VRMenuPanel
-	root.add_child(menu)
+	var results_panel := _wrap_panel(Vector2(VRWrapPanel.CENTER_PIXELS))
 	await process_frame
-	menu.show_results(&"victory", 12840, "", "", 252.4, 280.0)
+	results_panel.show_results_map({"outcome": &"victory", "score": 12840, "seconds": 252.4, "previous_best": 280.0, "tier": DifficultyTier.STANDARD, "entries": MissionCatalog.operation_entries(null)})
 	await process_frame
-	if not _has_label(menu, "SEALED IN 4:12  •  NEW BEST TIME"):
+	if not _has_label(results_panel, "4:12") or not _has_label(results_panel, "NEW BEST TIME"):
 		failures.append("Victory results do not show the completion time")
-	menu.queue_free()
+	results_panel.get_parent().queue_free()
 	director.cleanup_round()
 	for node in [round_controller, life, director, container]:
 		node.queue_free()

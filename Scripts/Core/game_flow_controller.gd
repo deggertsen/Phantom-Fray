@@ -35,7 +35,12 @@ var _debug_run: bool = false
 ## Debug builds: --tier=<id> plays command-line deploys at that tier without changing the saved choice.
 var _command_tier: String = ""
 var _last_debrief: String = ""
-var _next_mission_title: String = ""
+## The operation unlocked after the round, for results to offer next; "" when there is none.
+var _next_mission_id: String = ""
+## How many sites were sealed before the round, so results can show the front moving.
+var _sealed_before: int = -1
+## The site picked on the city map. Deploy starts it; "" falls back to the next live site.
+var _selected_site_id: String = ""
 var _menu_input_armed: bool = false
 var _results_pointer_warmup: float = 0.0
 var _results_action_locked: bool = false
@@ -140,21 +145,20 @@ func _on_menu_action(action: StringName) -> void:
 			return
 		_menu_input_armed = false
 		get_tree().create_timer(0.25).timeout.connect(_arm_menu_input_after_release)
-	if String(action).begins_with("mission_"):
-		_start_mission(String(action).trim_prefix("mission_"))
+	if String(action).begins_with("site_"):
+		var site_id := String(action).trim_prefix("site_")
+		if MissionCatalog.is_unlocked(site_id, _settings):
+			_selected_site_id = site_id
+		_show_main_menu()
 		return
 	if String(action).begins_with("tier_"):
 		if _settings:
 			_settings.set_difficulty_tier(String(action).trim_prefix("tier_"))
-		_show_operations()
+		_show_main_menu()
 		return
 	match action:
 		&"deploy":
-			_start_mission("")
-		&"operations":
-			_show_operations()
-		&"operations_back":
-			_show_main_menu()
+			_start_mission(_selected_site_id)
 		&"training":
 			_start_training()
 		&"results_training":
@@ -253,7 +257,7 @@ func _on_menu_action(action: StringName) -> void:
 			_results_action_locked = true
 			_menu_input_armed = false
 			if action == &"results_menu":
-				_return_to_operations_menu()
+				_return_to_city_map()
 			else:
 				var mission_id := _active_mission_id
 				if action == &"next_mission" and _settings:
@@ -313,18 +317,15 @@ func _unhandled_input(event: InputEvent) -> void:
 				elif _state in [STATE_SETTINGS, STATE_RESULTS] and not _paused_training:
 					_show_main_menu()
 
+## The main menu is the breach city: pick a site and a difficulty, then deploy.
 func _show_main_menu() -> void:
 	_state = STATE_MENU
 	_set_menu_visible(true)
+	if _selected_site_id == "" or not MissionCatalog.is_unlocked(_selected_site_id, _settings):
+		_selected_site_id = MissionCatalog.next_unlocked_id(_settings)
 	if _presenter:
 		var training_first: bool = _settings != null and not _settings.tutorial_completed
-		_presenter.show_main_menu(MissionCatalog.deploy_detail(_settings), training_first)
-
-func _show_operations() -> void:
-	_state = STATE_MENU
-	_set_menu_visible(true)
-	if _presenter:
-		_presenter.show_operations(MissionCatalog.operation_entries(_settings), MissionCatalog.tier_from(_settings))
+		_presenter.show_city_map(MissionCatalog.operation_entries(_settings), _selected_site_id, MissionCatalog.tier_from(_settings), training_first)
 
 ## Deploys a mission at the chosen difficulty, or at `tier_override` when one is given.
 ## A debug run skips the unlock chain and records nothing.
@@ -507,18 +508,17 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 	_last_debrief = _round.get_debrief(outcome) if _round else ""
 	_last_seconds = _round.elapsed_seconds if _round else 0.0
 	_previous_best_time = 0.0
-	_next_mission_title = ""
+	_next_mission_id = ""
+	_sealed_before = -1
 	# A debug drill or shortcut is not campaign progress, so it records no clear, score, or time.
 	# Records are kept per tier; a clear at any tier unlocks the next operation.
 	if outcome == &"victory" and _settings and not _debug_run and not MissionCatalog.is_debug_mission(_active_mission_id):
+		_sealed_before = _settings.cleared_missions.size()
 		_previous_best_time = _settings.best_time(_active_mission_id, _active_tier)
 		_settings.mark_mission_cleared(_active_mission_id)
 		_settings.record_score(_active_mission_id, score, _active_tier)
 		_settings.record_time(_active_mission_id, _last_seconds, _active_tier)
-		var follow_id := MissionCatalog.unlocked_followup(_active_mission_id, _settings)
-		if follow_id != "":
-			var follow := MissionCatalog.get_mission(follow_id)
-			_next_mission_title = "%s  •  %s" % [follow.get("title", ""), MissionCatalog.expected_minutes_text(DifficultyTier.apply_mission(follow, _active_tier))]
+		_next_mission_id = MissionCatalog.unlocked_followup(_active_mission_id, _settings)
 	_state = STATE_RESULTS
 	_menu_input_armed = false
 	_show_results()
@@ -531,9 +531,39 @@ func _show_results() -> void:
 	_menu_input_armed = false
 	_results_pointer_warmup = 0.35
 	if _presenter:
-		_presenter.show_results(_last_outcome, _last_score, _last_debrief, _next_mission_title, _last_seconds, _previous_best_time, DifficultyTier.label(_active_tier), _last_outcome == &"defeat")
+		_presenter.show_results(_results_report())
 	_refresh_menu_pointers()
 	call_deferred("_reset_results_pointers_after_render")
+
+## What the results panels show. The city entries are after the round; the mission and the next
+## site carry their expected times at the tier the round was played at, which Retry and Next keep.
+func _results_report() -> Dictionary:
+	var entries := MissionCatalog.operation_entries(_settings)
+	return {
+		"outcome": _last_outcome,
+		"score": _last_score,
+		"debrief": _last_debrief,
+		"seconds": _last_seconds,
+		"previous_best": _previous_best_time,
+		"best_seconds": _settings.best_time(_active_mission_id, _active_tier) if _settings else 0.0,
+		"tier": _active_tier,
+		"mission": _tiered_entry(entries, _active_mission_id),
+		"next": _tiered_entry(entries, _next_mission_id) if _next_mission_id != "" else {},
+		"sealed_before": _sealed_before,
+		"entries": entries,
+		"offer_training": _last_outcome == &"defeat",
+	}
+
+## The city entry for a mission (a debug drill has none, so it is built from the catalog), with
+## its expected time at the active tier.
+func _tiered_entry(entries: Array[Dictionary], mission_id: String) -> Dictionary:
+	var mission := MissionCatalog.get_mission(mission_id)
+	var entry: Dictionary = {"id": mission_id, "title": mission.get("title", ""), "summary": mission.get("summary", "")}
+	for candidate in entries:
+		if candidate.get("id", "") == mission_id:
+			entry = candidate.duplicate()
+	entry["expected_minutes"] = DifficultyTier.apply_mission(mission, _active_tier).get("expected_minutes", [])
+	return entry
 
 ## The trigger, or a pinch while that hand's controller hangs on its strap (CombatHandController).
 func _trigger_down(controller: XRController3D) -> bool:
@@ -570,7 +600,7 @@ func _action_belongs_to_state(action: StringName) -> bool:
 		STATE_RESET_CONFIRM:
 			return action in [&"reset_cancel", &"reset_confirm"]
 		STATE_MENU:
-			return String(action).begins_with("mission_") or String(action).begins_with("tier_") or action in [&"deploy", &"operations", &"operations_back", &"training", &"settings"]
+			return String(action).begins_with("site_") or String(action).begins_with("tier_") or action in [&"deploy", &"training", &"settings"]
 		STATE_TUTORIAL:
 			return action in [&"training_deploy", &"training_replay", &"training_menu"]
 		STATE_PAUSED:
@@ -609,16 +639,13 @@ func _activate_menu_from_controller(controller: XRController3D) -> void:
 	ray.force_raycast_update()
 	var body: Object = ray.get_collider() if ray.is_colliding() else null
 	var hit: Vector3 = ray.get_collision_point() if ray.is_colliding() else Vector3.ZERO
-	if body == null or not body.has_method("global_to_viewport"):
-		return
-	var point: Vector2 = body.global_to_viewport(hit)
-	_presenter.activate_at_viewport_point(point)
+	_presenter.activate_on_body(body, hit)
 
 func _restart_mission(mission_id: String) -> void:
 	var mission := MissionCatalog.get_mission(mission_id)
 	if mission.is_empty() or _round == null or not (_debug_run or MissionCatalog.is_unlocked(mission_id, _settings)):
 		_results_action_locked = false
-		_return_to_operations_menu()
+		_return_to_city_map()
 		return
 	# Retry and Next keep the tier the last mission was played at.
 	_active_mission_id = mission_id
@@ -627,10 +654,12 @@ func _restart_mission(mission_id: String) -> void:
 	_set_menu_visible(false)
 	_round.begin_round(mission, _active_tier)
 
-func _return_to_operations_menu() -> void:
+## Back from results, the map selects the next live site again, which a clear may have just opened.
+func _return_to_city_map() -> void:
 	if _round:
 		_round.abandon_round()
 	_results_action_locked = false
+	_selected_site_id = ""
 	_show_main_menu()
 	_menu_input_armed = false
 	_sync_menu_trigger_baseline()

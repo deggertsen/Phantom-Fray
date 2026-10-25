@@ -39,7 +39,7 @@ func _ready() -> void:
 	await _capture("01c-settings")
 	_press(KEY_ESCAPE)
 	await _wait(0.5)
-	await _capture_operations()
+	await _capture_city_tiers()
 	_press(KEY_ENTER)
 	await _wait(0.8)
 	await _capture("02c-deploy")
@@ -55,6 +55,7 @@ func _ready() -> void:
 	_press(KEY_ESCAPE)
 	await _wait(0.8)
 	await _capture("06-pause")
+	await _capture_results()
 	print("PLAY CAPTURE COMPLETE: %s" % _out_dir)
 	get_tree().quit()
 
@@ -256,26 +257,44 @@ func _hit(phantom: Phantom, hand: StringName, speed: float, on_lure: bool = fals
 	elif lure:
 		at += Vector3(0.0, -0.5, 0.0)
 	phantom.receive_strike({"hand_id": hand, "position": at, "direction": Vector3.FORWARD, "speed": speed})
-## The Operations screen at the profile's difficulty, then at Full Resonance, then back to the
-## main menu. The tier is switched in memory only, so the real profile keeps its choice.
-func _capture_operations() -> void:
+## The city map at Full Resonance, then back at the profile's difficulty. The tier is switched in
+## memory only, so the real profile keeps its choice.
+func _capture_city_tiers() -> void:
 	var flow := _main.get_node("GameFlowController")
 	var settings := get_node_or_null("/root/GameSettings")
-	flow._show_operations()
-	await _wait(0.6)
-	await _capture("02-operations")
 	if settings:
 		var chosen := String(settings.difficulty_tier)
 		settings.difficulty_tier = DifficultyTier.FULL_RESONANCE
-		flow._show_operations()
-		await _wait(0.6)
-		await _capture("02b-operations-full-resonance")
 		flow._show_main_menu()
 		await _wait(0.6)
-		await _capture("02b-menu-full-resonance")
+		await _capture("02-city-full-resonance")
 		settings.difficulty_tier = chosen
 	flow._show_main_menu()
 	await _wait(0.6)
+
+## Results after sealing the junction, from a scratch profile so the real one records nothing.
+func _capture_results() -> void:
+	var presenter := _main.get_node("VRMenuPresenter") as VRMenuPresenter
+	var profile: Node = load("res://Scripts/Core/game_settings.gd").new()
+	profile.cleared_missions = PackedStringArray(["first_light", "widen_the_ring", "chens_gambit"])
+	var entries := MissionCatalog.operation_entries(profile)
+	presenter.show_results({
+		"outcome": &"victory",
+		"score": 12840,
+		"debrief": "Chen: It knows your resonance now. This was the opening move. Not the end of the war.",
+		"seconds": 252.0,
+		"previous_best": 280.0,
+		"best_seconds": 252.0,
+		"tier": DifficultyTier.STANDARD,
+		"mission": entries[2],
+		"next": entries[3],
+		"sealed_before": 2,
+		"entries": entries,
+		"offer_training": false,
+	})
+	await _wait(0.6)
+	await _capture("07-results")
+	profile.free()
 
 func _press(keycode: Key) -> void:
 	var event := InputEventKey.new()

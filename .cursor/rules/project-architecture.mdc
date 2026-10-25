@@ -28,7 +28,7 @@ description: Project structure and architecture guidelines for Phantom Fray VR g
   - `Scripts/Player/`: `xr_player.gd`, `hand_collision.gd` (strike detection and haptics), `life_force_manager.gd`, `life_force_feedback.gd`
   - `Scripts/Presentation/`: `creature_mesh.gd`, `breach_city.gd`, `arena_builder.gd`, `erm_gauntlet.gd`, `combat_vfx.gd`, `rift_compass.gd`, `phantom_bearings.gd`, `glow_sprite.gd`, `shader_warmup.gd`
   - `Scripts/Audio/`: `chen_comms.gd`, `music_intensity_controller.gd`, `sfx_variations.gd`
-  - `Scripts/UI/`: `vr_menu_panel.gd`, `vr_menu_presenter.gd`, `round_hud.gd` (bracer panel)
+  - `Scripts/UI/`: `vr_menu_panel.gd` (single panel), `vr_wrap_panel.gd` (the city map and results, three panels around the player), `city_map.gd` (the drawn breach city), `vr_menu_presenter.gd`, `round_hud.gd` (bracer panel)
   - `Scripts/XR/`: `xr_lifecycle_controller.gd`
   - `Scripts/Debug/`: `performance_monitor.gd`, `art_capture.gd`, `play_capture.gd`, `menu_capture.gd`, `menu_preview.gd`
 - **[Scenes/](mdc:Scenes/)**: `Phantoms/` (base and four variants), `Player/`, `Rifts/`, `UI/`, `Debug/`
