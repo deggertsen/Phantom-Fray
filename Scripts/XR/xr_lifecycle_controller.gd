@@ -36,10 +36,11 @@ func _connect_recenter_signal() -> void:
 	if xr_interface and xr_interface.has_signal("pose_recentered") and not xr_interface.pose_recentered.is_connected(_on_pose_recentered):
 		xr_interface.pose_recentered.connect(_on_pose_recentered)
 
+## Fires on every return of focus too (the universal menu closing, the headset going back on).
+## The panels stay where they are; only holding the Meta button moves them.
 func _on_xr_started() -> void:
 	_connect_recenter_signal()
 	_resume_available()
-	_recenter_panel()
 	if _flow:
 		if _was_round_active and _flow.has_method("show_suspended_pause"):
 			_flow.show_suspended_pause()

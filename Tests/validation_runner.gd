@@ -726,7 +726,46 @@ func _validate_results_menu() -> void:
 		await process_frame
 	if not single.enabled or right_screen.enabled or center_screen.enabled:
 		failures.append("Pause did not switch back to the single panel")
+	# Choosing things never moves the panels: the player turned and stepped, and they stayed put.
+	var placed := presenter.global_transform
+	camera.global_position = Vector3(0.6, 1.6, 0.4)
+	camera.rotation.y = deg_to_rad(70.0)
+	presenter.show_city_map(entries, "first_light", DifficultyTier.STANDARD, false)
+	presenter.show_results({"outcome": &"defeat", "score": 10, "tier": DifficultyTier.STANDARD, "mission": entries[0], "entries": entries})
+	presenter.show_settings("75%", "50%", "100%", false, false)
+	for _frame in 2:
+		await process_frame
+	if not presenter.global_transform.is_equal_approx(placed):
+		failures.append("Showing a menu moved the panels; only the Meta recenter should")
+	presenter.recenter()
+	var facing := -presenter.global_transform.basis.z
+	var to_panel := presenter.global_position - camera.global_position
+	to_panel.y = 0.0
+	if presenter.global_transform.is_equal_approx(placed) or facing.dot(-camera.global_transform.basis.z) < 0.99 or to_panel.normalized().dot(-camera.global_transform.basis.z) < 0.99:
+		failures.append("Recentering did not bring the panels in front of the head")
 	presenter.queue_free()
+	await process_frame
+	# Shown before tracking (the camera still on the floor), then placed once the head is up.
+	camera.global_position = Vector3.ZERO
+	camera.rotation.y = 0.0
+	var early := VRMenuPresenter.new()
+	root.add_child(early)
+	await process_frame
+	early.show_pause()
+	await process_frame
+	camera.global_position = Vector3(0.0, 1.6, 0.0)
+	for _frame in 2:
+		await process_frame
+	if absf(early.global_position.y - (1.6 + early.panel_height_offset)) > 0.01:
+		failures.append("Panels shown before tracking were not placed at head height once it started")
+	var tracked := early.global_transform
+	camera.rotation.y = deg_to_rad(-60.0)
+	early.show_pause(true)
+	for _frame in 2:
+		await process_frame
+	if not early.global_transform.is_equal_approx(tracked):
+		failures.append("Panels kept following the head after they were placed")
+	early.queue_free()
 	player.queue_free()
 	await process_frame
 

@@ -6,6 +6,7 @@ Updated 2026-10-24 for the wraparound city map (`Scripts/UI/vr_wrap_panel.gd`, `
 
 - Launch while facing away from the intended play direction; hold the Meta button and confirm the menu is centered after Horizon OS recentering.
 - The panels remain stationary in world space while the player turns their head.
+- Only holding the Meta button moves the panels. Selecting a site or a difficulty, opening settings, pausing, results, opening and closing the universal menu, and taking the headset off and putting it back on all leave them where they are.
 - The city map and results are three panels: the city on the left, the map in the middle about 2.45 m away, the site and Deploy on the right. The side panels stand off the middle one's edges, turned 30° in toward the player. Everything sits at eye height inside the comfortable field of view; Deploy needs at most a small head turn to the right, never a turn of the shoulders.
 - Settings, pause, the confirmations, Training Complete, and the XR suspended page are one panel straight ahead, as before.
 

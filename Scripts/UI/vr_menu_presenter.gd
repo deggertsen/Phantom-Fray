@@ -13,6 +13,9 @@ signal action_requested(action: StringName)
 @export var wrap_angle_degrees: float = 30.0
 @export var wrap_gap: float = 0.06
 
+## How far above the play space origin the camera must be to count as a tracked, standing head.
+const MIN_HEAD_HEIGHT := 0.8
+
 var _player: Node3D
 var _single_root: Node3D
 var _wrap_root: Node3D
@@ -25,6 +28,8 @@ var _map_panel: VRWrapPanel
 var _right_panel: VRWrapPanel
 var _wrapped: bool = false
 var _is_visible: bool = false
+## The panels have been put in front of a tracked head. Until then each show places them.
+var _placed: bool = false
 var _holo_nodes: Array[MeshInstance3D] = []
 var _holo_time: float = 0.0
 
@@ -44,6 +49,9 @@ func _ready() -> void:
 	hide_menu()
 
 func _process(delta: float) -> void:
+	# Shown before the head was tracked: placed once, as soon as it is.
+	if _is_visible and not _placed and _head_tracked():
+		recenter()
 	if not _is_visible or _wrapped:
 		return
 	_holo_time += delta
@@ -152,6 +160,8 @@ func hide_menu() -> void:
 	for screen in _all_screens():
 		_set_screen_active(screen, false)
 
+## Puts the panels in front of the head. Only holding the Meta button calls this once they are
+## placed (XRLifecycleController), so choosing something on a menu never moves them.
 func recenter() -> void:
 	if _player == null:
 		_player = get_tree().get_first_node_in_group("Player") as Node3D
@@ -164,6 +174,13 @@ func recenter() -> void:
 	forward = forward.normalized() if forward.length_squared() > 0.001 else Vector3.FORWARD
 	global_position = anchor.global_position + forward * panel_distance + Vector3.UP * panel_height_offset
 	global_transform.basis = Basis.looking_at(forward, Vector3.UP)
+	_placed = _head_tracked()
+
+## A standing head: the camera well above the play space floor. Before tracking starts the camera
+## sits at the origin, and panels placed then would sit on the floor.
+func _head_tracked() -> bool:
+	var camera := _player.get_node_or_null("XRCamera3D") as Node3D if _player else null
+	return camera != null and camera.global_position.y - _player.global_position.y >= MIN_HEAD_HEIGHT
 
 func is_menu_visible() -> bool:
 	return _is_visible
@@ -176,7 +193,8 @@ func _show(wrapped: bool) -> void:
 	_wrap_root.visible = wrapped
 	for screen in _all_screens():
 		_set_screen_active(screen, (screen != _screen) == wrapped)
-	recenter()
+	if not _placed:
+		recenter()
 	# Victory opens the panels from the rift-close physics callback. A collision
 	# shape changed in that callback does not come back until the idle frame.
 	# https://docs.godotengine.org/en/stable/classes/class_collisionshape3d.html#class-collisionshape3d-property-disabled
