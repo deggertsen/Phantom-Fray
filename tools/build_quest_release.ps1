@@ -25,6 +25,9 @@ $env:GODOT_ANDROID_KEYSTORE_RELEASE_PATH = Read-CredentialValue 'keystore/releas
 $env:GODOT_ANDROID_KEYSTORE_RELEASE_USER = Read-CredentialValue 'keystore/release_user'
 $env:GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD = Read-CredentialValue 'keystore/release_password'
 
+# A Gradle daemon inherits the Godot console's output and keeps this script waiting after the APK
+# is written. Build without one.
+$env:GRADLE_OPTS = (("$env:GRADLE_OPTS -Dorg.gradle.daemon=false").Trim())
 New-Item (Split-Path -Parent $output) -ItemType Directory -Force | Out-Null
 Get-ChildItem (Join-Path $projectRoot 'android\build\res') -Filter '*.import' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
 & $godot --headless --path $projectRoot --export-release 'Quest Release' $output

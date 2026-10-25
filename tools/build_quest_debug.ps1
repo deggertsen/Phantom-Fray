@@ -33,10 +33,10 @@ if ($HandTrackingTest) {
 $handTestMarker
 "@
     [System.IO.File]::AppendAllText($projectFile, $handTestSettings.Replace("`r`n", "`n"))
-    # A Gradle daemon inherits the Godot console's output and keeps it waiting after the APK is
-    # written, which would hold project.godot modified. Build without one.
-    $env:GRADLE_OPTS = (("$env:GRADLE_OPTS -Dorg.gradle.daemon=false").Trim())
 }
+# A Gradle daemon inherits the Godot console's output and keeps this script waiting after the APK
+# is written (and, with -HandTrackingTest, project.godot modified). Build without one.
+$env:GRADLE_OPTS = (("$env:GRADLE_OPTS -Dorg.gradle.daemon=false").Trim())
 try {
     New-Item (Split-Path -Parent $output) -ItemType Directory -Force | Out-Null
     Get-ChildItem (Join-Path $projectRoot 'android\build\res') -Filter '*.import' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
