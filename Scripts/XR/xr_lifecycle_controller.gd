@@ -39,14 +39,23 @@ func _connect_recenter_signal() -> void:
 func _on_xr_started() -> void:
 	_connect_recenter_signal()
 	_resume_available()
-	_on_pose_recentered()
+	_recenter_panel()
 	if _flow:
 		if _was_round_active and _flow.has_method("show_suspended_pause"):
 			_flow.show_suspended_pause()
 		elif _flow.has_method("restore_current_menu"):
 			_flow.restore_current_menu()
 
+## Holding the Meta button. Under the Stage reference space the runtime leaves the origin where
+## it was, so the game moves it: the head lands over the safe ring, facing the arena, at its own
+## height. The camera picks up the new frame on the next frame, so the panel follows after it.
+## https://docs.godotengine.org/en/stable/tutorials/xr/openxr_settings.html#reference-space
 func _on_pose_recentered() -> void:
+	XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT, true)
+	await get_tree().process_frame
+	_recenter_panel()
+
+func _recenter_panel() -> void:
 	if _flow and _flow.has_method("recenter_current_panel"):
 		_flow.recenter_current_panel()
 

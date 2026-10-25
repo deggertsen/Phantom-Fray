@@ -73,6 +73,14 @@ Environment variables `META_APP_ID`, `META_APP_SECRET`, and `META_TOKEN` overrid
 
 ## Release channel upload
 
+The short way is the deploy skill (`.claude/skills/deploy/SKILL.md`) or its script, which does every step below in order from the main clone:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/deploy_quest.ps1 -Channel alpha -Notes "what changed"
+```
+
+By hand:
+
 1. Bump `version/code` in `export_presets.cfg` under the Quest Release preset. Meta rejects an upload whose version code is not higher than the last one on any channel.
 2. Build: `powershell -File tools/build_quest_release.ps1`.
 3. Upload: `powershell -File tools/upload_quest_build.ps1 -Channel alpha -Notes "what changed"`. The script passes `--age-group TEENS_AND_ADULTS`; without an age group Meta leaves the build in draft.
