@@ -1,9 +1,9 @@
 ---
-name: verify-phantom-fray
-description: Run Phantom Fray and capture desktop fallback evidence before headset verification.
+name: verify-phantom-fury
+description: Run Phantom Fury and capture desktop fallback evidence before headset verification.
 ---
 
-# Phantom Fray verification
+# Phantom Fury verification
 
 1. Use Godot 4.7.1 exactly.
 2. Launch the real app surface:

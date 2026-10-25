@@ -97,7 +97,7 @@ func _mission_from_command_line() -> String:
 ## Debug builds also read arguments from user://debug_args.txt, because Quest launches cannot
 ## pass them: the exported launcher activity drops intent extras on its way to GodotApp, and
 ## GodotApp itself is not exported. A debuggable build lets adb write the file:
-##   adb shell "run-as com.phantomfray.resonancerising sh -c 'echo --mission=sweep_drill > files/debug_args.txt'"
+##   adb shell "run-as com.phantomfury.resonancerising sh -c 'echo --mission=sweep_drill > files/debug_args.txt'"
 ## Delete the file (or write an empty one) to boot to the menu again.
 func _debug_args_file() -> PackedStringArray:
 	if not OS.is_debug_build() or not FileAccess.file_exists("user://debug_args.txt"):

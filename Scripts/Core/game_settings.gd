@@ -2,7 +2,7 @@ extends Node
 
 signal own_music_changed(enabled: bool)
 
-const SETTINGS_PATH := "user://phantom_fray_settings.cfg"
+const SETTINGS_PATH := "user://phantom_fury_settings.cfg"
 const VOLUME_DB: Array[float] = [-80.0, -20.0, -14.0, -8.0, -2.0]
 const VOLUME_LABELS: PackedStringArray = ["OFF", "25%", "50%", "75%", "100%"]
 

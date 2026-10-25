@@ -1,7 +1,7 @@
 extends Node
 class_name MusicManager
 
-## Music Manager for Phantom-Fray
+## Music Manager for Phantom Fury
 ## Handles random cycling through music tracks in the Music directory
 ## Like having your own personal cantina band, but for fighting phantoms! 🎵
 

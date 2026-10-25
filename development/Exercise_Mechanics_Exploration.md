@@ -2,7 +2,7 @@
 
 **Written:** 2026-10-09. **Updated** through 2026-10-13 with six rounds of David's answers, his boss proposal, and the merge of `main` (no mission time limit), and on 2026-10-17 with the hand tracking tests (7 and 8).
 **Status:** Exploration, partly built. The squat detector runs in every build (`Scripts/Player/squat_detector.gd`), the resonance sweep is built (`Scripts/Hazards/resonance_sweep.gd`, prototype plan Step 3), The Maw's boss phase is built (`Scripts/Bosses/maw_boss.gd`, Steps 6 and 7), and the four difficulties are built (`Scripts/Core/difficulty_tier.gd`, section 4): at Full Resonance the campaign Maw plays the boss fight.
-**Question:** How could Phantom Fray require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
+**Question:** How could Phantom Fury require squats, jumps, and push-ups, with harder difficulties that demand them, using a Quest 3 headset with its controllers or tracked hands?
 
 ## The short answer
 
@@ -401,7 +401,7 @@ A possession that pins the player until they do push-ups. The player goes to the
 
 ### What Meta's guidance covers
 
-Meta's store comfort ratings (Comfortable, Moderate, Intense) describe **motion**: camera movement, player motion, and disorienting effects. They do not describe physical exertion ([Meta Help: comfort ratings](https://www.meta.com/help/quest/331713305046406/)). I found no Meta developer policy that sets limits on exertion or requires an exertion warning ([Meta Horizon developer policies](https://developers.meta.com/horizon/policy/)). That is my reading of what I could find, not a confirmed absence; ask Meta developer support before submission. Phantom Fray is stationary with no artificial locomotion, so the comfort rating should stay where it is whatever we add here. What protects players is our own design: opt-in, warned, and capped.
+Meta's store comfort ratings (Comfortable, Moderate, Intense) describe **motion**: camera movement, player motion, and disorienting effects. They do not describe physical exertion ([Meta Help: comfort ratings](https://www.meta.com/help/quest/331713305046406/)). I found no Meta developer policy that sets limits on exertion or requires an exertion warning ([Meta Horizon developer policies](https://developers.meta.com/horizon/policy/)). That is my reading of what I could find, not a confirmed absence; ask Meta developer support before submission. Phantom Fury is stationary with no artificial locomotion, so the comfort rating should stay where it is whatever we add here. What protects players is our own design: opt-in, warned, and capped.
 
 ### Squats
 
@@ -454,12 +454,12 @@ A debug-only build with hand tracking and a measurement overlay. Combat is uncha
 
 ```
 powershell -File tools/build_quest_debug.ps1 -HandTrackingTest
-adb install -r builds/phantom-fray-handtest.apk
+adb install -r builds/phantom-fury-handtest.apk
 adb logcat -c
 adb logcat -s godot
 ```
 
-Since decision 39, hand tracking, both hand tracking data sources, and `xr/openxr/extensions/meta/simultaneous_hands_and_controllers` are on in `project.godot` for every build, and both presets declare hand tracking as optional (Quest Debug at high frequency, Quest Release at low). The switch only appends `phantom_fray/debug/hand_tracking_probe` (the overlay) to `project.godot` for that one export, then puts the file back byte for byte: the editor reads neither feature-tag overrides nor `override.cfg` when exporting. If a hand tracking build is interrupted and leaves the setting in `project.godot`, both build scripts refuse to run until `git checkout -- project.godot`.
+Since decision 39, hand tracking, both hand tracking data sources, and `xr/openxr/extensions/meta/simultaneous_hands_and_controllers` are on in `project.godot` for every build, and both presets declare hand tracking as optional (Quest Debug at high frequency, Quest Release at low). The switch only appends `phantom_fury/debug/hand_tracking_probe` (the overlay) to `project.godot` for that one export, then puts the file back byte for byte: the editor reads neither feature-tag overrides nor `override.cfg` when exporting. If a hand tracking build is interrupted and leaves the setting in `project.godot`, both build scripts refuse to run until `git checkout -- project.godot`.
 
 Before the session: turn on hand tracking in the Quest settings (Movement tracking), and light the room well.
 

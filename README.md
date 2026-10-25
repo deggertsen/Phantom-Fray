@@ -1,8 +1,8 @@
-# Phantom Fray: Resonance Rising
+# Phantom Fury: Resonance Rising
 
 A stationary VR fitness-combat game for Meta Quest, built in Godot 4.7.1 with OpenXR and godot-xr-tools. You stand at a breach site in a dead city, wearing Dr. Chen's Ethereal Resonance Matrix (ERM) gauntlets, and physically punch, block, and dodge phantoms pouring out of dimensional rifts until every rift is sealed and every phantom is gone.
 
-The goal of the project is a workout you want to come back to because the world needs saving, not because a timer told you to. Everything below describes the game as it exists in this repository today. Plans live in [development/Production_Roadmap.md](development/Production_Roadmap.md); ideas not yet scheduled live in [development/Ideas_Backlog.md](development/Ideas_Backlog.md).
+The goal of the project is a workout you want to come back to because the world needs saving, not because a timer told you to. Everything below describes the game as it exists in this repository today. The game was called Phantom Fray until 2026-10-24; the repository folder, the release keystore, and the ElevenLabs key folder on the build machine keep that name. The Android package is `com.phantomfury.resonancerising`. Plans live in [development/Production_Roadmap.md](development/Production_Roadmap.md); ideas not yet scheduled live in [development/Ideas_Backlog.md](development/Ideas_Backlog.md).
 
 ## How it plays
 
@@ -117,7 +117,7 @@ The design intent, in priority order. Details and status in the roadmap.
 
 ## Lore
 
-Title: "Phantom Fray: Resonance Rising"
+Title: "Phantom Fury: Resonance Rising"
 
 In 2142, humanity's reach exceeded its grasp. Our experiments with interdimensional energy, meant to revolutionize space travel, instead tore the fabric of reality. On the day known as "The Breach," ethereal entities we called "Phantoms" began pouring through microscopic rifts, impervious to conventional weapons and hungry for life force.
 

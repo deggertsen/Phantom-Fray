@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $folder = Join-Path $projectRoot 'Assets\Audio\VO\chen'
 $script = Get-Content (Join-Path $folder 'chen_lines.json') -Raw | ConvertFrom-Json
-$scratch = Join-Path ([System.IO.Path]::GetTempPath()) 'phantom-fray-vo'
+$scratch = Join-Path ([System.IO.Path]::GetTempPath()) 'phantom-fury-vo'
 New-Item $scratch -ItemType Directory -Force | Out-Null
 
 Add-Type -AssemblyName System.Speech

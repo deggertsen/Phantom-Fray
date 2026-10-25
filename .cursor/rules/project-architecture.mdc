@@ -1,12 +1,12 @@
 ---
 alwaysApply: true
-description: Project structure and architecture guidelines for Phantom Fray VR game
+description: Project structure and architecture guidelines for Phantom Fury VR game
 ---
 
-# Phantom Fray Project Architecture
+# Phantom Fury Project Architecture
 
 ## Project Overview
-**Phantom Fray: Resonance Rising** is a stationary VR fitness-combat game for Meta Quest. Players physically punch, two-hand block, and side-step phantoms pouring out of dimensional rifts. Godot 4.7.1 with OpenXR and the godot-xr-tools 4.5.1 plugin. Compatibility renderer.
+**Phantom Fury: Resonance Rising** is a stationary VR fitness-combat game for Meta Quest. Players physically punch, two-hand block, and side-step phantoms pouring out of dimensional rifts. Godot 4.7.1 with OpenXR and the godot-xr-tools 4.5.1 plugin. Compatibility renderer.
 
 ## Core Game Mechanics
 - **Stationary physical combat**: no artificial locomotion; the player turns, ducks, and steps

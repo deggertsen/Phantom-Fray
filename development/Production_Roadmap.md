@@ -1,4 +1,4 @@
-# Phantom Fray — Production Roadmap
+# Phantom Fury — Production Roadmap
 
 **Last updated:** 2026-10-13
 **Current stage:** Combat system complete and fun in headset. Chen fully voiced. The six operations play as an extended tutorial, which is what they will become: the on-ramp to a world map of missions the player picks by difficulty. Replay value and narrative hooks are the gap before launch.

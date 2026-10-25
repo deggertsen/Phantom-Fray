@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $godot = 'C:\Users\demav\AppData\Local\Microsoft\WinGet\Packages\GodotEngine.GodotEngine_Microsoft.Winget.Source_8wekyb3d8bbwe\Godot_v4.7.1-stable_win64_console.exe'
-$output = Join-Path $projectRoot 'builds\phantom-fray-debug.apk'
+$output = Join-Path $projectRoot 'builds\phantom-fury-debug.apk'
 $templateVersion = Join-Path $projectRoot 'android\.build_version'
 $projectFile = Join-Path $projectRoot 'project.godot'
 $handTestMarker = 'debug/hand_tracking_probe=true'
@@ -22,13 +22,13 @@ if (Select-String -Path $projectFile -SimpleMatch $handTestMarker -Quiet) {
 }
 $projectBytes = $null
 if ($HandTrackingTest) {
-    $output = Join-Path $projectRoot 'builds\phantom-fray-handtest.apk'
+    $output = Join-Path $projectRoot 'builds\phantom-fury-handtest.apk'
     # The editor ignores override.cfg and custom feature tags when exporting, so the probe
     # setting goes into project.godot for this export and the file is put back byte for byte.
     $projectBytes = [System.IO.File]::ReadAllBytes($projectFile)
     $handTestSettings = @"
 
-[phantom_fray]
+[phantom_fury]
 
 $handTestMarker
 "@
