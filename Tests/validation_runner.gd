@@ -211,6 +211,27 @@ func _validate_menu_surface() -> void:
 			failures.append("Soundtrack volume still shows while playing your own music")
 	if not own_music_marked:
 		failures.append("Play my own music on-state is unmarked")
+	# Changing a setting draws the list again; it stays scrolled where the player was.
+	menu.show_settings("75%", "50%", "100%", false, false)
+	for _frame in 2:
+		await process_frame
+	menu._settings_scroll.scroll_vertical = 100000
+	await process_frame
+	var scrolled: int = menu._settings_scroll.scroll_vertical
+	if scrolled <= 0:
+		failures.append("The settings list does not scroll, so its scroll position cannot be checked")
+	else:
+		menu.show_settings("75%", "50%", "100%", true, false)
+		# One frame: the first drawn frame already sits where the player was, with no jump.
+		await process_frame
+		if menu._settings_scroll.scroll_vertical != scrolled:
+			failures.append("Changing a setting scrolled the list from %d to %d" % [scrolled, menu._settings_scroll.scroll_vertical])
+		menu.show_pause()
+		menu.show_settings("75%", "50%", "100%", true, true)
+		for _frame in 2:
+			await process_frame
+		if menu._settings_scroll.scroll_vertical != 0:
+			failures.append("Opening settings again did not start at the top")
 	menu.show_reset_confirmation()
 	await process_frame
 	var keep := _find_button(menu, "KEEP PROGRESS")

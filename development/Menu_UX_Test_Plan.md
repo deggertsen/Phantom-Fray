@@ -63,6 +63,7 @@ Training is no longer a menu: it is Dr. Chen's training chamber ([Tutorial_Plan.
 - Play My Own Music switch shows its state; when on, the Music Volume stepper is hidden and the soundtrack is silent.
 - Music (when shown), Effects, and Haptics steppers show their current value and explain what they affect.
 - Reduced Flashes shows its state.
+- Changing any setting leaves the list scrolled where it was, with no jump to the top. Opening settings again starts at the top.
 - Reset Progress asks for confirmation and explains that audio and training are kept.
 - Back returns to the correct origin: the city map or pause.
 - Settings and progress persist after an app restart.

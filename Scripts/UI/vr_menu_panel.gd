@@ -24,6 +24,8 @@ var _scanline: ColorRect
 var _status_light: ColorRect
 var _settings_scroll: ScrollContainer
 var _animation_time: float = 0.0
+## The view on the panel now, by its section badge.
+var _section: StringName = &""
 
 func _ready() -> void:
 	set_process(true)
@@ -77,6 +79,10 @@ func _tier_color(tier_id: String) -> Color:
 
 
 func show_settings(music_text: String, effects_text: String, haptics_text: String, reduced_flashes: bool, from_pause: bool, own_music: bool = false) -> void:
+	# Every change draws settings again; the player stays where they had scrolled to.
+	var kept_scroll := 0
+	if _section == &"SETTINGS" and is_instance_valid(_settings_scroll):
+		kept_scroll = _settings_scroll.scroll_vertical
 	_begin_view(&"SETTINGS", "RSF // STRIKER PROFILE", "SETTINGS", "", COLOR_BLUE)
 	var scroll_hint := _label("AIM AT PANEL • USE EITHER THUMBSTICK TO SCROLL", 16, COLOR_MUTED, true)
 	scroll_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -114,13 +120,31 @@ func show_settings(music_text: String, effects_text: String, haptics_text: Strin
 		COLOR_RED,
 		Vector2(0, 72)
 	))
-	var back_text := "BACK TO PAUSE" if from_pause else "BACK TO MAIN MENU"
+	var back_text := "BACK TO PAUSE" if from_pause else "BACK TO CITY MAP"
 	_content.add_child(_make_action_button(&"settings_back", back_text, COLOR_BLUE, Vector2(0, 72), true))
 	var bottom_spacer := Control.new()
 	bottom_spacer.custom_minimum_size.y = 6
 	bottom_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(bottom_spacer)
 	_set_footer("STATIONARY VR  •  NO ARTIFICIAL LOCOMOTION  •  HOLD META BUTTON TO RECENTER")
+	if kept_scroll > 0:
+		_restore_scroll(_settings_scroll, kept_scroll)
+
+## A new list has no height until its container lays it out, and a scroll set before then is
+## clamped to whatever range the bar has so far. The range grows in steps over the next frames,
+## so the scroll is set again each time it does, before those frames are drawn.
+func _restore_scroll(scroll: ScrollContainer, value: int) -> void:
+	var bar := scroll.get_v_scroll_bar()
+	var apply := func() -> void:
+		if is_instance_valid(scroll):
+			scroll.scroll_vertical = value
+	# https://docs.godotengine.org/en/stable/classes/class_range.html#class-range-signal-changed
+	bar.changed.connect(apply)
+	apply.call()
+	for _frame in 2:
+		await get_tree().process_frame
+	if is_instance_valid(bar) and bar.changed.is_connected(apply):
+		bar.changed.disconnect(apply)
 
 func show_pause(training: bool = false) -> void:
 	if training:
@@ -270,6 +294,7 @@ func _build_cyber_grid() -> void:
 		add_child(line)
 
 func _begin_view(section: StringName, system_title: String, title: String, subtitle: String, accent: Color, title_size: int = 54) -> void:
+	_section = section
 	_clear_content()
 	_content.add_theme_constant_override("separation", 14)
 	var top := HBoxContainer.new()
