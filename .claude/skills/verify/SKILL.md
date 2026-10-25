@@ -1,5 +1,5 @@
 ---
-name: verify-phantom-fray
+name: verify-phantom-fury
 description: Run Phantom Fury and capture desktop fallback evidence before headset verification.
 ---
 

@@ -454,12 +454,12 @@ A debug-only build with hand tracking and a measurement overlay. Combat is uncha
 
 ```
 powershell -File tools/build_quest_debug.ps1 -HandTrackingTest
-adb install -r builds/phantom-fray-handtest.apk
+adb install -r builds/phantom-fury-handtest.apk
 adb logcat -c
 adb logcat -s godot
 ```
 
-Since decision 39, hand tracking, both hand tracking data sources, and `xr/openxr/extensions/meta/simultaneous_hands_and_controllers` are on in `project.godot` for every build, and both presets declare hand tracking as optional (Quest Debug at high frequency, Quest Release at low). The switch only appends `phantom_fray/debug/hand_tracking_probe` (the overlay) to `project.godot` for that one export, then puts the file back byte for byte: the editor reads neither feature-tag overrides nor `override.cfg` when exporting. If a hand tracking build is interrupted and leaves the setting in `project.godot`, both build scripts refuse to run until `git checkout -- project.godot`.
+Since decision 39, hand tracking, both hand tracking data sources, and `xr/openxr/extensions/meta/simultaneous_hands_and_controllers` are on in `project.godot` for every build, and both presets declare hand tracking as optional (Quest Debug at high frequency, Quest Release at low). The switch only appends `phantom_fury/debug/hand_tracking_probe` (the overlay) to `project.godot` for that one export, then puts the file back byte for byte: the editor reads neither feature-tag overrides nor `override.cfg` when exporting. If a hand tracking build is interrupted and leaves the setting in `project.godot`, both build scripts refuse to run until `git checkout -- project.godot`.
 
 Before the session: turn on hand tracking in the Quest settings (Movement tracking), and light the room well.
 

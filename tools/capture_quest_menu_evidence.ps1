@@ -2,8 +2,8 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
-$apk = Join-Path $projectRoot 'builds\phantom-fray-menu-debug.apk'
-$package = 'com.phantomfray.resonancerising'
+$apk = Join-Path $projectRoot 'builds\phantom-fury-menu-debug.apk'
+$package = 'com.phantomfury.resonancerising'
 $evidence = Join-Path $projectRoot 'reports\quest-menu'
 
 New-Item $evidence -ItemType Directory -Force | Out-Null

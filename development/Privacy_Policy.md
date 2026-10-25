@@ -1,7 +1,7 @@
 # Phantom Fury Privacy Policy
 
 **Effective date:** 2026-10-24
-**Applies to:** Phantom Fury: Resonance Rising for Meta Quest (package `com.phantomfray.resonancerising`), including test builds distributed through Meta release channels.
+**Applies to:** Phantom Fury: Resonance Rising for Meta Quest (package `com.phantomfury.resonancerising`), including test builds distributed through Meta release channels.
 
 This policy describes what the game does with information on your headset. It is written to match the game as built; the "What would change this" section at the end lists the features that would require an update.
 

@@ -7,7 +7,7 @@ class_name HandTrackingProbe
 ## section 3 of development/Exercise_Mechanics_Exploration.md. It does not touch combat.
 ##
 ## Off by default. On in a debug build when `debug_enabled` is set, or when the project setting
-## `phantom_fray/debug/hand_tracking_probe` is true (tools/build_quest_debug.ps1 -HandTrackingTest
+## `phantom_fury/debug/hand_tracking_probe` is true (tools/build_quest_debug.ps1 -HandTrackingTest
 ## sets it, along with the OpenXR hand tracking settings, for that one export).
 ##
 ## Left thumbstick click: pause or resume XR_META_simultaneous_hands_and_controllers.
@@ -20,7 +20,7 @@ class_name HandTrackingProbe
 ## https://docs.godotengine.org/en/4.7/classes/class_xrhandtracker.html
 ## https://github.com/GodotVR/godot_openxr_vendors/blob/5.1.0-stable/doc_classes/OpenXRMetaSimultaneousHandsAndControllersExtension.xml
 
-const SETTING := "phantom_fray/debug/hand_tracking_probe"
+const SETTING := "phantom_fury/debug/hand_tracking_probe"
 
 @export var debug_enabled: bool = false
 ## A punch starts when the palm moves faster than this (m/s).

@@ -23,7 +23,7 @@
    - XR Mode: OpenXR
    - Meta vendor: enabled
    - Architecture: ARM64 only
-   - Package: `com.phantomfray.resonancerising` until a final studio namespace is selected
+   - Package: `com.phantomfury.resonancerising` until a final studio namespace is selected
    - Runnable: enabled
 7. Create a second `Quest Release` preset with release signing. Never commit the keystore or credentials.
 
@@ -53,14 +53,14 @@ powershell -File tools/build_quest_debug.ps1
 Equivalent commands after template installation:
 
 ```bash
-godot --headless --path . --export-debug "Quest Debug" builds/phantom-fray-debug.apk
-godot --headless --path . --export-release "Quest Release" builds/phantom-fray-release.apk
-adb install -r builds/phantom-fray-debug.apk
+godot --headless --path . --export-debug "Quest Debug" builds/phantom-fury-debug.apk
+godot --headless --path . --export-release "Quest Release" builds/phantom-fury-release.apk
+adb install -r builds/phantom-fury-debug.apk
 adb logcat -c
 adb logcat | grep -i -E "godot|openxr|phantom"
 ```
 
-`powershell -File tools/build_quest_debug.ps1 -HandTrackingTest` builds `builds/phantom-fray-handtest.apk`, the hand tracking measurement build for tests 7 and 8 in `development/Exercise_Mechanics_Exploration.md` (section 3, "Running tests 7 and 8"). Hand tracking and simultaneous hands and controllers are on in every build; the switch adds only the probe overlay setting to `project.godot` for that export and restores the file afterwards. The export stops the adb server, which ends any running `adb logcat`; start the capture again after a build. The device keeps its own log buffer, so `adb logcat -d` recovers what was missed.
+`powershell -File tools/build_quest_debug.ps1 -HandTrackingTest` builds `builds/phantom-fury-handtest.apk`, the hand tracking measurement build for tests 7 and 8 in `development/Exercise_Mechanics_Exploration.md` (section 3, "Running tests 7 and 8"). Hand tracking and simultaneous hands and controllers are on in every build; the switch adds only the probe overlay setting to `project.godot` for that export and restores the file afterwards. The export stops the adb server, which ends any running `adb logcat`; start the capture again after a build. The device keeps its own log buffer, so `adb logcat -d` recovers what was missed.
 
 ## Required package checks
 
