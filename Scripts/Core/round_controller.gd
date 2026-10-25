@@ -330,7 +330,9 @@ func _show_message(text: String, color: Color, lifetime: float) -> void:
 		var timer := get_tree().create_timer(lifetime)
 		timer.timeout.connect(_clear_message.bind(_message))
 
-func _clear_message(label: Label3D) -> void:
+## Untyped: a newer message may have freed this label before its timer fired, and a freed object
+## does not convert to a typed argument.
+func _clear_message(label) -> void:
 	if is_instance_valid(label):
 		label.queue_free()
 

@@ -55,105 +55,14 @@ func _update_thumbstick_scroll(delta: float) -> void:
 		return
 	_settings_scroll.scroll_vertical += int(-scroll_input * 620.0 * delta)
 
-## training_first: training has not been finished on this profile, so it is the highlighted
-## button and Deploy says so. Deploy still works.
-func show_main_menu(deploy_detail: String = "Seal the next live rift", training_first: bool = false) -> void:
-	_begin_view(&"DEPLOYMENT", "RSF // STRIKER INTERFACE", "PHANTOM FURY", "RESONANCE RISING", COLOR_CYAN)
-	# The deploy, operations, and training rows plus the footer only fit the 780 px panel with tighter rows.
-	_content.add_theme_constant_override("separation", 8)
-	if training_first:
-		_add_copy("NEW RECRUIT", "Start with Dr. Chen's training chamber. About five minutes.", COLOR_MUTED)
-	else:
-		_add_copy("THE BREACH IS ACTIVE", "Deploy the next contract, or open Operations and choose.", COLOR_MUTED)
-	var deploy_heading := "TRAINING RECOMMENDED FIRST" if training_first else "LIVE COMBAT OPERATION"
-	_content.add_child(_make_action_button(
-		&"deploy",
-		"⚡  DEPLOY MISSION\n%s\n%s" % [deploy_heading, deploy_detail],
-		COLOR_MAGENTA,
-		Vector2(0, 128),
-		not training_first
-	))
-	_content.add_child(_make_action_button(
-		&"operations",
-		"◉  OPERATIONS\nCHOOSE A CONTRACT AND DIFFICULTY\nSix live operations from Dr. Chen",
-		COLOR_AMBER,
-		Vector2(0, 96)
-	))
-	var secondary := HBoxContainer.new()
-	secondary.add_theme_constant_override("separation", 22)
-	secondary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_content.add_child(secondary)
-	secondary.add_child(_make_action_button(
-		&"training",
-		"◈  START TRAINING\nDR. CHEN'S TRAINING CHAMBER\n%s" % ("Recommended before first deployment" if training_first else "Replay the full walkthrough"),
-		COLOR_VIOLET,
-		Vector2(0, 118),
-		training_first
-	))
-	secondary.add_child(_make_action_button(
-		&"settings",
-		"⌁  OPEN SETTINGS\nAUDIO • HAPTICS • COMFORT\nCustomize your Striker profile",
-		COLOR_BLUE,
-		Vector2(0, 118)
-	))
-	_set_footer("POINT AT A BUTTON  •  PULL TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
-
-func show_operations(entries: Array[Dictionary], tier_id: String = DifficultyTier.STANDARD) -> void:
-	var tier := DifficultyTier.resolve(tier_id)
-	# The subtitle says what the chosen difficulty asks for, so Full Resonance's jumps are named before Deploy.
-	_begin_view(&"OPERATIONS", "RSF // MISSION SELECT", "CHOOSE AN OPERATION", "%s  •  %s" % [DifficultyTier.label(tier), DifficultyTier.blurb(tier).to_upper()], _tier_color(tier), 36)
-	# Six two-line cards, the difficulty row, the back button, and the footer only fit the 780 px panel with tighter rows.
-	_content.add_theme_constant_override("separation", 6)
-	_content.add_child(_make_tier_row(tier))
-	for entry in entries:
-		var unlocked: bool = entry.get("unlocked", false)
-		var cleared: bool = entry.get("cleared", false)
-		var accent := COLOR_GREEN if cleared else COLOR_MAGENTA if unlocked else COLOR_MUTED
-		var detail := String(entry.get("summary", "")) if unlocked else String(entry.get("lock_reason", "Locked"))
-		var state := "SEALED" if cleared else "OPEN" if unlocked else "LOCKED"
-		var heading := "%s  %s  •  %s" % [entry.get("codename", ""), entry.get("title", ""), state]
-		var expected := MissionCatalog.expected_minutes_text(entry)
-		if expected != "":
-			heading += "  •  %s" % expected
-		var best_seconds := float(entry.get("best_seconds", 0.0))
-		if best_seconds > 0.0:
-			heading += "  •  YOUR BEST %s" % _clock(best_seconds)
-		var button := _make_action_button(
-			StringName("mission_%s" % entry.get("id", "")),
-			"%s\n%s" % [heading, detail],
-			accent,
-			Vector2(0, 56),
-			unlocked and not cleared
-		)
-		button.disabled = not unlocked
-		_compact_menu_button(button, 56.0)
-		_content.add_child(button)
-	var back := _make_action_button(&"operations_back", "BACK TO MAIN MENU", COLOR_BLUE, Vector2(0, 44))
-	_compact_menu_button(back, 44.0)
-	_content.add_child(back)
-	_set_footer("LOCKED CONTRACTS OPEN WHEN YOU SEAL THE ONE BEFORE THEM")
-
 ## After Chen signs off, in the chamber: deploy the next operation, go again, or leave.
 func show_training_complete(deploy_detail: String) -> void:
 	_begin_view(&"TRAINING", "RSF // TRAINING CHAMBER 07", "TRAINING COMPLETE", "THE GAUNTLETS ARE YOURS", COLOR_GREEN)
 	_add_copy("SIMULATION ENDED", "Every rule you just met works the same out there. The phantoms will not pause.", COLOR_MUTED)
 	_content.add_child(_make_action_button(&"training_deploy", "⚡  DEPLOY\n%s" % deploy_detail, COLOR_MAGENTA, Vector2(0, 104), true))
 	_content.add_child(_make_action_button(&"training_replay", "REPLAY TRAINING", COLOR_VIOLET, Vector2(0, 82)))
-	_content.add_child(_make_action_button(&"training_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 82)))
+	_content.add_child(_make_action_button(&"training_menu", "CITY MAP", COLOR_BLUE, Vector2(0, 82)))
 	_set_footer("POINT + TRIGGER TO SELECT  •  HOLD META BUTTON TO RECENTER")
-
-## One button per difficulty; the chosen one is marked and lit. Picking one sends tier_<id>.
-func _make_tier_row(selected: String) -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for tier in DifficultyTier.ORDER:
-		var chosen := tier == selected
-		var text := ("● %s" if chosen else "%s") % DifficultyTier.label(tier)
-		var button := _make_action_button(StringName("tier_%s" % tier), text, _tier_color(tier), Vector2(0, 44), chosen)
-		_compact_menu_button(button, 44.0)
-		row.add_child(button)
-	return row
 
 func _tier_color(tier_id: String) -> Color:
 	match tier_id:
@@ -238,7 +147,7 @@ func show_reset_confirmation() -> void:
 
 func show_abort_confirmation() -> void:
 	_begin_view(&"CONFIRM", "RSF // MISSION CONTROL", "END CURRENT MISSION?", "UNSAVED MISSION PROGRESS WILL BE LOST", COLOR_RED)
-	_add_copy("RETURN TO OPERATIONS", "Your settings and completed training record will be preserved.", COLOR_MUTED)
+	_add_copy("RETURN TO THE CITY MAP", "Your settings and completed training record will be preserved.", COLOR_MUTED)
 	_content.add_child(_make_action_button(&"abort_cancel", "KEEP FIGHTING", COLOR_GREEN, Vector2(0, 92), true))
 	_content.add_child(_make_action_button(&"abort_confirm", "END MISSION & RETURN", COLOR_RED, Vector2(0, 92)))
 	_set_footer("SELECT KEEP FIGHTING TO RESUME WITHOUT LOSING PROGRESS")
@@ -269,57 +178,6 @@ func _closest_button(node: Node, point: Vector2, best: Array) -> void:
 				best[1] = distance
 	for child in node.get_children():
 		_closest_button(child, point, best)
-
-## seconds is the live round time; previous_best is the stored fastest victory at this tier before
-## this one (0 when none); tier_label names the difficulty it was played at. offer_training adds
-## REVIEW TRAINING, for a Striker the failsafe just pulled out.
-func show_results(outcome: StringName, score: int, debrief: String = "", next_title: String = "", seconds: float = 0.0, previous_best: float = 0.0, tier_label: String = "", offer_training: bool = false) -> void:
-	var victory := outcome == &"victory"
-	var title := "MISSION COMPLETE" if victory else "OPERATION ENDED"
-	var subtitle := "ALL RIFTS SEALED" if victory else "LIFE FORCE DEPLETED"
-	if tier_label != "":
-		subtitle += "  •  %s" % tier_label
-	var accent := COLOR_GREEN if victory else COLOR_RED
-	_begin_view(&"RESULTS", "RSF // AFTER-ACTION REPORT", title, subtitle, accent, 34)
-	var outcome_banner := ColorRect.new()
-	outcome_banner.custom_minimum_size.y = 6
-	outcome_banner.color = accent
-	outcome_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_content.add_child(outcome_banner)
-	var score_panel := PanelContainer.new()
-	score_panel.add_theme_stylebox_override("panel", _style_box(COLOR_PANEL_SOFT, accent, 2, 18))
-	_content.add_child(score_panel)
-	var score_stack := VBoxContainer.new()
-	score_stack.add_theme_constant_override("separation", 2)
-	score_panel.add_child(score_stack)
-	var score_label := _label("FINAL SCORE  %06d" % score, 28, accent, true)
-	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	score_stack.add_child(score_label)
-	if victory and seconds > 0.0:
-		var time_text := "SEALED IN %s" % _clock(seconds)
-		if previous_best > 0.0 and seconds < previous_best:
-			time_text += "  •  NEW BEST TIME"
-		var time_label := _label(time_text, 20, COLOR_TEXT, true)
-		time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		score_stack.add_child(time_label)
-	if debrief != "":
-		var debrief_label := _label(debrief, 18, COLOR_TEXT)
-		debrief_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		# https://docs.godotengine.org/en/stable/classes/class_label.html#class-label-property-max-lines-visible
-		debrief_label.max_lines_visible = 2
-		debrief_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		_content.add_child(debrief_label)
-	if next_title != "":
-		_content.add_child(_make_action_button(&"next_mission", "NEXT OPERATION\n%s" % next_title, COLOR_GREEN, Vector2(0, 78), true))
-	_content.add_child(_make_action_button(&"retry", "RETRY MISSION", COLOR_CYAN, Vector2(0, 78), next_title == ""))
-	if offer_training:
-		_content.add_child(_make_action_button(&"results_training", "REVIEW TRAINING", COLOR_VIOLET, Vector2(0, 78)))
-	_content.add_child(_make_action_button(&"results_menu", "MAIN MENU", COLOR_BLUE, Vector2(0, 78)))
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_content.add_child(spacer)
-	_set_footer("POINT + TRIGGER TO SELECT YOUR NEXT OPERATION")
 
 func _clock(seconds: float) -> String:
 	var whole := maxi(floori(seconds), 0)

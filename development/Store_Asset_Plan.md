@@ -34,7 +34,7 @@ Every Phantom is a different movement. Yellow and blue Anglers take a left or ri
 6. The Maw at full size.
 7. Bracer panel mid-fight with a Chen caption.
 8. After-action report with score, debrief, and Next Operation.
-9. Operations screen with sealed, open, and locked contracts.
+9. The city map: sealed, live, and locked sites with the front line between them.
 
 ## Trailer beats (45 to 60 seconds)
 
