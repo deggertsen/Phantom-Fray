@@ -2576,7 +2576,8 @@ func _held_yellow(head: Node3D) -> ResonancePhantom:
 ## does not move, and a soft lure hit still beats the hardest plain hit.
 ## The world front and a city's section on the wrap panels: every city is a button, the filter
 ## dims the rest, Open leads the city card, a district leads to Deploy at the city's tier, and
-## the results panels for a world mission fit.
+## a world mission's results are the city map: its open districts press, Deploy follows a pick,
+## and no panel says boss.
 func _validate_world_menu() -> void:
 	var left := _wrap_panel(Vector2(VRWrapPanel.SIDE_PIXELS))
 	var center := _wrap_panel(Vector2(VRWrapPanel.CENTER_PIXELS))
@@ -2632,6 +2633,12 @@ func _validate_world_menu() -> void:
 		failures.append("The home city does not offer Breach Night")
 	_check_fits(left, "world panel")
 	_check_fits(right, "city card")
+	_check_no_boss([left, center, right], "The world map")
+	for entry in entries:
+		right.show_world_city(entry, world)
+		_check_no_boss([right], "%s's city card" % entry["name"])
+	right.show_world_city(home, world)
+	await process_frame
 	# A safe city has nothing to open; a consumed one neither.
 	for entry in entries:
 		if entry["state"] in [WorldMap.STATE_SAFE, WorldMap.STATE_CONSUMED]:
@@ -2652,7 +2659,7 @@ func _validate_world_menu() -> void:
 	var city := {
 		"entry": tokyo, "section": section, "sealed": sealed, "selected_id": node["id"], "tier": tier, "assist": false,
 		"node": node, "status": WorldMap.node_status(section, sealed, node["id"]),
-		"kind_label": WorldMap.kind_label(node["kind"], tier), "kind_summary": WorldMap.kind_summary(node["kind"], tier),
+		"kind_label": WorldMap.kind_label(node["kind"]), "kind_summary": WorldMap.kind_summary(node["kind"]),
 		"expected_minutes": DifficultyTier.apply_mission(mission, tier).get("expected_minutes", []), "best_seconds": 0.0,
 	}
 	left.show_operations_status(city)
@@ -2692,13 +2699,32 @@ func _validate_world_menu() -> void:
 				failures.append("A threatened city with Assist on does not deploy at Assist")
 			_check_fits(right, "assisted district panel")
 			break
-	# Results after sealing the first district: the line moved, the city map leads.
+	_check_no_boss([left, center, right], "Tokyo's section")
+	# Every Maw card, at every tier, reads the same and says nothing of what may come through.
+	for maw_tier in DifficultyTier.ORDER:
+		for candidate in _maw_districts():
+			var maw_city := _city_card(candidate["entry"], candidate["section"], [], maw_tier)
+			maw_city["selected_id"] = candidate["node"]["id"]
+			maw_city["node"] = candidate["node"]
+			maw_city["kind_label"] = WorldMap.kind_label(WorldMap.KIND_MAW)
+			maw_city["kind_summary"] = WorldMap.kind_summary(WorldMap.KIND_MAW)
+			center.show_operations_map(maw_city)
+			right.show_district_detail(maw_city)
+			await process_frame
+			_check_no_boss([center, right], "a Maw district at %s" % maw_tier)
+			_check_fits(right, "Maw district panel")
+			break
+	# Results after sealing the first district are the city map: the line moved, the open
+	# districts are pressable, and the next one's card leads with Deploy.
+	var after_seal := _city_card(tokyo, section, [node["id"]], tier)
 	var report := {
 		"outcome": &"victory", "score": 4200, "debrief": "Chen: sealed.", "seconds": 300.0, "previous_best": 0.0, "best_seconds": 300.0, "tier": tier,
 		"world": {
 			"entry": tokyo, "section": section, "sealed_before": [], "sealed_after": [node["id"]], "node": node,
-			"kind_label": city["kind_label"], "operation_complete": false, "liberation_before": tokyo["liberation"], "liberation_after": tokyo["liberation"],
+			"kind_label": city["kind_label"], "moved": true, "operation_complete": false, "liberation_before": tokyo["liberation"], "liberation_after": tokyo["liberation"],
 		},
+		"city": after_seal,
+		"picked": false,
 		"offer_training": false,
 	}
 	left.show_world_report(report)
@@ -2708,24 +2734,239 @@ func _validate_world_menu() -> void:
 		await process_frame
 	if not _has_label(left, "THE LINE MOVED"):
 		failures.append("World results do not say the line moved")
-	var city_button := _find_button(right, "CITY MAP")
-	if city_button == null or not bool(city_button.get_meta(&"primary", false)):
-		failures.append("City map does not lead world results after a seal")
+	if not _has_label(center, "MISSION COMPLETE") or not _has_label(center, "4,200"):
+		failures.append("World results lost the outcome, time, or score over the map")
+	_check_results_districts(center, section, after_seal, "after a seal")
+	var next_deploy := _find_button(right, "DEPLOY")
+	if next_deploy == null or next_deploy.disabled or not bool(next_deploy.get_meta(&"primary", false)) or not _has_label(right, String(after_seal["node"]["name"])):
+		failures.append("World results after a seal do not lead with the next district and Deploy")
+	if _find_button(left, "REPLAY") == null or _find_button(left, "WORLD") == null or _find_button(left, "SETTINGS") == null:
+		failures.append("World results lost Replay, World, or Settings")
+	if _find_button(right, "CITY MAP") != null or _find_button(left, "CITY MAP") != null:
+		failures.append("World results still send the Striker to a separate city map")
 	_check_fits(left, "world report")
-	_check_fits(right, "world results actions")
+	_check_fits(right, "world results district")
+	_check_no_boss([left, center, right], "world results")
+	# Picking another open district from results puts its card up.
+	var open_after: Array = WorldMap.available_nodes(section, [node["id"]])
+	if open_after.size() > 1:
+		after_seal = _city_card(tokyo, section, [node["id"]], tier, String(open_after[1]))
+		report["city"] = after_seal
+		report["picked"] = true
+		right.show_world_results_actions(report)
+		await process_frame
+		if not _has_label(right, String(after_seal["node"]["name"])) or _find_button(right, "DEPLOY") == null:
+			failures.append("Picking a district on world results did not show its card")
+	# After a defeat Retry leads, and the open districts can still be picked.
 	report["outcome"] = &"defeat"
 	report["offer_training"] = true
+	report["world"]["sealed_after"] = []
+	report["world"]["moved"] = false
+	report["city"] = _city_card(tokyo, section, [], tier, String(node["id"]))
+	report["picked"] = false
 	left.show_world_report(report)
+	center.show_world_results_map(report)
 	right.show_world_results_actions(report)
 	for _frame in 2:
 		await process_frame
 	var retry := _find_button(right, "RETRY")
 	if retry == null or not bool(retry.get_meta(&"primary", false)):
 		failures.append("Retry does not lead world results after a defeat")
+	if not _has_label(left, "THE BREACH HELD") or not _has_label(center, "OPERATION ENDED"):
+		failures.append("World defeat results lost their outcome")
+	_check_results_districts(center, section, report["city"], "after a defeat")
+	_check_fits(left, "world defeat report")
 	_check_fits(right, "world defeat actions")
+	_check_no_boss([left, center, right], "world defeat results")
+	report["picked"] = true
+	right.show_world_results_actions(report)
+	await process_frame
+	if _find_button(right, "DEPLOY") == null:
+		failures.append("Picking a district after a defeat did not offer Deploy")
+	# The third seal: the operation is complete and the next section opens on the map.
+	var next_section := WorldMap.section("tokyo", int(tokyo["section"]) + 1)
+	var fresh := _city_card(tokyo, next_section, [], tier)
+	report = {
+		"outcome": &"victory", "score": 5100, "debrief": "", "seconds": 280.0, "previous_best": 300.0, "best_seconds": 280.0, "tier": tier,
+		"world": {
+			"entry": tokyo, "section": section, "sealed_before": [], "sealed_after": [], "node": node,
+			"kind_label": city["kind_label"], "moved": true, "operation_complete": true, "liberation_before": 25, "liberation_after": 29,
+		},
+		"city": fresh, "picked": false, "offer_training": false,
+	}
+	left.show_world_report(report)
+	center.show_world_results_map(report)
+	right.show_world_results_actions(report)
+	for _frame in 2:
+		await process_frame
+	if not _has_label(left, "OPERATION COMPLETE") or not _has_label(center, "OPERATION COMPLETE  •  %s" % DifficultyTier.label(tier)):
+		failures.append("A completed operation's results do not say so")
+	_check_results_districts(center, next_section, fresh, "after a completed operation")
+	if _find_button(right, "DEPLOY") == null:
+		failures.append("A completed operation's results do not offer the next section's first district")
+	_check_fits(left, "operation complete report")
 	for panel in [left, center, right]:
 		panel.get_parent().queue_free()
 	await process_frame
+	profile.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://world_map_validation.cfg"))
+	_validate_world_words()
+	await _validate_world_results_flow()
+
+## The city card GameFlowController._city_status builds, picking `selected` or the first open district.
+func _city_card(entry: Dictionary, section: Dictionary, sealed: Array, tier: String, selected: String = "") -> Dictionary:
+	var open := WorldMap.available_nodes(section, sealed)
+	if selected == "":
+		selected = String(open[0]) if not open.is_empty() else ""
+	var node := WorldMap.node_in(section, selected)
+	var kind := String(node.get("kind", WorldMap.KIND_SINGLE))
+	var mission := WorldMap.build_mission(entry, int(section.get("index", 0)), node, tier) if not node.is_empty() else {}
+	return {
+		"entry": entry, "section": section, "sealed": sealed, "selected_id": selected, "tier": tier, "assist": false,
+		"node": node, "status": WorldMap.node_status(section, sealed, selected) if not node.is_empty() else "locked",
+		"kind_label": WorldMap.kind_label(kind), "kind_summary": WorldMap.kind_summary(kind),
+		"expected_minutes": DifficultyTier.apply_mission(mission, tier).get("expected_minutes", []) if not mission.is_empty() else [], "best_seconds": 0.0,
+	}
+
+## A few Maw districts from playable cities' early sections: [{entry, section, node}].
+func _maw_districts() -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
+	for entry in WorldMap.cities():
+		if not entry.get("playable", false):
+			continue
+		for index in 4:
+			var section := WorldMap.section(String(entry["id"]), index)
+			for node in section["nodes"]:
+				if node["kind"] == WorldMap.KIND_MAW:
+					found.append({"entry": entry, "section": section, "node": node})
+					break
+	if found.is_empty():
+		failures.append("No early section anywhere has a Maw district to check")
+	return found
+
+## On world results the section's open districts are pressable and press as node_<id>; the rest are not.
+func _check_results_districts(center: Control, section: Dictionary, city: Dictionary, what: String) -> void:
+	var open := WorldMap.available_nodes(section, city["sealed"])
+	var pressed := [&""]
+	var listen := func(action: StringName) -> void: pressed[0] = action
+	center.action_requested.connect(listen)
+	for button in _buttons_under(center):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if not action.begins_with("node_"):
+			continue
+		var node_id := action.trim_prefix("node_")
+		if button.disabled == (node_id in open):
+			failures.append("On world results %s, district %s is %s" % [what, node_id, "locked" if button.disabled else "pressable"])
+	if open.is_empty():
+		failures.append("World results %s have no open district" % what)
+	else:
+		var target: Button = null
+		for button in _buttons_under(center):
+			if String(button.get_meta(&"menu_action", &"")) == "node_%s" % open[0]:
+				target = button
+		if target == null or not center.activate_at_viewport_point(target.get_global_rect().get_center()) or pressed[0] != StringName("node_%s" % open[0]):
+			failures.append("Pointing at an open district on world results %s did not pick it" % what)
+	center.action_requested.disconnect(listen)
+
+## No label or button on these panels says "boss": whether one comes through stays a surprise.
+func _check_no_boss(panels: Array, what: String) -> void:
+	for panel in panels:
+		for node in _controls_under(panel):
+			if (node is Label or node is Button) and "boss" in String(node.get("text")).to_lower():
+				failures.append("%s says boss: '%s'" % [what, node.get("text")])
+				return
+
+## District words: the new names, the same at every tier, and nothing in a district's mission
+## that calls out a boss, a break, or the other district.
+func _validate_world_words() -> void:
+	var names := {WorldMap.KIND_SINGLE: "CLEAN SEAL", WorldMap.KIND_DUAL: "CROSSFIRE", WorldMap.KIND_HOLD: "COVER THE TEAM", WorldMap.KIND_MAW: "SHUT THE MAW"}
+	for kind in WorldMap.KINDS:
+		if WorldMap.kind_label(kind) != names.get(kind, ""):
+			failures.append("District kind %s is called %s" % [kind, WorldMap.kind_label(kind)])
+		for tier in DifficultyTier.ORDER:
+			var mission := WorldMap.build_mission(WorldMap.city("tokyo"), 0, {"id": "s0n1", "name": "Harbor", "kind": kind, "site": "harbor"}, tier)
+			for field in ["codename", "title", "summary", "objective", "start_line", "victory_line", "defeat_line"]:
+				var text := String(mission.get(field, "")).to_lower()
+				for word in ["boss", "break", "other district"]:
+					if word in text:
+						failures.append("A %s district's %s at %s says '%s': %s" % [kind, field, tier, word, mission.get(field, "")])
+	for entry in WorldMap.cities():
+		for text in [String(entry.get("blurb", "")), WorldMap.asks(String(entry.get("state", "")))]:
+			if "boss" in text.to_lower():
+				failures.append("%s's card says boss: %s" % [entry["name"], text])
+
+## GameFlowController on a world mission's results: the section is the city map, so picking a
+## district and deploying it work there, behind the same release a held trigger needs.
+func _validate_world_results_flow() -> void:
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.settings_path = "user://world_flow_validation.cfg"
+	profile.clear_mission_progress()
+	var flow = load("res://Scripts/Core/game_flow_controller.gd").new()
+	root.add_child(flow)
+	for _frame in 3:
+		await process_frame
+	# Nothing else from the tree: no round to start, no panels, no hands.
+	flow._settings = profile
+	flow._round = null
+	flow._presenter = null
+	flow._player = null
+	flow._tutorial = null
+	var city_id := "tokyo"
+	var entry := WorldMap.city_entry(profile, city_id)
+	var section := WorldMap.section(city_id, int(entry["section"]))
+	var first := String(WorldMap.available_nodes(section, [])[0])
+	flow._selected_city_id = city_id
+	flow._active_mission_id = WorldMap.mission_id(city_id, int(entry["section"]), first)
+	flow._active_tier = WorldMap.tier_for(String(entry["state"]))
+	flow._last_seconds = 240.0
+	flow._world_result = flow._finish_world_mission(true, 4000)
+	flow._last_outcome = &"victory"
+	flow._state = &"results"
+	if not flow._world_result.get("moved", false) or not first in WorldMap.progress_for(profile, city_id)["sealed"]:
+		failures.append("A world victory did not seal its district")
+	var report: Dictionary = flow._results_report()
+	var card: Dictionary = report.get("city", {})
+	var next_open := WorldMap.available_nodes(section, [first])
+	if card.is_empty() or card.get("status", "") != "open" or not String(card.get("selected_id", "")) in next_open:
+		failures.append("World results do not carry the city card with an open district picked: %s" % [card.get("selected_id", "")])
+	for action in [StringName("node_%s" % next_open[0]), &"deploy", &"settings", &"results_world", &"retry"]:
+		if not flow._action_belongs_to_state(action):
+			failures.append("World results refuse %s" % action)
+	# A trigger still held from the fight presses nothing.
+	flow._menu_input_armed = false
+	flow._menu_action_cooldown = 0.0
+	flow._on_menu_action(&"deploy")
+	if flow._state != &"results":
+		failures.append("Deploy fired from world results before the trigger was released")
+	# Picked, then deployed: the next district starts.
+	var target := String(next_open[next_open.size() - 1])
+	flow._menu_input_armed = true
+	flow._menu_action_cooldown = 0.0
+	flow._on_menu_action(StringName("node_%s" % target))
+	if flow._state != &"results" or flow._selected_node_id != target or not flow._results_picked:
+		failures.append("Picking a district on world results did not stay on results with it picked")
+	if String((flow._results_report().get("city", {}) as Dictionary).get("selected_id", "")) != target:
+		failures.append("World results lost the picked district")
+	flow._menu_input_armed = true
+	flow._menu_action_cooldown = 0.0
+	flow._on_menu_action(&"deploy")
+	if flow._state != &"playing" or flow._active_mission_id != WorldMap.mission_id(city_id, int(entry["section"]), target):
+		failures.append("Deploy from world results did not start the picked district: %s" % flow._active_mission_id)
+	# Replay after a seal plays the sealed district again and credits nothing twice.
+	flow._active_mission_id = WorldMap.mission_id(city_id, int(entry["section"]), first)
+	if not flow._world_mission(flow._active_mission_id).is_empty() or flow._replay_mission(flow._active_mission_id).is_empty():
+		failures.append("A sealed district cannot be replayed")
+	var replay: Dictionary = flow._finish_world_mission(true, 4100)
+	if replay.get("moved", true) or WorldMap.progress_for(profile, city_id)["sealed"] != [first]:
+		failures.append("Replaying a sealed district moved the line")
+	# Breach Night results keep their own panels: no districts there.
+	flow._world_result = {}
+	if flow._action_belongs_to_state(StringName("node_%s" % target)) or flow._action_belongs_to_state(&"deploy"):
+		failures.append("Breach Night results accept district actions")
+	flow.queue_free()
+	await process_frame
+	profile.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://world_flow_validation.cfg"))
 
 ## Every district name is a site id BreachSites knows, so no district silently plays at the Dead City.
 func _validate_district_sites() -> void:

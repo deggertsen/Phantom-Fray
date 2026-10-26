@@ -27,17 +27,15 @@ var _section: Dictionary = {}
 var _sealed: Array = []
 var _selected_id: String = ""
 var _highlight_id: String = ""
-var _tier: String = DifficultyTier.STANDARD
 var _interactive: bool = true
 var _sealed_before: int = -1
 
 ## sealed are the district ids sealed in this section so far. On results, highlight_id is the
 ## district just sealed and sealed_before where the line stood before it.
-func show_section(section: Dictionary, sealed: Array, selected_id: String, tier: String, interactive: bool = true, highlight_id: String = "", sealed_before: int = -1) -> void:
+func show_section(section: Dictionary, sealed: Array, selected_id: String, interactive: bool = true, highlight_id: String = "", sealed_before: int = -1) -> void:
 	_section = section
 	_sealed = sealed
 	_selected_id = selected_id
-	_tier = tier
 	_interactive = interactive
 	_highlight_id = highlight_id
 	_sealed_before = sealed_before
@@ -120,7 +118,7 @@ func _add_node(node: Dictionary) -> void:
 	name_label.add_theme_color_override("font_color", COLOR_TEXT if status != "locked" else Color("8b7fa3"))
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var kind_label := Label.new()
-	kind_label.text = WorldMap.kind_label(String(node.get("kind", "")), _tier)
+	kind_label.text = WorldMap.kind_label(String(node.get("kind", "")))
 	kind_label.add_theme_font_size_override("font_size", 12)
 	kind_label.add_theme_color_override("font_color", Color("7fe3ff") if status == "sealed" else (COLOR_MUTED if status == "open" else Color("6b5a84")))
 	kind_label.mouse_filter = Control.MOUSE_FILTER_IGNORE

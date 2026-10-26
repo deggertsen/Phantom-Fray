@@ -58,7 +58,7 @@ const CITIES := [
 	{"id": "nairobi", "name": "Nairobi", "lon": 36.8, "lat": -1.3, "ops": 6, "seed_ops": 2, "blurb": "Threatened. It watches the Indian Ocean."},
 	{"id": "moscow", "name": "Moscow", "lon": 37.6, "lat": 55.8, "ops": 0, "seed_ops": 0, "blurb": "Safe, and cold for other reasons."},
 	{"id": "tehran", "name": "Tehran", "lon": 51.4, "lat": 35.7, "ops": 12, "seed_ops": 2, "blurb": "In danger. The southern front's western edge is a week away."},
-	{"id": "delhi", "name": "Delhi", "lon": 77.2, "lat": 28.6, "ops": 24, "seed_ops": 2, "blurb": "Overrun. On the front itself; a boss holds the junction."},
+	{"id": "delhi", "name": "Delhi", "lon": 77.2, "lat": 28.6, "ops": 24, "seed_ops": 2, "blurb": "Overrun. On the front itself; the junction fell in the second week."},
 	{"id": "beijing", "name": "Beijing", "lon": 116.4, "lat": 39.9, "ops": 14, "seed_ops": 3, "blurb": "In danger. The front is moving north through the plain."},
 	{"id": "seoul", "name": "Seoul", "lon": 127.0, "lat": 37.6, "ops": 12, "seed_ops": 2, "blurb": "In danger."},
 	{"id": "tokyo", "name": "Tokyo", "lon": 139.7, "lat": 35.7, "ops": 28, "seed_ops": 7, "blurb": "Overrun, and fought over every night. The front has stalled here for a month."},
@@ -178,7 +178,7 @@ static func has_missions(state: String) -> bool:
 static func asks(state: String) -> String:
 	match state:
 		STATE_CONSUMED: return "Behind the front, out of reach. Nothing can be done here until the front is pushed back to it. No city is ever permanently lost."
-		STATE_OVERRUN: return "A boss holds this city. Squats under high sweeps, jumps over low ones, side-steps, push-ups on the spent tentacle. Every operation pushes the front back a district."
+		STATE_OVERRUN: return "Squats, jumps, side-steps, and push-ups. Clear room to jump."
 		STATE_DANGER: return "Shorter tells, faster lunges. Hold the line while Chen's team seals from the pylons. Every hold here keeps the front off the next city."
 		STATE_THREATENED: return "Hands, block, dodge. Seal rifts and keep the front far away. Easy on the body; Assist is a session toggle."
 		_: return "No threat detected. There is nothing to fight here tonight; the front is far away."
@@ -268,7 +268,7 @@ static func resistance_label(ops: int) -> String:
 ## One section of a city: three columns of one to three districts, every district linked to at
 ## least one in the next column. Generated from the city id and section index, so the same
 ## ground comes back until it is sealed. A lone district is never a Maw and a column is never
-## all Maws, so there is always a way around the boss.
+## all Maws, so there is always a way around one.
 static func section(city_id: String, index: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("%s:%d" % [city_id, index])
@@ -365,23 +365,23 @@ static func node_status(section_data: Dictionary, sealed: Array, node_id: String
 static func site_for(district: String) -> String:
 	return district.to_lower().replace(" ", "_")
 
-static func kind_label(kind: String, tier_id: String) -> String:
+## What the Striker does in a district, named like an operation. The kind ids stay in saved
+## records (record_key); only these words change. The words are the same at every tier: what
+## may come through a Maw stays a surprise.
+static func kind_label(kind: String) -> String:
 	match kind:
-		KIND_SINGLE: return "SINGLE RIFT"
-		KIND_DUAL: return "DUAL RIFT"
-		KIND_HOLD: return "HOLD THE LINE"
-		KIND_MAW: return "MAW RIFT, BOSS" if DifficultyTier.allows_bosses(tier_id) else "MAW RIFT"
+		KIND_SINGLE: return "CLEAN SEAL"
+		KIND_DUAL: return "CROSSFIRE"
+		KIND_HOLD: return "COVER THE TEAM"
+		KIND_MAW: return "SHUT THE MAW"
 		_: return kind.to_upper()
 
-static func kind_summary(kind: String, tier_id: String) -> String:
+static func kind_summary(kind: String) -> String:
 	match kind:
-		KIND_SINGLE: return "One rift, a steady stream. The plain seal."
-		KIND_DUAL: return "Two doors open in one view, out of step. Keep both in front of you."
-		KIND_HOLD: return "Chen's team seals from the pylons. Keep them off you for the whole interval."
-		KIND_MAW:
-			if DifficultyTier.allows_bosses(tier_id):
-				return "One vast rift that may tear open into the boss: squats, jumps, push-ups. Take the other district if you do not want it tonight."
-			return "One vast rift, a steady flood, and a glimpse of what holds it open. No boss below hard."
+		KIND_SINGLE: return "One rift, a steady stream. Read every tell, answer it, and shut the door."
+		KIND_DUAL: return "Two rifts in one view, out of step. Keep both doors in front of you."
+		KIND_HOLD: return "Chen's team seals from the pylons. Keep the phantoms off you until they finish."
+		KIND_MAW: return "One vast rift, a heavy flood, and a glimpse of what holds it open. It takes a long chew to shut."
 		_: return ""
 
 # --- Missions -------------------------------------------------------------------------------
@@ -413,8 +413,8 @@ static func build_mission(city_data: Dictionary, section_index: int, node: Dicti
 	var mission := {
 		"id": mission_id(String(city_data.get("id", "")), section_index, String(node.get("id", ""))),
 		"codename": "%s • %s" % [city_name.to_upper(), district.to_upper()],
-		"title": kind_label(kind, tier_id),
-		"summary": kind_summary(kind, tier_id),
+		"title": kind_label(kind),
+		"summary": kind_summary(kind),
 		"objective": "SEAL THE DISTRICT",
 		"site": node.get("site", DEFAULT_SITE),
 		"world": {"city_id": city_data.get("id", ""), "section": section_index, "node_id": node.get("id", ""), "kind": kind},
@@ -422,7 +422,7 @@ static func build_mission(city_data: Dictionary, section_index: int, node: Dicti
 		"pressure_labels": [district.to_upper()],
 		"open_barks": [""],
 		"seal_lines": [],
-		"victory_line": "Chen: %s is sealed. The line moved. Pick the next district when you are ready." % district,
+		"victory_line": "Chen: %s is shut. Pick the next district when you are ready." % district,
 		"defeat_line": "Chen: The failsafe fired. %s held. Rest, then go back in." % district,
 	}
 	match kind:
@@ -437,7 +437,7 @@ static func build_mission(city_data: Dictionary, section_index: int, node: Dicti
 			]
 		KIND_HOLD:
 			mission["expected_minutes"] = [5, 7]
-			mission["objective"] = "HOLD THE LINE"
+			mission["objective"] = "COVER THE TEAM"
 			mission["start_line"] = "CHEN: %s. MY TEAM IS ON THE SEAL. KEEP THEM OFF YOU." % district.to_upper()
 			var hold := _wave(360, 3.0, 3, 1.0, 1.0, ["yellow", "blue", "green", "pink"])
 			# RiftManager drains the rift on its own over this long; the player's seals shorten it.
