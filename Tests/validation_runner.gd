@@ -20,6 +20,7 @@ func _run_validation() -> void:
 	await _validate_menu_surface()
 	await _validate_city_menu()
 	_validate_front_lines()
+	await _validate_breach_sites()
 	await _validate_results_menu()
 	await _validate_pink_dodge()
 	_validate_squat_detector()
@@ -612,6 +613,94 @@ func _validate_front_lines() -> void:
 			if (index < sealed) != (site.x < _line_x_at(line, site.y)):
 				failures.append("With %d sealed, %s sits on the wrong side of the front" % [sealed, mission_id])
 	map.free()
+
+## Every world-map district resolves to a site with a look and dressing; unknown ids play at
+## the Dead City; each site's dressing keeps the breach-site rules (one merged mesh, no shadows,
+## nothing between waist height and 20 m up inside 20 m, a vertex budget); and apply_site
+## really swaps the dressing, the fog, and the ground.
+func _validate_breach_sites() -> void:
+	var districts := ["harbor", "rail_yards", "junction", "stadium", "reservoir", "old_town", "civic_ring", "foundry", "airport", "docks", "university", "bluffs", "quarry", "northgate", "eastbank", "riverside"]
+	var ids := BreachSites.ids()
+	for id in districts:
+		if not ids.has(id):
+			failures.append("BreachSites has no id for the %s district" % id)
+	for id in ids:
+		if id != id.to_snake_case() or not BreachSites.SITES.has(BreachSites.resolve(id)):
+			failures.append("Breach site id %s is not snake_case or resolves to no site" % id)
+	if BreachSites.resolve("no_such_district") != "dead_city":
+		failures.append("An unknown district does not fall back to the Dead City")
+	for site in BreachSites.site_ids():
+		var look := BreachSites.look(site)
+		for key in ["sky_horizon", "sky_zenith", "sky_breach", "fog", "fog_density", "ambient", "ambient_energy", "sun", "sun_energy", "outer", "outer_from", "stripes", "shimmer", "crust", "pitch"]:
+			if not look.has(key):
+				failures.append("Breach site %s has no %s" % [site, key])
+		var dressing := SiteDressing.build(site)
+		var meshes := 0
+		var vertices := 0
+		for node in _nodes_under(dressing):
+			if node is GeometryInstance3D and (node as GeometryInstance3D).cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+				failures.append("Breach site %s casts a shadow from %s" % [site, node.name])
+			if node is MeshInstance3D:
+				meshes += 1
+				var mesh := (node as MeshInstance3D).mesh
+				for surface in mesh.get_surface_count():
+					var points: PackedVector3Array = mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]
+					vertices += points.size()
+					for point in points:
+						var reach := Vector2(point.x, point.z).length()
+						if reach < 20.0 and point.y > 1.5 and point.y < 20.0:
+							failures.append("Breach site %s has dressing at %.1f m up only %.1f m out" % [site, point.y, reach])
+							break
+		if meshes > 2 or vertices > 60000:
+			failures.append("Breach site %s is %d meshes and %d vertices; the budget is 2 and 60000" % [site, meshes, vertices])
+		dressing.free()
+
+	var stage := Node3D.new()
+	var world := WorldEnvironment.new()
+	world.name = "WorldEnvironment"
+	world.environment = Environment.new()
+	world.environment.sky = Sky.new()
+	var sky := ShaderMaterial.new()
+	sky.shader = load("res://Resources/Materials/breach_sky.gdshader")
+	world.environment.sky.sky_material = sky
+	stage.add_child(world)
+	var sun := DirectionalLight3D.new()
+	sun.name = "DirectionalLight3D"
+	stage.add_child(sun)
+	var floor_body := Node3D.new()
+	floor_body.name = "Floor"
+	var floor_mesh := MeshInstance3D.new()
+	floor_mesh.name = "MeshInstance3D"
+	floor_body.add_child(floor_mesh)
+	stage.add_child(floor_body)
+	var arena := Node3D.new()
+	arena.set_script(load("res://Scripts/Presentation/arena_builder.gd"))
+	stage.add_child(arena)
+	root.add_child(stage)
+	await process_frame
+	if arena.call("site_id") != "dead_city" or arena.get_node_or_null("DeadCitySite") == null:
+		failures.append("The arena does not start at the Dead City")
+	arena.call("apply_site", "docks")
+	await process_frame
+	var floor_material := floor_mesh.material_override as ShaderMaterial
+	if arena.call("site_id") != "harbor" or arena.get_node_or_null("HarborSite") == null or arena.get_node_or_null("DeadCitySite") != null:
+		failures.append("apply_site(\"docks\") did not swap the Dead City for the harbor")
+	if not is_equal_approx(world.environment.fog_density, float(BreachSites.SITES["harbor"]["fog_density"])) or float(floor_material.get_shader_parameter("shimmer")) < 0.5:
+		failures.append("apply_site did not set the harbor's fog and water")
+	if sky.get_shader_parameter("horizon_color") != BreachSites.SITES["harbor"]["sky_horizon"]:
+		failures.append("apply_site did not set the harbor's sky")
+	arena.call("apply_site", "somewhere_new")
+	await process_frame
+	if arena.call("site_id") != "dead_city" or float(floor_material.get_shader_parameter("shimmer")) > 0.0:
+		failures.append("An unknown site did not put the arena back at the Dead City")
+	stage.queue_free()
+	await process_frame
+
+func _nodes_under(node: Node) -> Array[Node]:
+	var found: Array[Node] = [node]
+	for child in node.get_children():
+		found.append_array(_nodes_under(child))
+	return found
 
 func _line_x_at(line: PackedVector2Array, y: float) -> float:
 	for index in range(line.size() - 1):

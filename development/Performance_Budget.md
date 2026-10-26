@@ -20,7 +20,7 @@ Paired operations run two rifts at `max_live` 2 each. The Maw runs one rift at `
 ## Content budgets
 
 - Every creature species and form is one `ArrayMesh`, shared across instances, built and shader-prewarmed while the menu is up (`CreatureMesh.prewarm`, `shader_warmup.gd`).
-- The dead city and rubble are each one merged mesh and one draw call.
+- Each breach site's set dressing is one merged mesh of at most three surfaces plus one multimesh of glow halos (`SiteKit`), with no real lights and no shadows. Measured 2026-10-25: the heaviest site, farmland, is about 9,800 triangles; the rest are 1,600 to 4,600. Site materials are prewarmed with the combat shaders while the menu is up.
 - Prefer opaque or cutout materials; transparent exceptions are the portal, glow sprites, beacon, debris, and the pink lane.
 - No per-phantom raycasts or allocations during steady-state combat. Pink's lane is one quad with a shader.
 - Particle systems are short-lived and below 40 particles per effect.
