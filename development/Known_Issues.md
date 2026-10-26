@@ -1,6 +1,6 @@
 # Known Issues and Open Questions
 
-Updated 2026-10-24.
+Updated 2026-10-26.
 
 ## Content and design gaps
 
@@ -36,6 +36,7 @@ Updated 2026-10-24.
 - Android export automation can be added to CI only after the export preset and build template versions are established on a trusted workstation.
 - The validation runner now covers stragglers and the own-music view; round and rift integration fixtures for whole operations are still missing.
 - `_validate_arc_motion` in `Tests/validation_runner.gd` is flaky: "Yellow arc stalled during approach" failed 2 of 5 headless runs on 2026-10-09 with no code change between runs. The arc is built from random side, bow, and control-point values, and 120 physics steps is not always enough for every curve to clear 1 m at 0.3 m/s. Seed the RNG in the test or lengthen the run.
+- **Every punched phantom flew to the player's left.** Reported 2026-10-26 from the headset; fixed the same day. Since ab4bdee (2026-10-24) the Meta recenter calls `XRServer.center_on_hmd`, which turns the controllers' transforms by the new reference frame but not `XRPose.linear_velocity`, so the strike direction in `Scripts/Player/hand_collision.gd` stayed in the old play-space frame and every fling came out turned by the recenter's yaw. The velocity now takes the reference frame, the origin's turn, and the world scale; `_validate_punch_direction` covers both hands. Not yet felt on the headset.
 - The project targets Compatibility rendering for standalone Quest reliability. Reassess Mobile/Vulkan only with device measurements on the pinned Godot release.
 - **Hand tracking: simultaneous hands and controllers built.** Tests 7 and 8 (2026-10-14 and 2026-10-17, [Playtest_Log.md](Playtest_Log.md)) ruled out tracked hands for the fighting: 4 to 10 dropped punches in 20 against a bar of 2, lost hands at the face and on wide hooks, visible lag. Simultaneous hands and controllers works: controllers hanging on their straps, hands tracked for push-ups with no drops (decision 39). Built 2026-10-17 ([Exercise_Mechanics_Exploration.md](Exercise_Mechanics_Exploration.md), boss section, "Hand tracking"): a free hand cannot strike, its glove and gauntlet ride the tracked hand, fist and pinch work. On the floor the runtime often takes a hanging controller that touches the hand for a held one, so the gauntlets stay with the controllers; a plank needs both hands down either way (a flat palm, or a hanging controller within 30 cm of the floor), and a boss fight the same day counted 10 of 10 push-ups twice. Chen's spent-tentacle lines now say push-ups plainly.
 
