@@ -31,6 +31,7 @@ func _run_validation() -> void:
 	_validate_maw_cycle_variety()
 	await _validate_maw_glimpse()
 	await _validate_phantom_hold()
+	_validate_world_map()
 	await _validate_punch_power()
 	await _validate_tutorial_flow()
 	await _validate_resonance_sweep()
@@ -356,6 +357,114 @@ func _validate_attack_window() -> void:
 	await _validate_turn_back(yellow_scene)
 	await _validate_green_arrival()
 	await _validate_possession(yellow_scene)
+
+## The war as data: states from distance to the fronts, sections that always have a way around
+## the boss, operations that count only when three districts along a path are sealed.
+func _validate_world_map() -> void:
+	var by_id := {}
+	for city in WorldMap.cities():
+		by_id[city["id"]] = city
+	var expected := {
+		"jakarta": WorldMap.STATE_CONSUMED, "chicago": WorldMap.STATE_CONSUMED, "mumbai": WorldMap.STATE_CONSUMED,
+		"tokyo": WorldMap.STATE_OVERRUN, "delhi": WorldMap.STATE_OVERRUN, "new_york": WorldMap.STATE_OVERRUN, "toronto": WorldMap.STATE_OVERRUN,
+		"tehran": WorldMap.STATE_DANGER, "beijing": WorldMap.STATE_DANGER, "denver": WorldMap.STATE_DANGER,
+		"portland": WorldMap.STATE_THREATENED, "cairo": WorldMap.STATE_THREATENED, "mexico_city": WorldMap.STATE_THREATENED,
+		"berlin": WorldMap.STATE_SAFE, "sao_paulo": WorldMap.STATE_SAFE, "moscow": WorldMap.STATE_SAFE, "lagos": WorldMap.STATE_SAFE,
+	}
+	for city_id in expected:
+		var state: String = by_id.get(city_id, {}).get("state", "")
+		if state != expected[city_id]:
+			failures.append("World map puts %s in state %s, expected %s" % [city_id, state, expected[city_id]])
+	if WorldMap.tier_for(WorldMap.STATE_OVERRUN) != DifficultyTier.FULL_RESONANCE or WorldMap.tier_for(WorldMap.STATE_DANGER) != DifficultyTier.OPERATOR:
+		failures.append("World map tiers do not follow the city state")
+	if WorldMap.tier_for(WorldMap.STATE_THREATENED) != DifficultyTier.STANDARD or WorldMap.tier_for(WorldMap.STATE_THREATENED, true) != DifficultyTier.ASSIST:
+		failures.append("A threatened city should play Standard, or Assist as the session choice")
+	if WorldMap.has_missions(WorldMap.STATE_SAFE) or WorldMap.has_missions(WorldMap.STATE_CONSUMED):
+		failures.append("Safe or consumed cities offer missions")
+	# Sections: shape, links, and a way around every Maw.
+	for city_id in ["portland", "tokyo", "tehran"]:
+		for index in 6:
+			var section := WorldMap.section(city_id, index)
+			var again := WorldMap.section(city_id, index)
+			if str(section) != str(again):
+				failures.append("Section %s/%d is not stable for its seed" % [city_id, index])
+			var nodes: Array = section["nodes"]
+			var columns := {}
+			for node in nodes:
+				columns[node["column"]] = columns.get(node["column"], []) + [node]
+			if columns.size() != 3:
+				failures.append("Section %s/%d does not have three columns" % [city_id, index])
+				continue
+			for column in 3:
+				var members: Array = columns[column]
+				if members.size() < 1 or members.size() > 3:
+					failures.append("Section %s/%d column %d has %d districts" % [city_id, index, column, members.size()])
+				var maws := 0
+				for member in members:
+					if member["kind"] == WorldMap.KIND_MAW:
+						maws += 1
+				if maws == members.size():
+					failures.append("Section %s/%d column %d is all Maws" % [city_id, index, column])
+				if column < 2:
+					for member in members:
+						var linked := false
+						for edge in section["edges"]:
+							if edge[0] == member["id"]:
+								linked = true
+						if not linked:
+							failures.append("Section %s/%d: %s links nowhere" % [city_id, index, member["name"]])
+				if column > 0:
+					for member in members:
+						var reached := false
+						for edge in section["edges"]:
+							if edge[1] == member["id"]:
+								reached = true
+						if not reached:
+							failures.append("Section %s/%d: %s cannot be reached" % [city_id, index, member["name"]])
+			var names := {}
+			for node in nodes:
+				names[node["name"]] = true
+			if names.size() != nodes.size():
+				failures.append("Section %s/%d repeats a district name" % [city_id, index])
+	# Progress: three seals along a path complete an operation and open the next section.
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.settings_path = "user://world_map_validation.cfg"
+	profile.clear_mission_progress()
+	var city_id := "portland"
+	var before := WorldMap.progress_for(profile, city_id)
+	var section := WorldMap.section(city_id, int(before["section"]))
+	var open := WorldMap.available_nodes(section, [])
+	if open.is_empty() or open.size() != (section["starts"] as Array).size():
+		failures.append("A fresh section should open exactly its first column")
+	var path: Array = []
+	var current := String(open[0])
+	for step in 3:
+		path.append(current)
+		var result := WorldMap.seal_node(profile, city_id, current)
+		if step < 2:
+			if result["operation_complete"]:
+				failures.append("Operation completed after %d seals" % (step + 1))
+			var next := WorldMap.available_nodes(section, result["sealed"])
+			if next.is_empty():
+				failures.append("No district opened after sealing %s" % current)
+				break
+			current = String(next[0])
+		elif not result["operation_complete"] or int(result["section"]) != int(before["section"]) + 1 or int(result["ops_done"]) != int(before["ops_done"]) + 1:
+			failures.append("Three seals did not complete the operation: %s" % [result])
+	var after := WorldMap.progress_for(profile, city_id)
+	if not (after["sealed"] as Array).is_empty():
+		failures.append("The new section started with districts already sealed")
+	var entry := WorldMap.city_entry(profile, city_id)
+	if int(entry.get("liberation", 0)) <= WorldMap.liberation(entry, int(before["ops_done"])):
+		failures.append("Liberation did not rise after a completed operation")
+	var mission := WorldMap.build_mission(entry, int(after["section"]), WorldMap.node_in(WorldMap.section(city_id, int(after["section"])), String(WorldMap.available_nodes(WorldMap.section(city_id, int(after["section"])), [])[0])), DifficultyTier.STANDARD)
+	if not WorldMap.is_world_mission(String(mission.get("id", ""))) or (mission.get("rifts", []) as Array).is_empty() or not mission.has("expected_minutes"):
+		failures.append("A district did not build a playable mission: %s" % [mission.get("id", "")])
+	var parsed := WorldMap.parse_mission_id(String(mission["id"]))
+	if parsed.get("city_id", "") != city_id or int(parsed.get("section", -1)) != int(after["section"]):
+		failures.append("World mission id does not round-trip: %s" % [mission["id"]])
+	profile.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://world_map_validation.cfg"))
 
 ## A player who steps out of the path is still the target. A phantom that flies past the head
 ## must come back for it at once, never float at the point where the head used to be.
