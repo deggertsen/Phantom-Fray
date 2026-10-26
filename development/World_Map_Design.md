@@ -39,7 +39,7 @@ A section is a small directed graph in three columns, generated from a seed of c
 
 - Each column has one to three districts; every district links forward to at least one in the next column.
 - District kinds: single rift, dual rift, hold the line, Maw rift. A column with one district is never a Maw, and a column is never all Maws, so a path around the boss always exists.
-- District names come from a fixed pool (Harbor, Rail Yards, Junction, Stadium, Reservoir, Old Town, Civic Ring, Foundry, Airport, Docks, University, Bluffs, Quarry, Northgate, Eastbank, Riverside). Each name maps to an environment; the environment session is adding the missing ones.
+- District names come from a fixed pool (Harbor, Rail Yards, Junction, Stadium, Reservoir, Old Town, Civic Ring, Foundry, Airport, Docks, University, Bluffs, Quarry, Northgate, Eastbank, Riverside). A district's site id is its name as a key (`rail_yards`), passed straight to `ArenaPresentation.apply_site` before the deploy; `BreachSites.DISTRICTS` (the environment work, on its own branch until merged) says which environment each plays in, and anything unknown plays in the Dead City.
 - The player picks any district in the first column, then any linked district, then any linked district. Three seals complete the operation. The front line across the city map sits one column right of the last sealed district.
 - On completion the section is replaced by the next one and the city's `ops_done` increments. The player can continue or leave. A liberated city has no sections; Chen says she will call when the front turns back toward it.
 - Sections are not labeled or numbered on screen.
@@ -67,17 +67,21 @@ Reset Progress clears world progress and keeps audio and training.
 
 ## What happens to the six operations
 
-They stay as they are on `main` for now and remain reachable as Breach Night from the home city's left panel. The plan on the roadmap is for them to become the tutorial arc; that restructure is a separate piece of work.
+They stay as they are on `main` for now. The game still boots to the Breach Night city map; its left panel has a World Map button, and the home city's card on the world map has a Breach Night button back. The plan on the roadmap is for the six to become the tutorial arc; that restructure, and making the world map the boot screen, are separate pieces of work.
 
 ## Build order
 
-1. Model: `Scripts/Core/world_map.gd` (cities, zones, projection, states, tiers, section generator, mission builder) and `GameSettings` world progress, with validation.
-2. World screen: a drawn map (`Scripts/UI/world_map_view.gd` over `WorldCoastline`), the right-panel city card, the tier filter as a dimmer, Chen's priority card, and the Open action.
-3. City screen: `Scripts/UI/city_operations_map.gd` replacing the fixed six-site map for world missions, the liberation bar, and Deploy into a generated mission.
-4. Round and results: `hold_seconds` in `RiftManager`, results that mark the district sealed and move the line, operation completion.
-5. Docs, Menu UX test plan, playtest.
+Built 2026-10-26 on `claude/world-map`, all validated headless (`Tests/validation_runner.gd`: `_validate_world_map`, `_validate_world_menu`, `_validate_hold_the_line`):
+
+1. Model: `Scripts/Core/world_map.gd` (cities, zones, projection, states, tiers, section generator, mission builder) and `GameSettings` world progress.
+2. World screen: `Scripts/UI/world_map_view.gd` over `WorldCoastline` in the center panel; the left panel carries world liberation, Chen's priority, the difficulty filter (a dimmer), Training and Settings; the right panel is the picked city's card with Open (`VRWrapPanel.show_world_status`, `show_world_map`, `show_world_city`).
+3. City screen: `Scripts/UI/city_operations_map.gd` in the center; the left panel has Back to the world, the liberation bar with the pending operation dashed, and three pips; the right panel is the district card with the tier, the Assist choice for threatened cities only, and Deploy (`show_operations_status`, `show_operations_map`, `show_district_detail`).
+4. Round and results: `hold_seconds` in `RiftManager.configure_wave` drains the rift by `maximum_health / hold_seconds` per second while it is open; `GameFlowController` states `world` and `city`, world missions built on deploy from `WorldMap.build_mission`, seals credited in `_finish_world_mission` through `WorldMap.seal_node`, and world results panels that show the line moving (`show_world_report`, `show_world_results_map`, `show_world_results_actions`).
+5. Docs and the Menu UX test plan: done with this. Playtest: open.
 
 ## Open
+
+- Whether the world map should be the boot screen once the six operations are the tutorial.
 
 - Whether to reveal only the next column's district kinds (Path of Exile's trial does this) once there are more than four kinds to choose between.
 - Whether the home city should get Chen's priority pull as well as the world.

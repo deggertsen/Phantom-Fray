@@ -47,6 +47,9 @@ var _speed_scale: float = 1.0
 var _telegraph_scale: float = 1.0
 ## The tier's multiplier on every contact this rift's phantoms and attackers deal (DifficultyTier).
 var _contact_scale: float = 1.0
+## Hold the line (WorldMap.KIND_HOLD): seconds for the rift to drain on its own, 0 for never.
+var _hold_seconds: float = 0.0
+var _hold_accumulator: float = 0.0
 var _rift_scale: float = 1.0
 var _tear_gain: float = 1.0
 var _beacon: Node3D
@@ -77,6 +80,10 @@ func configure_wave(wave: Dictionary) -> void:
 	_speed_scale = float(wave.get("speed_scale", 1.0))
 	_telegraph_scale = float(wave.get("telegraph_scale", 1.0))
 	_contact_scale = float(wave.get("contact_scale", 1.0))
+	# Hold the line: Chen's team seals the rift over this long while the player keeps the
+	# phantoms off; every resolve still takes health too, so good work shortens the hold.
+	_hold_seconds = float(wave.get("hold_seconds", 0.0))
+	_hold_accumulator = 0.0
 	# Training: the rift sends only what spawn_variant asks for until its feed is turned on.
 	feed_enabled = bool(wave.get("feed", true))
 	set_hologram(bool(wave.get("hologram", false)))
@@ -144,6 +151,12 @@ func _process(delta: float) -> void:
 			_portal_material.set_shader_parameter("dissolve_amount", _dissolve_override)
 		return
 	if not _closing:
+		if _hold_seconds > 0.0 and spawning_enabled and not _held:
+			_hold_accumulator += float(maximum_health) / _hold_seconds * delta
+			var whole := floori(_hold_accumulator)
+			if whole >= 1:
+				_hold_accumulator -= whole
+				drain_health(whole)
 		return
 	_dissolve_amount = minf(_dissolve_amount + delta * dissolve_rate, 1.0)
 	if _portal_material:

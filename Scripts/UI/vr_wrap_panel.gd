@@ -80,10 +80,14 @@ func show_city_status(entries: Array[Dictionary], training_first: bool = false) 
 		Vector2(0, 70),
 		training_first
 	)
-	var settings := _make_action_button(&"settings", "⌁  SETTINGS\nAudio • haptics • comfort", COLOR_BLUE, Vector2(0, 70))
-	for button in [training, settings]:
-		_compact_menu_button(button, 70.0)
-		_content.add_child(button)
+	_compact_menu_button(training, 70.0)
+	_content.add_child(training)
+	var world := _make_action_button(&"world", "◎  WORLD MAP", COLOR_MAGENTA, Vector2(0, 60))
+	var settings := _make_action_button(&"settings", "⌁  SETTINGS", COLOR_BLUE, Vector2(0, 60))
+	for button in [world, settings]:
+		_compact_menu_button(button, 60.0)
+		_tight_sides(button, 8)
+	_content.add_child(_button_pair(world, settings))
 	_content.add_child(_hint())
 
 # --- City map: center -----------------------------------------------------------------------
@@ -420,3 +424,463 @@ func _hint() -> Label:
 	var hint := _wrapped("POINT + TRIGGER TO SELECT  •  HOLD META TO RECENTER", 16, COLOR_MUTED, true)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return hint
+
+# --- World map ------------------------------------------------------------------------------
+# world: liberation (int), filter ("all"|"easy"|"medium"|"hard"), home_id, home_name,
+# priority {title, body, bonus}, training_first (bool), assist (bool).
+
+const STATE_COLORS := {
+	WorldMap.STATE_SAFE: Color("6b7a94"),
+	WorldMap.STATE_THREATENED: Color("7fe3ff"),
+	WorldMap.STATE_DANGER: Color("ffb347"),
+	WorldMap.STATE_OVERRUN: Color("ff7fd0"),
+	WorldMap.STATE_CONSUMED: Color("8b7fa3"),
+}
+const FILTERS := ["all", "easy", "medium", "hard"]
+
+func _state_color(state: String) -> Color:
+	return STATE_COLORS.get(state, COLOR_TEXT)
+
+## Left: the war's one number, Chen's priority, the difficulty filter, Training and Settings.
+func show_world_status(world: Dictionary) -> void:
+	_begin_wrap(COLOR_MAGENTA)
+	_content.add_child(_label("RSF // WORLD FRONT", 16, COLOR_MUTED, true))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.add_child(_label("%d%%" % int(world.get("liberation", 0)), 44, Color("7fe3ff"), true))
+	var word := _label("LIBERATED", 18, Color("c4d3e4"), true)
+	word.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(word)
+	_content.add_child(row)
+	var priority: Dictionary = world.get("priority", {})
+	if not priority.is_empty():
+		var card := PanelContainer.new()
+		card.add_theme_stylebox_override("panel", _style_box(Color(COLOR_MAGENTA, 0.07), COLOR_MAGENTA, 2, 8))
+		var stack := VBoxContainer.new()
+		stack.add_theme_constant_override("separation", 4)
+		stack.add_child(_label("CHEN'S PRIORITY", 15, Color("ff8bdd"), true))
+		stack.add_child(_wrapped(String(priority.get("body", "")), 17, COLOR_TEXT))
+		if priority.has("bonus"):
+			stack.add_child(_wrapped(String(priority.get("bonus", "")), 15, COLOR_MUTED))
+		card.add_child(stack)
+		_content.add_child(card)
+	_content.add_child(_divider())
+	_content.add_child(_label("SHOW MISSIONS", 15, COLOR_MUTED, true))
+	var filter := String(world.get("filter", "all"))
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	for option in FILTERS:
+		var chosen: bool = option == filter
+		var text: String = ("● " if chosen else "") + option.to_upper()
+		var button := _make_action_button(StringName("world_filter_%s" % option), text, COLOR_CYAN, Vector2(0, 50), chosen)
+		_compact_menu_button(button, 50.0)
+		_tight_sides(button, 8)
+		grid.add_child(button)
+	_content.add_child(grid)
+	_content.add_child(_spacer())
+	var training_first: bool = world.get("training_first", false)
+	var training := _make_action_button(&"training", "◈  TRAINING\n%s" % ("Start here" if training_first else "Replay"), COLOR_VIOLET, Vector2(0, 60), training_first)
+	var settings := _make_action_button(&"settings", "⌁  SETTINGS", COLOR_BLUE, Vector2(0, 60))
+	for button in [training, settings]:
+		_compact_menu_button(button, 60.0)
+		_tight_sides(button, 8)
+	_content.add_child(_button_pair(training, settings))
+	_content.add_child(_hint())
+
+## Center: the drawn world with the fronts and every city.
+func show_world_map(entries: Array[Dictionary], selected_id: String, filter: String, home_id: String) -> void:
+	_begin_wrap(COLOR_CYAN, 0)
+	var header := MarginContainer.new()
+	for side in ["margin_left", "margin_right"]:
+		header.add_theme_constant_override(side, 18)
+	header.add_theme_constant_override("margin_top", 10)
+	header.add_theme_constant_override("margin_bottom", 6)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	header.add_child(row)
+	var title := _label("PICK A CITY", 18, COLOR_TEXT, true)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(title)
+	row.add_child(_label("● SAFE", 14, _state_color(WorldMap.STATE_SAFE), true))
+	row.add_child(_label("● EASY", 14, _state_color(WorldMap.STATE_THREATENED), true))
+	row.add_child(_label("● MEDIUM", 14, _state_color(WorldMap.STATE_DANGER), true))
+	row.add_child(_label("● HARD", 14, _state_color(WorldMap.STATE_OVERRUN), true))
+	row.add_child(_label("▨ CONSUMED", 14, _state_color(WorldMap.STATE_CONSUMED), true))
+	_content.add_child(header)
+	var view := WorldMapView.new()
+	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	view.city_pressed.connect(_on_action_pressed)
+	view.city_hovered.connect(_on_button_hovered.bind(null))
+	view.show_world(entries, selected_id, filter, home_id, true)
+	_content.add_child(view)
+	var foot := MarginContainer.new()
+	for side in ["margin_left", "margin_right"]:
+		foot.add_theme_constant_override(side, 18)
+	foot.add_theme_constant_override("margin_top", 6)
+	foot.add_theme_constant_override("margin_bottom", 10)
+	foot.add_child(_wrapped("The magenta line is the front; the arrows show where it is pushing. A city's danger is its distance from it.", 15, COLOR_MUTED))
+	_content.add_child(foot)
+
+## Right: the picked city and Open, or why it cannot be opened.
+func show_world_city(entry: Dictionary, world: Dictionary) -> void:
+	var state := String(entry.get("state", WorldMap.STATE_SAFE))
+	var color := _state_color(state)
+	_begin_wrap(color)
+	var where := "behind the front" if state == WorldMap.STATE_CONSUMED else ("far from any front" if state == WorldMap.STATE_SAFE else "about %d km from the front" % WorldMap.kilometers(float(entry.get("distance", 0.0))))
+	var eyebrow := "%s  •  %s" % [entry.get("state_label", ""), entry.get("difficulty_label", "")]
+	if entry.get("id", "") == world.get("home_id", ""):
+		eyebrow += "  •  HOME"
+	_content.add_child(_wrapped(eyebrow, 15, color, true))
+	var name_label := _wrapped(String(entry.get("name", "")), 30, COLOR_TEXT, true)
+	_content.add_child(name_label)
+	_content.add_child(_wrapped(where.substr(0, 1).to_upper() + where.substr(1), 15, COLOR_MUTED))
+	var blurb := _wrapped(String(entry.get("blurb", "")), 16, Color("c4d3e4"))
+	blurb.max_lines_visible = 2
+	blurb.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_content.add_child(blurb)
+	var tier := WorldMap.tier_for(state, bool(world.get("assist", false)))
+	_content.add_child(_facts([
+		["LIBERATION", "%d%%" % int(entry.get("liberation", 0)), Color("7fe3ff")],
+		["RESISTANCE", String(entry.get("resistance", "NONE")), COLOR_TEXT],
+		["TIER", DifficultyTier.label(tier) if tier != "" else "NONE", _tier_color(tier) if tier != "" else COLOR_MUTED],
+		["OPERATIONS", "%d of %d" % [int(entry.get("ops_done", 0)), int(entry.get("ops", 0))] if int(entry.get("ops", 0)) > 0 else "—", COLOR_TEXT],
+	]))
+	var asks := _wrapped(WorldMap.asks(state), 15, Color("c4d3e4"))
+	asks.max_lines_visible = 2
+	asks.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_content.add_child(asks)
+	_content.add_child(_spacer())
+	if entry.get("playable", false) and not entry.get("liberated", false):
+		_content.add_child(_make_solid_button(&"world_open", "OPEN\n%s" % String(entry.get("name", "")).to_upper(), color, 92.0))
+	else:
+		var reason := "LIBERATED" if entry.get("liberated", false) else String(entry.get("difficulty_label", ""))
+		var button := _make_action_button(&"world_open", reason, COLOR_MUTED, Vector2(0, 70))
+		button.disabled = true
+		_content.add_child(button)
+	if entry.get("home", false):
+		var campaign := _make_action_button(&"campaign", "◆  BREACH NIGHT", COLOR_AMBER, Vector2(0, 44))
+		_compact_menu_button(campaign, 44.0)
+		_content.add_child(campaign)
+
+## Rows of [eyebrow, value, color]: the eyebrow at the left, the value flush right, a rule between rows.
+func _facts(rows: Array) -> Control:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _style_box(Color(0, 0, 0, 0), COLOR_EDGE, 1, 6))
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 4)
+	for index in rows.size():
+		var row: Array = rows[index]
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 8)
+		var eyebrow := _label(String(row[0]), 12, COLOR_MUTED, true)
+		eyebrow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		eyebrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		line.add_child(eyebrow)
+		var value := _label(String(row[1]), 15, row[2], true)
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		line.add_child(value)
+		stack.add_child(line)
+		if index < rows.size() - 1:
+			stack.add_child(_divider())
+	panel.add_child(stack)
+	return panel
+
+# --- City operations -----------------------------------------------------------------------
+# city: entry (WorldMap.city_entries row), section (WorldMap.section), sealed (Array), selected_id,
+# tier, assist (bool), node (the selected district, or {}), status ("open"|"sealed"|"locked"),
+# best_seconds, expected_minutes (Array), kind_label, kind_summary.
+
+## Left: back to the world, the city's liberation bar, the operation's three pips.
+func show_operations_status(city: Dictionary) -> void:
+	var entry: Dictionary = city.get("entry", {})
+	var state := String(entry.get("state", WorldMap.STATE_SAFE))
+	_begin_wrap(_state_color(state))
+	var back := _make_action_button(&"city_world", "←  WORLD MAP", COLOR_CYAN, Vector2(0, 50))
+	_compact_menu_button(back, 50.0)
+	_content.add_child(back)
+	_content.add_child(_label("%s  •  %s" % [entry.get("state_label", ""), entry.get("difficulty_label", "")], 15, _state_color(state), true))
+	_content.add_child(_wrapped(String(entry.get("name", "")), 30, COLOR_TEXT, true))
+	var liberation := int(entry.get("liberation", 0))
+	_content.add_child(_label("CITY LIBERATION", 15, COLOR_MUTED, true))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.add_child(_label("%d%%" % liberation, 40, Color("7fe3ff"), true))
+	var word := _label("%s RESISTANCE" % entry.get("resistance", ""), 14, Color("c4d3e4"), true)
+	word.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(word)
+	_content.add_child(row)
+	var sealed: Array = city.get("sealed", [])
+	var ops := int(entry.get("ops", 1))
+	var pending := (sealed.size() / 3.0) * (100.0 / maxf(ops, 1))
+	_content.add_child(_liberation_bar(liberation, pending))
+	_content.add_child(_wrapped("The bar moves when an operation is complete: three districts along the path. The dashed part is the operation you are in.", 14, COLOR_MUTED))
+	_content.add_child(_divider())
+	_content.add_child(_label("THIS OPERATION", 15, COLOR_MUTED, true))
+	var pips := HBoxContainer.new()
+	pips.add_theme_constant_override("separation", 6)
+	for index in 3:
+		var pip := Panel.new()
+		pip.custom_minimum_size = Vector2(40, 10)
+		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var on := index < sealed.size()
+		var style := _style_box(COLOR_CYAN if on else Color("1c2342"), COLOR_CYAN if on else Color("1c2342"), 1, 5)
+		style.content_margin_top = 0
+		style.content_margin_bottom = 0
+		pip.add_theme_stylebox_override("panel", style)
+		pips.add_child(pip)
+	_content.add_child(pips)
+	var note := "Pick any district on the left to start."
+	if entry.get("liberated", false):
+		note = "The city is liberated. Chen will call when the front turns back toward it."
+	elif not sealed.is_empty():
+		note = "Pick a connected district to continue. The line moves when all three are sealed."
+	_content.add_child(_wrapped(note, 15, COLOR_MUTED))
+	_content.add_child(_spacer())
+	var settings := _make_action_button(&"settings", "⌁  SETTINGS", COLOR_BLUE, Vector2(0, 50))
+	_compact_menu_button(settings, 50.0)
+	_content.add_child(settings)
+	_content.add_child(_hint())
+
+func _liberation_bar(liberation: int, pending_percent: float) -> Control:
+	var bar := Control.new()
+	bar.custom_minimum_size.y = 12
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var back := ColorRect.new()
+	back.color = Color("1c2342")
+	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_child(back)
+	var fill := ColorRect.new()
+	fill.color = COLOR_CYAN
+	fill.anchor_right = clampf(liberation / 100.0, 0.0, 1.0)
+	fill.anchor_bottom = 1.0
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_child(fill)
+	var pending := ColorRect.new()
+	pending.color = Color(COLOR_CYAN, 0.45)
+	pending.anchor_left = fill.anchor_right
+	pending.anchor_right = clampf(fill.anchor_right + pending_percent / 100.0, 0.0, 1.0)
+	pending.anchor_bottom = 1.0
+	pending.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_child(pending)
+	return bar
+
+## Center: the section's districts as a path, the line, and the ground still held.
+func show_operations_map(city: Dictionary) -> void:
+	_begin_wrap(COLOR_MAGENTA, 0)
+	var header := MarginContainer.new()
+	for side in ["margin_left", "margin_right"]:
+		header.add_theme_constant_override(side, 18)
+	header.add_theme_constant_override("margin_top", 10)
+	header.add_theme_constant_override("margin_bottom", 6)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	header.add_child(row)
+	var sealed: Array = city.get("sealed", [])
+	var title := _label("NEW GROUND" if sealed.is_empty() else "PUSHING THE LINE  •  %d OF 3" % sealed.size(), 18, COLOR_TEXT, true)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(title)
+	row.add_child(_label("■ SEALED", 14, COLOR_CYAN, true))
+	row.add_child(_label("□ OPEN", 14, COLOR_TEXT, true))
+	row.add_child(_label("▨ BEHIND THE LINE", 14, COLOR_MUTED, true))
+	_content.add_child(header)
+	var map := CityOperationsMap.new()
+	map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	map.node_pressed.connect(_on_action_pressed)
+	map.node_hovered.connect(_on_button_hovered.bind(null))
+	map.show_section(city.get("section", {}), sealed, String(city.get("selected_id", "")), String(city.get("tier", DifficultyTier.STANDARD)), true)
+	_content.add_child(map)
+
+## Right: the picked district and Deploy at the city's tier.
+func show_district_detail(city: Dictionary) -> void:
+	var entry: Dictionary = city.get("entry", {})
+	var node: Dictionary = city.get("node", {})
+	var status := String(city.get("status", "locked"))
+	var tier := String(city.get("tier", DifficultyTier.STANDARD))
+	var tier_color := _tier_color(tier)
+	_begin_wrap(tier_color)
+	var status_label := String({"open": "OPEN", "sealed": "SEALED", "locked": "BEHIND THE LINE"}.get(status, ""))
+	_content.add_child(_label("DISTRICT  •  %s" % status_label, 15, COLOR_CYAN if status != "locked" else COLOR_MUTED, true))
+	_content.add_child(_wrapped(String(node.get("name", "No district")), 30, COLOR_TEXT, true))
+	var summary := _wrapped(String(city.get("kind_summary", "")), 16, Color("c4d3e4"))
+	summary.max_lines_visible = 3
+	summary.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_content.add_child(summary)
+	var best := float(city.get("best_seconds", 0.0))
+	_content.add_child(_facts([
+		["MISSION", String(city.get("kind_label", "")), COLOR_TEXT],
+		["TIER", DifficultyTier.label(tier), tier_color],
+		["EXPECTED", MissionCatalog.expected_minutes_text({"expected_minutes": city.get("expected_minutes", [])}), COLOR_TEXT],
+		["YOUR BEST", _clock(best) if best > 0.0 else "—", Color("7fe3ff")],
+	]))
+	_content.add_child(_spacer())
+	if String(entry.get("state", "")) == WorldMap.STATE_THREATENED:
+		var assist: bool = city.get("assist", false)
+		var assist_row := HBoxContainer.new()
+		assist_row.add_theme_constant_override("separation", 8)
+		var standard := _make_action_button(&"assist_off", ("● " if not assist else "") + "STANDARD", COLOR_CYAN, Vector2(0, 50), not assist)
+		var assisted := _make_action_button(&"assist_on", ("● " if assist else "") + "ASSIST", COLOR_GREEN, Vector2(0, 50), assist)
+		for button in [standard, assisted]:
+			_compact_menu_button(button, 50.0)
+			_tight_sides(button, 8)
+		assist_row.add_child(standard)
+		assist_row.add_child(assisted)
+		_content.add_child(assist_row)
+		_content.add_child(_wrapped("Assist: slower tells, lighter drain. Your load, never the city.", 14, COLOR_MUTED))
+	if status == "open":
+		_content.add_child(_make_solid_button(&"deploy", "DEPLOY\n%s" % DifficultyTier.label(tier), tier_color, 92.0))
+	else:
+		var button := _make_action_button(&"deploy", status_label, COLOR_MUTED, Vector2(0, 70))
+		button.disabled = true
+		_content.add_child(button)
+
+# --- World results -------------------------------------------------------------------------
+# report["world"]: entry (after), section, sealed_before (Array), sealed_after (Array), node,
+# operation_complete (bool), liberation_before, liberation_after, next_section (Dictionary or {}).
+
+func show_world_report(report: Dictionary) -> void:
+	var victory: bool = report.get("outcome", &"") == &"victory"
+	var world: Dictionary = report.get("world", {})
+	var entry: Dictionary = world.get("entry", {})
+	_begin_wrap(COLOR_GREEN if victory else COLOR_RED)
+	_content.add_child(_wrapped("%s  •  %s" % [entry.get("state_label", ""), entry.get("name", "")], 15, COLOR_MUTED, true))
+	var before := int(world.get("liberation_before", 0))
+	var after := int(world.get("liberation_after", before))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.add_child(_label("%d%%" % after, 44, Color("7fe3ff"), true))
+	var word := _label("LIBERATED", 18, Color("c4d3e4"), true)
+	word.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(word)
+	_content.add_child(row)
+	if after > before:
+		_content.add_child(_label("UP FROM %d%%" % before, 16, COLOR_MUTED, true))
+	var sealed_after: Array = world.get("sealed_after", [])
+	var complete: bool = world.get("operation_complete", false)
+	var headline := "OPERATION COMPLETE" if complete else ("THE LINE MOVED" if victory else "THE BREACH HELD")
+	_content.add_child(_label(headline, 24, COLOR_GREEN if victory else COLOR_RED, true))
+	var body := ""
+	var node: Dictionary = world.get("node", {})
+	if complete:
+		body = "%s sealed the operation. New ground opened ahead; keep going or stop here." % node.get("name", "The district")
+	elif victory:
+		body = "%s is sealed. %d of 3 for this operation." % [node.get("name", "The district"), sealed_after.size()]
+	else:
+		body = "The failsafe fired. %s held, and the line did not move." % node.get("name", "The district")
+	_content.add_child(_wrapped(body, 16, COLOR_MUTED))
+	_content.add_child(_divider())
+	var best := float(report.get("best_seconds", 0.0))
+	if best > 0.0:
+		_content.add_child(_wrapped("YOUR BEST  •  %s AT %s" % [String(world.get("kind_label", "")), DifficultyTier.label(String(report.get("tier", "")))], 14, COLOR_MUTED, true))
+		_content.add_child(_label(_clock(best), 34, COLOR_TEXT, true))
+	_content.add_child(_spacer())
+	_content.add_child(_hint())
+
+func show_world_results_map(report: Dictionary) -> void:
+	var victory: bool = report.get("outcome", &"") == &"victory"
+	var world: Dictionary = report.get("world", {})
+	var accent := COLOR_GREEN if victory else COLOR_RED
+	_begin_wrap(accent, 0)
+	var header := MarginContainer.new()
+	for side in ["margin_left", "margin_right"]:
+		header.add_theme_constant_override(side, 20)
+	header.add_theme_constant_override("margin_top", 12)
+	header.add_theme_constant_override("margin_bottom", 12)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 22)
+	header.add_child(row)
+	var outcome := VBoxContainer.new()
+	outcome.add_theme_constant_override("separation", 2)
+	outcome.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var subtitle := "DISTRICT SEALED" if victory else "LIFE FORCE DEPLETED"
+	if report.has("tier"):
+		subtitle += "  •  %s" % DifficultyTier.label(String(report.get("tier", "")))
+	outcome.add_child(_label(subtitle, 16, accent, true))
+	outcome.add_child(_label("MISSION COMPLETE" if victory else "OPERATION ENDED", 30, COLOR_TEXT, true))
+	row.add_child(outcome)
+	var seconds := float(report.get("seconds", 0.0))
+	if victory and seconds > 0.0:
+		var time_stack := VBoxContainer.new()
+		time_stack.add_theme_constant_override("separation", 0)
+		var time_label := _label(_clock(seconds), 40, COLOR_TEXT, true)
+		time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		time_stack.add_child(time_label)
+		var previous := float(report.get("previous_best", 0.0))
+		var new_best := previous > 0.0 and seconds < previous
+		var note := _label("NEW BEST TIME" if new_best else "SEALED IN", 16, COLOR_GREEN if new_best else COLOR_MUTED, true)
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		time_stack.add_child(note)
+		row.add_child(time_stack)
+	var score_stack := VBoxContainer.new()
+	score_stack.add_theme_constant_override("separation", 0)
+	var score_label := _label(_grouped(int(report.get("score", 0))), 28, accent, true)
+	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	score_stack.add_child(score_label)
+	var score_note := _label("SCORE", 16, COLOR_MUTED, true)
+	score_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	score_stack.add_child(score_note)
+	row.add_child(score_stack)
+	_content.add_child(header)
+	var map := CityOperationsMap.new()
+	map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var sealed_before: Array = world.get("sealed_before", [])
+	var shown_sealed: Array = world.get("sealed_after", sealed_before)
+	# A completed operation shows the section it finished, fully sealed, before the next opens.
+	if world.get("operation_complete", false):
+		shown_sealed = sealed_before.duplicate()
+		shown_sealed.append(String((world.get("node", {}) as Dictionary).get("id", "")))
+	map.show_section(world.get("section", {}), shown_sealed, "", String(report.get("tier", DifficultyTier.STANDARD)), false, String((world.get("node", {}) as Dictionary).get("id", "")) if victory else "", sealed_before.size() if victory else -1)
+	_content.add_child(map)
+	var debrief := String(report.get("debrief", ""))
+	if debrief != "":
+		var strip := MarginContainer.new()
+		for side in ["margin_left", "margin_right"]:
+			strip.add_theme_constant_override(side, 20)
+		strip.add_theme_constant_override("margin_top", 10)
+		strip.add_theme_constant_override("margin_bottom", 12)
+		var line := _wrapped(debrief, 17, COLOR_TEXT)
+		line.max_lines_visible = 2
+		line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		strip.add_child(line)
+		_content.add_child(strip)
+
+## Right: after a seal, back to the city to pick the next district; after a defeat, retry leads.
+func show_world_results_actions(report: Dictionary) -> void:
+	var victory: bool = report.get("outcome", &"") == &"victory"
+	var tier := String(report.get("tier", DifficultyTier.STANDARD))
+	var world: Dictionary = report.get("world", {})
+	var entry: Dictionary = world.get("entry", {})
+	var node: Dictionary = world.get("node", {})
+	var tier_color := _tier_color(tier)
+	_begin_wrap(tier_color)
+	var complete: bool = world.get("operation_complete", false)
+	var eyebrow := "NEXT" if victory else "TRY AGAIN"
+	_content.add_child(_label(eyebrow, 16, COLOR_MUTED, true))
+	_content.add_child(_wrapped(String(entry.get("name", "")), 30, COLOR_TEXT, true))
+	var line := "New ground is open. Pick the next district." if complete else ("Pick a connected district to continue the operation." if victory else "%s held. The operation continues where it stood." % node.get("name", "The district"))
+	if entry.get("liberated", false):
+		line = "The city is liberated."
+	_content.add_child(_wrapped(line, 16, Color("c4d3e4")))
+	_content.add_child(_wrapped("%s  •  %s" % [String(world.get("kind_label", "")), DifficultyTier.label(tier)], 16, COLOR_TEXT, true))
+	_content.add_child(_spacer())
+	if victory:
+		_content.add_child(_make_solid_button(&"results_city", "CITY MAP\n%s" % String(entry.get("name", "")).to_upper(), tier_color, 92.0))
+		var retry := _make_action_button(&"retry", "REPLAY", COLOR_CYAN, Vector2(0, 60))
+		var world_button := _make_action_button(&"results_world", "WORLD", COLOR_BLUE, Vector2(0, 60))
+		_tight_sides(retry, 8)
+		_tight_sides(world_button, 8)
+		_content.add_child(_button_pair(retry, world_button))
+	else:
+		_content.add_child(_make_solid_button(&"retry", "RETRY\n%s" % DifficultyTier.label(tier), tier_color, 92.0))
+		if report.get("offer_training", false):
+			_content.add_child(_make_action_button(&"results_training", "◈  REVIEW TRAINING", COLOR_VIOLET, Vector2(0, 60)))
+		var city := _make_action_button(&"results_city", "CITY MAP", COLOR_CYAN, Vector2(0, 60))
+		var world_button := _make_action_button(&"results_world", "WORLD", COLOR_BLUE, Vector2(0, 60))
+		_tight_sides(city, 8)
+		_tight_sides(world_button, 8)
+		_content.add_child(_button_pair(city, world_button))

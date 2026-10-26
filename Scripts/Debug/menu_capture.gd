@@ -13,6 +13,7 @@ func _ready() -> void:
 	_build_wrap_stage()
 	await _capture_city_map()
 	await _capture_results()
+	await _capture_world()
 	_stage.queue_free()
 	# The panel is drawn at the headset viewport size; the default 1152x648 window cut off its bottom rows.
 	get_window().size = Vector2i(1280, 780)
@@ -122,6 +123,100 @@ func _profile(cleared: Array) -> Node:
 		times["widen_the_ring"] = 342.0
 	profile.best_times = times
 	return profile
+
+# --- World map -----------------------------------------------------------------------------
+
+## The world front, a city's section, and world results, in the shapes GameFlowController builds.
+func _capture_world() -> void:
+	var profile := _profile([])
+	profile.world_progress = {}
+	var home_id := WorldMap.home_city_id()
+	var entries := WorldMap.city_entries(profile)
+	var home := _entry(entries, home_id)
+	var tokyo := _entry(entries, "tokyo")
+	var world := {
+		"liberation": WorldMap.world_liberation(profile),
+		"filter": "all",
+		"home_id": home_id,
+		"priority": {"city_id": home_id, "body": "%s. The front is about %d km out and it does not stop. Hold home ground." % [home["name"], WorldMap.kilometers(float(home["distance"]))], "bonus": "%s  •  %s" % [home["difficulty_label"], home["resistance"]]},
+		"training_first": true,
+		"assist": false,
+	}
+	_left.show_world_status(world)
+	_center.show_world_map(entries, home_id, "all", home_id)
+	_right.show_world_city(home, world)
+	await _capture("world-map.png")
+	world["filter"] = "hard"
+	world["training_first"] = false
+	_left.show_world_status(world)
+	_center.show_world_map(entries, "tokyo", "hard", home_id)
+	_right.show_world_city(tokyo, world)
+	await _capture("world-map-hard.png")
+	_right.show_world_city(_entry(entries, "sao_paulo"), world)
+	await _capture("world-map-safe-card.png")
+	# Tokyo's section, fresh and then with one seal.
+	var city := _city(tokyo, [])
+	_left.show_operations_status(city)
+	_center.show_operations_map(city)
+	_right.show_district_detail(city)
+	await _capture("city-operations.png")
+	var first := String(city["selected_id"])
+	var sealed_city := _city(tokyo, [first])
+	_left.show_operations_status(sealed_city)
+	_center.show_operations_map(sealed_city)
+	_right.show_district_detail(sealed_city)
+	await _capture("city-operations-sealed.png")
+	# A threatened city with Assist on.
+	var easy := _city(home, [], true)
+	_left.show_operations_status(easy)
+	_center.show_operations_map(easy)
+	_right.show_district_detail(easy)
+	await _capture("city-operations-assist.png")
+	# Results after the first seal, and after a defeat.
+	var report := {
+		"outcome": &"victory", "score": 9860, "debrief": "Chen: %s is sealed. The line moved. Pick the next district when you are ready." % city["node"]["name"],
+		"seconds": 287.0, "previous_best": 0.0, "best_seconds": 287.0, "tier": city["tier"],
+		"world": {
+			"entry": tokyo, "section": city["section"], "sealed_before": [], "sealed_after": [first], "node": city["node"],
+			"kind_label": city["kind_label"], "operation_complete": false, "liberation_before": tokyo["liberation"], "liberation_after": tokyo["liberation"],
+		},
+		"offer_training": false,
+	}
+	_left.show_world_report(report)
+	_center.show_world_results_map(report)
+	_right.show_world_results_actions(report)
+	await _capture("world-results.png")
+	report["outcome"] = &"defeat"
+	report["score"] = 3120
+	report["debrief"] = "Chen: The failsafe fired. %s held. Rest, then go back in." % city["node"]["name"]
+	report["offer_training"] = true
+	report["world"]["sealed_after"] = []
+	_left.show_world_report(report)
+	_center.show_world_results_map(report)
+	_right.show_world_results_actions(report)
+	await _capture("world-results-defeat.png")
+	profile.free()
+
+func _entry(entries: Array[Dictionary], city_id: String) -> Dictionary:
+	for entry in entries:
+		if entry.get("id", "") == city_id:
+			return entry
+	return {}
+
+## The shape GameFlowController._city_status builds, with the first open district picked.
+func _city(entry: Dictionary, sealed: Array, assist: bool = false) -> Dictionary:
+	var section := WorldMap.section(String(entry["id"]), int(entry.get("section", 0)))
+	var open := WorldMap.available_nodes(section, sealed)
+	var node := WorldMap.node_in(section, open[0]) if not open.is_empty() else {}
+	var tier := WorldMap.tier_for(String(entry.get("state", "")), assist)
+	var kind := String(node.get("kind", WorldMap.KIND_SINGLE))
+	var mission := WorldMap.build_mission(entry, int(entry.get("section", 0)), node, tier)
+	return {
+		"entry": entry, "section": section, "sealed": sealed, "selected_id": node.get("id", ""), "tier": tier, "assist": assist,
+		"node": node, "status": WorldMap.node_status(section, sealed, String(node.get("id", ""))),
+		"kind_label": WorldMap.kind_label(kind, tier), "kind_summary": WorldMap.kind_summary(kind, tier),
+		"expected_minutes": DifficultyTier.apply_mission(mission, tier).get("expected_minutes", []), "best_seconds": 0.0,
+	}
 
 func _capture_tutorial() -> void:
 	_menu.show_training_complete(MissionCatalog.deploy_detail(null))

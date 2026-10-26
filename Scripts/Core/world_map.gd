@@ -72,14 +72,8 @@ const CITIES := [
 
 ## Generic district names; a city's sections draw from these. No in-world place names.
 const DISTRICT_NAMES: Array[String] = ["Harbor", "Rail Yards", "Junction", "Stadium", "Reservoir", "Old Town", "Civic Ring", "Foundry", "Airport", "Docks", "University", "Bluffs", "Quarry", "Northgate", "Eastbank", "Riverside"]
-## District to breach-site environment (BreachSites ids, when that catalog exists). Districts not
-## listed fall back to the Dead City.
-const SITE_BY_DISTRICT := {
-	"harbor": "drowned_harbor",
-	"docks": "drowned_harbor",
-	"stadium": "shelter_stadium",
-	"old_town": "small_town",
-}
+## A district's breach-site id is its name as a key ("Rail Yards" is rail_yards). BreachSites
+## decides which environment each one plays in; anything it does not know falls back to this.
 const DEFAULT_SITE := "dead_city"
 
 ## Where a section's three columns sit on an 820 by 500 map, and how rows spread in a column.
@@ -367,11 +361,9 @@ static func node_status(section_data: Dictionary, sealed: Array, node_id: String
 		return "open"
 	return "locked"
 
-## The breach-site environment for a district name. BreachSites decides what is real; this
-## only names the intent, and ArenaPresentation falls back to the Dead City for the rest.
+## The breach-site id for a district name, passed straight to ArenaPresentation.apply_site.
 static func site_for(district: String) -> String:
-	var key := district.to_lower().replace(" ", "_")
-	return String(SITE_BY_DISTRICT.get(key, key))
+	return district.to_lower().replace(" ", "_")
 
 static func kind_label(kind: String, tier_id: String) -> String:
 	match kind:

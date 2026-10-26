@@ -32,6 +32,8 @@ func _run_validation() -> void:
 	await _validate_maw_glimpse()
 	await _validate_phantom_hold()
 	_validate_world_map()
+	await _validate_world_menu()
+	await _validate_hold_the_line()
 	await _validate_punch_power()
 	await _validate_tutorial_flow()
 	await _validate_resonance_sweep()
@@ -594,7 +596,7 @@ func _validate_city_menu() -> void:
 	right.show_site_detail(entries[2], DifficultyTier.STANDARD, false)
 	for _frame in 3:
 		await process_frame
-	if _button_actions(left) != ["training", "settings"]:
+	if _button_actions(left) != ["training", "world", "settings"]:
 		failures.append("The city's left panel offers %s" % [_button_actions(left)])
 	elif bool(_find_button(left, "TRAINING").get_meta(&"primary", false)):
 		failures.append("Training leads the city map for a trained Striker")
@@ -2481,6 +2483,187 @@ func _held_yellow(head: Node3D) -> ResonancePhantom:
 
 ## Punch power: rift damage rises from 0.85x for a 2 m/s punch to 1.3x for a 6 m/s one, the score
 ## does not move, and a soft lure hit still beats the hardest plain hit.
+## The world front and a city's section on the wrap panels: every city is a button, the filter
+## dims the rest, Open leads the city card, a district leads to Deploy at the city's tier, and
+## the results panels for a world mission fit.
+func _validate_world_menu() -> void:
+	var left := _wrap_panel(Vector2(VRWrapPanel.SIDE_PIXELS))
+	var center := _wrap_panel(Vector2(VRWrapPanel.CENTER_PIXELS))
+	var right := _wrap_panel(Vector2(VRWrapPanel.SIDE_PIXELS))
+	await process_frame
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.settings_path = "user://world_map_validation.cfg"
+	profile.clear_mission_progress()
+	var entries := WorldMap.city_entries(profile)
+	var home_id := WorldMap.home_city_id()
+	var world := {"liberation": WorldMap.world_liberation(profile), "filter": "hard", "home_id": home_id, "priority": {"body": "Portland. The front is about 2500 km out and it does not stop. Hold home ground.", "bonus": "EASY  •  LIGHT"}, "training_first": true, "assist": false}
+	var home: Dictionary = {}
+	var tokyo: Dictionary = {}
+	for entry in entries:
+		if entry["id"] == home_id:
+			home = entry
+		if entry["id"] == "tokyo":
+			tokyo = entry
+	left.show_world_status(world)
+	center.show_world_map(entries, home_id, "hard", home_id)
+	right.show_world_city(home, world)
+	for _frame in 3:
+		await process_frame
+	var filters := 0
+	for button in _buttons_under(left):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action.begins_with("world_filter_"):
+			filters += 1
+			if button.text.begins_with("●") != (action == "world_filter_hard"):
+				failures.append("The world filter does not mark %s" % action)
+	if filters != 4:
+		failures.append("The world panel offers %d filters" % filters)
+	if not _has_label(left, "%d%%" % WorldMap.world_liberation(profile)):
+		failures.append("The world panel does not show world liberation")
+	var cities := {}
+	for button in _buttons_under(center):
+		cities[String(button.get_meta(&"menu_action", &""))] = button
+	for entry in entries:
+		var button: Button = cities.get("world_city_%s" % entry["id"])
+		if button == null:
+			failures.append("The world map has no button for %s" % entry["id"])
+		elif (button.modulate.a < 0.99) != (String(entry.get("difficulty", "")) != "hard"):
+			failures.append("The hard filter dims %s wrongly" % entry["id"])
+	var picked := [&""]
+	center.action_requested.connect(func(action: StringName) -> void: picked[0] = action)
+	var tokyo_button: Button = cities.get("world_city_tokyo")
+	if tokyo_button == null or not center.activate_at_viewport_point(tokyo_button.get_global_rect().get_center()) or picked[0] != &"world_city_tokyo":
+		failures.append("Pointing at a city did not pick it")
+	var open := _find_button(right, "OPEN")
+	if open == null or open.disabled or not bool(open.get_meta(&"primary", false)):
+		failures.append("Open does not lead the home city's card")
+	if _find_button(right, "BREACH NIGHT") == null:
+		failures.append("The home city does not offer Breach Night")
+	_check_fits(left, "world panel")
+	_check_fits(right, "city card")
+	# A safe city has nothing to open; a consumed one neither.
+	for entry in entries:
+		if entry["state"] in [WorldMap.STATE_SAFE, WorldMap.STATE_CONSUMED]:
+			right.show_world_city(entry, world)
+			await process_frame
+			var button := _find_button(right, entry["difficulty_label"])
+			if button == null or not button.disabled:
+				failures.append("%s offers missions while %s" % [entry["name"], entry["state"]])
+			_check_fits(right, "%s card" % entry["name"])
+			break
+	# Tokyo, overrun: its section at Full Resonance.
+	var section := WorldMap.section("tokyo", int(tokyo["section"]))
+	var sealed: Array = tokyo["sealed"]
+	var starts := WorldMap.available_nodes(section, sealed)
+	var node := WorldMap.node_in(section, starts[0])
+	var tier := WorldMap.tier_for(String(tokyo["state"]), false)
+	var mission := WorldMap.build_mission(tokyo, int(tokyo["section"]), node, tier)
+	var city := {
+		"entry": tokyo, "section": section, "sealed": sealed, "selected_id": node["id"], "tier": tier, "assist": false,
+		"node": node, "status": WorldMap.node_status(section, sealed, node["id"]),
+		"kind_label": WorldMap.kind_label(node["kind"], tier), "kind_summary": WorldMap.kind_summary(node["kind"], tier),
+		"expected_minutes": DifficultyTier.apply_mission(mission, tier).get("expected_minutes", []), "best_seconds": 0.0,
+	}
+	left.show_operations_status(city)
+	center.show_operations_map(city)
+	right.show_district_detail(city)
+	for _frame in 3:
+		await process_frame
+	if tier != DifficultyTier.FULL_RESONANCE:
+		failures.append("Tokyo should play at Full Resonance, not %s" % tier)
+	if _find_button(left, "WORLD MAP") == null:
+		failures.append("The city panel has no way back to the world")
+	var districts := {}
+	for button in _buttons_under(center):
+		districts[String(button.get_meta(&"menu_action", &""))] = button
+	for candidate in section["nodes"]:
+		var button: Button = districts.get("node_%s" % candidate["id"])
+		if button == null:
+			failures.append("The section has no button for %s" % candidate["name"])
+		elif button.disabled != (not candidate["id"] in starts):
+			failures.append("District %s is %s" % [candidate["name"], "locked" if button.disabled else "open"])
+	var deploy := _find_button(right, "DEPLOY")
+	if deploy == null or deploy.disabled or not bool(deploy.get_meta(&"primary", false)) or not DifficultyTier.label(tier) in deploy.text:
+		failures.append("Deploy does not lead the district panel at the city's tier")
+	if _find_button(right, "ASSIST") != null:
+		failures.append("An overrun city offers Assist")
+	_check_fits(left, "operations panel")
+	_check_fits(right, "district panel")
+	# A threatened city offers the Assist choice.
+	for entry in entries:
+		if entry["state"] == WorldMap.STATE_THREATENED:
+			var easy := city.duplicate()
+			easy["entry"] = entry
+			easy["tier"] = WorldMap.tier_for(entry["state"], true)
+			right.show_district_detail(easy)
+			await process_frame
+			if _find_button(right, "ASSIST") == null or not "ASSIST" in _find_button(right, "DEPLOY").text:
+				failures.append("A threatened city with Assist on does not deploy at Assist")
+			_check_fits(right, "assisted district panel")
+			break
+	# Results after sealing the first district: the line moved, the city map leads.
+	var report := {
+		"outcome": &"victory", "score": 4200, "debrief": "Chen: sealed.", "seconds": 300.0, "previous_best": 0.0, "best_seconds": 300.0, "tier": tier,
+		"world": {
+			"entry": tokyo, "section": section, "sealed_before": [], "sealed_after": [node["id"]], "node": node,
+			"kind_label": city["kind_label"], "operation_complete": false, "liberation_before": tokyo["liberation"], "liberation_after": tokyo["liberation"],
+		},
+		"offer_training": false,
+	}
+	left.show_world_report(report)
+	center.show_world_results_map(report)
+	right.show_world_results_actions(report)
+	for _frame in 3:
+		await process_frame
+	if not _has_label(left, "THE LINE MOVED"):
+		failures.append("World results do not say the line moved")
+	var city_button := _find_button(right, "CITY MAP")
+	if city_button == null or not bool(city_button.get_meta(&"primary", false)):
+		failures.append("City map does not lead world results after a seal")
+	_check_fits(left, "world report")
+	_check_fits(right, "world results actions")
+	report["outcome"] = &"defeat"
+	report["offer_training"] = true
+	left.show_world_report(report)
+	right.show_world_results_actions(report)
+	for _frame in 2:
+		await process_frame
+	var retry := _find_button(right, "RETRY")
+	if retry == null or not bool(retry.get_meta(&"primary", false)):
+		failures.append("Retry does not lead world results after a defeat")
+	_check_fits(right, "world defeat actions")
+	for panel in [left, center, right]:
+		panel.get_parent().queue_free()
+	await process_frame
+
+## Hold the line: a wave with hold_seconds drains its rift on its own while it is open.
+func _validate_hold_the_line() -> void:
+	var rift: RiftManager = (load("res://Scenes/Rifts/rift_manager.tscn") as PackedScene).instantiate()
+	root.add_child(rift)
+	await process_frame
+	rift.configure_wave({"health": 100, "interval": 60.0, "max_live": 0, "hold_seconds": 10.0})
+	rift.spawning_enabled = true
+	for _tick in 5:
+		rift._process(1.0)
+	if rift.rift_health != 50:
+		failures.append("Hold the line drained to %d after half its hold, not 50" % rift.rift_health)
+	for _tick in 5:
+		rift._process(1.0)
+	if rift.rift_health != 0:
+		failures.append("Hold the line did not drain its rift by the end of the hold (%d left)" % rift.rift_health)
+	var plain: RiftManager = (load("res://Scenes/Rifts/rift_manager.tscn") as PackedScene).instantiate()
+	root.add_child(plain)
+	await process_frame
+	plain.configure_wave({"health": 100, "interval": 60.0, "max_live": 0})
+	plain.spawning_enabled = true
+	for _tick in 5:
+		plain._process(1.0)
+	if plain.rift_health != 100:
+		failures.append("A wave without hold_seconds drained on its own")
+	rift.queue_free()
+	plain.queue_free()
+	await process_frame
+
 func _validate_punch_power() -> void:
 	var soft := await _committed_strike(2.0, false)
 	var hard := await _committed_strike(6.0, false)

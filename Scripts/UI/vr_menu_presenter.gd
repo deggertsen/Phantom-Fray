@@ -76,9 +76,32 @@ func show_city_map(entries: Array[Dictionary], selected_id: String, tier_id: Str
 			selected = entry
 	_right_panel.show_site_detail(selected, tier_id, training_first)
 
-## report: see VRWrapPanel's results section.
+## The world front. world: see VRWrapPanel.show_world_status; entries are WorldMap.city_entries.
+func show_world_map(world: Dictionary, entries: Array[Dictionary], selected_id: String) -> void:
+	_show(true)
+	_left_panel.show_world_status(world)
+	_map_panel.show_world_map(entries, selected_id, String(world.get("filter", "all")), String(world.get("home_id", "")))
+	var selected: Dictionary = {}
+	for entry in entries:
+		if entry.get("id", "") == selected_id:
+			selected = entry
+	_right_panel.show_world_city(selected, world)
+
+## One section of a city. city: see VRWrapPanel.show_operations_status.
+func show_city_operations(city: Dictionary) -> void:
+	_show(true)
+	_left_panel.show_operations_status(city)
+	_map_panel.show_operations_map(city)
+	_right_panel.show_district_detail(city)
+
+## report: see VRWrapPanel's results section. A world mission's report carries "world".
 func show_results(report: Dictionary) -> void:
 	_show(true)
+	if report.has("world"):
+		_left_panel.show_world_report(report)
+		_map_panel.show_world_results_map(report)
+		_right_panel.show_world_results_actions(report)
+		return
 	_left_panel.show_city_report(report)
 	_map_panel.show_results_map(report)
 	_right_panel.show_results_actions(report)
