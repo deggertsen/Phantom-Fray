@@ -95,7 +95,7 @@ func _update_corruption(delta: float) -> void:
 	_floor_material.set_shader_parameter("rifts", packed)
 
 ## The Maw's turn, 0 (none) to 1 (torn): veins race from the rift under the player's feet, the
-## sky crack spreads, the pylons flicker and dim, and the light shifts toward the boss's colour.
+## sky behind the rift burns, the pylons flicker and dim, and the light shifts toward the boss's colour.
 ## Reduced Flashes caps the light shift and holds the pylons steady. The world changes; the
 ## player's view never moves.
 func set_boss_mood(amount: float, rift_position: Vector3, head: Vector3) -> void:
@@ -109,9 +109,10 @@ func set_boss_mood(amount: float, rift_position: Vector3, head: Vector3) -> void
 	var sky := _sky_material()
 	if sky and changed:
 		var stepped := snappedf(_boss_mood, 0.1)
-		var current: Variant = sky.get_shader_parameter("crack_spread")
+		var current: Variant = sky.get_shader_parameter("boss_mood")
 		if current == null or not is_equal_approx(float(current), stepped):
-			sky.set_shader_parameter("crack_spread", stepped)
+			sky.set_shader_parameter("boss_azimuth", atan2(rift_position.x - head.x, head.z - rift_position.z))
+			sky.set_shader_parameter("boss_mood", stepped)
 	var flicker := 1.0
 	if not calm and _boss_mood > 0.0 and _boss_mood < 1.0:
 		flicker = 0.45 + 0.55 * randf()

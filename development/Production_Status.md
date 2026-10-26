@@ -31,7 +31,7 @@
 - XR origin with tracked hands, grip-gated strike spheres, haptics.
 - ERM gauntlet armor with color-coded bracers.
 - Bracer wrist panel: operation, timer, life force bar, rift hexes, score, multiplier, Chen caption.
-- Breach-site arena: hex floor with rift-driven corruption veins, pylons, procedural dead city and rubble, sky crack.
+- Breach-site arena: hex floor with rift-driven corruption veins, pylons, procedural dead city and rubble, night sky.
 - Dr. Chen comms: 108 events in `Assets/Audio/VO/chen/chen_lines.json` (49 for operations, 59 for training), one to eight takes each, 254 clips voiced with ElevenLabs (`elevenlabs_manifest.json` tracks what was generated). Pacing by per-event cooldown and a script-wide max wait; priority 3 lines play as soon as she is free; stale lines are dropped. Opening line varies by history (first, retry after failsafe, replay); victory line varies by outcome (flawless, at critical, new record, plain). No timer callouts; missions have no time limit. Training's 59 `tutorial_` lines (she calls the player Recruit there, and Striker from the first operation on) play back to back under a prefix lock (`lock_prefix`), and her pause holds a line mid-word while training is paused. The wrist caption pages a line too long for its two rows, in step with her voice.
 - Music manager with six tracks and an intensity controller driven by pressure and life state. Own-music switch mutes the Music bus and stops the manager.
 - Radio treatment on the Voice bus; music ducks under Chen.

@@ -26,7 +26,7 @@ Every Phantom is a different movement. Yellow and blue Anglers take a left or ri
 
 ## Capture list
 
-1. Hero image: gauntlets up, a weakened rift ahead, one phantom of each color in the air, dead-city skyline and sky crack behind.
+1. Hero image: gauntlets up, a weakened rift ahead, one phantom of each color in the air, dead-city skyline behind.
 2. Yellow Angler lure strike with the crit flash.
 3. Green Carapace two-hand block.
 4. Pink Spearfin lane on the floor with the player stepping clear.

@@ -8,8 +8,8 @@ const CITY_SHADER := preload("res://Resources/Materials/breach_city.gdshader")
 const CYAN := Color(0.08, 0.7, 1.0)
 const VIOLET := Color(0.6, 0.3, 1.0)
 
-## A ring of dead towers 46 to 110 m out. Towers in front of the sky crack (toward -Z)
-## stay low, so the crack is never hidden.
+## A ring of dead towers 46 to 110 m out. Towers ahead (toward -Z) stay low, so the sky over
+## the front arc, where The Maw opens, is not hidden when it burns.
 static func city(seed_value: int = 11) -> MeshInstance3D:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
