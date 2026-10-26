@@ -70,11 +70,16 @@ Pass condition: all four within 15 seconds.
 
 - The center shows one section: up to three columns of districts, the first column open, the rest dashed and locked behind a magenta line one column right of the last seal. Sections are not labeled or numbered.
 - A sealed district carries a check and lights its edges cyan; the open ones after it have a cyan edge. Picking a district fills the right panel. Nothing starts until Deploy.
+- Each district names what the Striker does there: CLEAN SEAL, CROSSFIRE, COVER THE TEAM, or SHUT THE MAW, the same at every tier. Ask the tester what each one means before they play it; expected: one rift, two at once, protect Chen's team, a big one. No district, card, or button says boss, a break, or to take the other district; a Maw card reads as a vast rift, a heavy flood, and a glimpse of what holds it open.
 - Deploy names the tier the city plays at (threatened = STANDARD or ASSIST, in danger = OPERATOR, overrun = FULL RESONANCE). Only a threatened city shows the STANDARD / ASSIST choice; it is remembered across cities and restarts.
 - The left panel has Back to the world map, the liberation percentage with the city's resistance word, a bar whose dashed part is the operation in progress, and three pips for this operation's seals.
-- After a seal, results say THE LINE MOVED (or OPERATION COMPLETE on the third), show the section with the old line faint and the new one lit, and lead with City Map; Replay and World sit below. After a defeat, Retry leads at the same tier, with City Map and World below.
-- The third seal advances the city: liberation rises by one operation's share, the next section opens, and the pips clear.
-- Replay after a seal does not reopen the sealed district; it returns to the city map.
+- A world mission's results are the city map. Ask the tester, without coaching, how to start the next mission; expected: point at a lit district in the middle and press Deploy, within 10 seconds and without going anywhere else first.
+- After a seal: the center keeps MISSION COMPLETE with the time and score over the section, the district just sealed ringed white and the old line faint behind the new one; the next open district is already picked, its card and a filled Deploy on the right. The left says THE LINE MOVED with the liberation number and has Replay (the district again, for its time), World, and Settings.
+- Picking another open district on the results map swaps the right panel to its card; locked and sealed districts do not press. Deploy starts the picked one at the city's tier. A trigger held through the end of the fight presses nothing: the first press counts only after it is released.
+- After a defeat the center reads OPERATION ENDED and the left THE BREACH HELD. Retry leads on the right at the same tier, with Review Training under it; the open districts still press, and picking one puts its card and Deploy up instead.
+- The third seal advances the city: the left says OPERATION COMPLETE and liberation rises by one operation's share (UP FROM the old value), and the center shows the next section, its first column open and picked, under OPERATION COMPLETE. The pips clear.
+- Replay after a seal plays the sealed district again; its time and score count, the left then says THE LINE HELD, and the line does not move.
+- Settings from results returns to the same results, with the same district picked.
 
 ## Training
 

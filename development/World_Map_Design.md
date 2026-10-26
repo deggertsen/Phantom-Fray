@@ -38,22 +38,23 @@ World liberation on the header is the mean of city liberation, with safe cities 
 A section is a small directed graph in three columns, generated from a seed of city id and section index so it is stable for that city until it is completed:
 
 - Each column has one to three districts; every district links forward to at least one in the next column.
-- District kinds: single rift, dual rift, hold the line, Maw rift. A column with one district is never a Maw, and a column is never all Maws, so a path around the boss always exists.
+- District kinds: Clean Seal, Crossfire, Cover the Team, Shut the Maw (see below). A column with one district is never a Maw, and a column is never all Maws, so a path around a Maw always exists.
 - District names come from a fixed pool (Harbor, Rail Yards, Junction, Stadium, Reservoir, Old Town, Civic Ring, Foundry, Airport, Docks, University, Bluffs, Quarry, Northgate, Eastbank, Riverside). A district's site id is its name as a key (`rail_yards`), passed straight to `ArenaPresentation.apply_site` before the deploy; `BreachSites.DISTRICTS` says which of the seven sites each plays at (harbor, docks, reservoir and riverside at the harbor; stadium; old town and university in the small town; the airport on the salt flat; bluffs and quarry on the summit; the rest in the Dead City), and anything unknown plays in the Dead City. Validation checks every district name has an entry.
 - The player picks any district in the first column, then any linked district, then any linked district. Three seals complete the operation. The front line across the city map sits one column right of the last sealed district.
 - On completion the section is replaced by the next one and the city's `ops_done` increments. The player can continue or leave. A liberated city has no sections; Chen says she will call when the front turns back toward it.
 - Sections are not labeled or numbered on screen.
+- A mission's results are the city map (David, 2026-10-26: results looked like the map but could not deploy). The center keeps the outcome, time and score over the section as it now stands, with the new line drawn against the old one after a seal; its open districts press like the city map's, and the right panel is the picked district's card with Deploy. After a seal the next open district is picked; after a completed operation the next section shows, its first column open, under OPERATION COMPLETE; after a defeat Retry leads until another district is picked. The left panel keeps the liberation number and THE LINE MOVED, OPERATION COMPLETE, THE LINE HELD (a replay of a sealed district: its time counts, nothing moves) or THE BREACH HELD, with Replay, World and Settings under it.
 
 ## Missions from districts
 
-A district's kind, the city's tier, and the district's environment produce the mission dictionary the round plays, built from the catalog's wave vocabulary:
+A district's kind, the city's tier, and the district's environment produce the mission dictionary the round plays, built from the catalog's wave vocabulary. Each kind is named on screen like an operation, for what the Striker does there (`WorldMap.kind_label`); the ids (`single`, `dual`, `hold`, `maw`) stay in saved records. The names and card lines are the same at every tier, and nothing on the city map says boss: whether one comes through a Maw stays a surprise (David, 2026-10-26).
 
-- **Single rift**: one rift, the First Light shape at the city's tier.
-- **Dual rift**: two rifts in one view, the Double Breach pair.
-- **Hold the line**: one rift whose health also drains on its own while Chen's team seals it; the player survives the interval. New wave field `hold_seconds`; the rift closes when its health reaches zero from either source.
-- **Maw rift**: The Maw's single large rift. At Full Resonance it carries the boss block and the break odds; below, the flood and the glimpse.
+- **Clean Seal** (`single`, was "Single rift"): one rift, the First Light shape at the city's tier. "One rift, a steady stream. Read every tell, answer it, and shut the door."
+- **Crossfire** (`dual`, was "Dual rift"): two rifts in one view, the Double Breach pair. "Two rifts in one view, out of step. Keep both doors in front of you."
+- **Cover the Team** (`hold`, was "Hold the line"): one rift whose health also drains on its own while Chen's team seals it; the player survives the interval. New wave field `hold_seconds`; the rift closes when its health reaches zero from either source. "Chen's team seals from the pylons. Keep the phantoms off you until they finish."
+- **Shut the Maw** (`maw`, was "Maw rift", and "Maw rift, boss" at Full Resonance): The Maw's single large rift. At Full Resonance it carries the boss block and the break odds; below, the flood and the glimpse. The card says the same at every tier: "One vast rift, a heavy flood, and a glimpse of what holds it open. It takes a long chew to shut."
 
-Best score and time are kept per city, district kind, and tier, so a player sees that a dual rift in Tokyo at Operator has a best.
+Best score and time are kept per city, district kind, and tier, so a player sees that a Crossfire in Tokyo at Operator has a best.
 
 ## Persistence (`GameSettings`)
 
