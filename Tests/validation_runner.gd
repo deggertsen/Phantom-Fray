@@ -33,6 +33,8 @@ func _run_validation() -> void:
 	await _validate_maw_glimpse()
 	await _validate_phantom_hold()
 	_validate_world_map()
+	_validate_world_regions()
+	_validate_world_kinds()
 	await _validate_world_menu()
 	_validate_district_sites()
 	await _validate_hold_the_line()
@@ -478,6 +480,99 @@ func _validate_world_map() -> void:
 		failures.append("World mission id does not round-trip: %s" % [mission["id"]])
 	profile.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://world_map_validation.cfg"))
+
+## One region per continent: six authored boxes that never overlap, every city in exactly one and
+## inside its box, the label inside too, and each box big enough to pick with the ray.
+func _validate_world_regions() -> void:
+	var ids: Array = []
+	for raw in WorldMap.REGIONS:
+		ids.append(raw["id"])
+	if ids != ["north_america", "south_america", "europe", "africa", "asia", "oceania"]:
+		failures.append("The world map does not have one region per continent: %s" % [ids])
+	var expected := {"jakarta": "asia", "tehran": "asia", "cairo": "africa", "moscow": "europe", "berlin": "europe", "perth": "oceania", "sydney": "oceania", "bogota": "south_america", "mexico_city": "north_america"}
+	for city_id in expected:
+		if WorldMap.region_of(city_id) != expected[city_id]:
+			failures.append("%s is in %s, not %s" % [city_id, WorldMap.region_of(city_id), expected[city_id]])
+	for raw in WorldMap.CITIES:
+		var homes := 0
+		for region_raw in WorldMap.REGIONS:
+			if raw["id"] in region_raw["cities"]:
+				homes += 1
+				if not WorldMap.region_has(region_raw, float(raw["lon"]), float(raw["lat"])):
+					failures.append("%s is outside %s's box" % [raw["id"], region_raw["id"]])
+		if homes != 1:
+			failures.append("%s is in %d regions" % [raw["id"], homes])
+	# Landmarks on the right side of each split: Darwin and Wellington are Oceania, not Asia;
+	# Paris is Europe and Tripoli Africa; Riyadh is Asia.
+	var landmarks := {"oceania": [[130.8, -12.5], [174.8, -41.3]], "europe": [[2.3, 48.9]], "africa": [[13.2, 32.9]], "asia": [[46.7, 24.7]]}
+	for region_raw in WorldMap.REGIONS:
+		for point in landmarks.get(region_raw["id"], []):
+			if not WorldMap.region_has(region_raw, float(point[0]), float(point[1])):
+				failures.append("%s does not cover %s" % [region_raw["id"], point])
+		if region_raw["id"] == "asia" and WorldMap.region_has(region_raw, 130.8, -12.5):
+			failures.append("Asia crosses into Australia")
+	var projected := WorldMap.regions()
+	for index in projected.size():
+		var region_data: Dictionary = projected[index]
+		var degrees: Array = WorldMap.REGIONS[index]["box"]
+		var rect: Rect2 = region_data["box"]
+		if degrees.size() != 4 or float(degrees[0]) >= float(degrees[2]) or float(degrees[1]) >= float(degrees[3]) or float(degrees[0]) < -180.0 or float(degrees[2]) > 180.0 or float(degrees[1]) < WorldCoastline.LAT_BOTTOM or float(degrees[3]) > WorldCoastline.LAT_TOP:
+			failures.append("%s's box is not on the map: %s" % [region_data["id"], degrees])
+		if not rect.has_point(region_data["label_point"]):
+			failures.append("%s's label is outside its box" % region_data["id"])
+		if rect.size.x < 100.0 or rect.size.y < 100.0:
+			failures.append("%s's box is too small to pick in VR: %s" % [region_data["id"], rect.size])
+		for other in projected.slice(index + 1):
+			if rect.intersects(other["box"]):
+				failures.append("%s and %s overlap" % [region_data["id"], other["id"]])
+
+## Every district kind runs about as long as an operation: Clean Seal and Crossfire seal four
+## rifts, Cover the Team holds one for three to five minutes, Shut the Maw is The Maw's rift.
+func _validate_world_kinds() -> void:
+	var city := WorldMap.city("portland")
+	var expected_rifts := {WorldMap.KIND_SINGLE: 4, WorldMap.KIND_DUAL: 4, WorldMap.KIND_HOLD: 1, WorldMap.KIND_MAW: 1}
+	var objectives := {WorldMap.KIND_SINGLE: "SEAL FOUR RIFTS", WorldMap.KIND_DUAL: "SEAL TWO PAIRS", WorldMap.KIND_HOLD: "COVER THE TEAM", WorldMap.KIND_MAW: "SEAL THE MAW"}
+	var names := {WorldMap.KIND_SINGLE: "CLEAN SEAL", WorldMap.KIND_DUAL: "CROSSFIRE", WorldMap.KIND_HOLD: "COVER THE TEAM", WorldMap.KIND_MAW: "SHUT THE MAW"}
+	for kind in WorldMap.KINDS:
+		var mission := WorldMap.build_mission(city, 0, {"id": "s0n1", "name": "Harbor", "kind": kind, "site": "harbor"}, DifficultyTier.STANDARD)
+		var rifts: Array = mission.get("rifts", [])
+		if rifts.size() != expected_rifts[kind]:
+			failures.append("%s opens %d rifts, not %d" % [kind, rifts.size(), expected_rifts[kind]])
+		if mission.get("objective", "") != objectives[kind]:
+			failures.append("%s's objective is %s" % [kind, mission.get("objective", "")])
+		if WorldMap.kind_label(kind) != names[kind]:
+			failures.append("%s is no longer called %s" % [kind, names[kind]])
+		var minutes: Array = mission.get("expected_minutes", [])
+		if minutes.size() != 2 or int(minutes[0]) < 2 or int(minutes[1]) <= int(minutes[0]):
+			failures.append("%s expects %s minutes; a district should run at least two" % [kind, minutes])
+		if (mission.get("pressure_labels", []) as Array).size() != rifts.size() or (mission.get("open_barks", []) as Array).size() != rifts.size() or (mission.get("seal_lines", []) as Array).size() != rifts.size() - 1:
+			failures.append("%s does not carry a pressure label and bark per rift and a seal line between" % kind)
+		match kind:
+			WorldMap.KIND_SINGLE:
+				if rifts[0] != rifts[2] or rifts[1] != rifts[3] or int(rifts[1]["health"]) <= int(rifts[0]["health"]) or float(rifts[1]["interval"]) >= float(rifts[0]["interval"]):
+					failures.append("Clean Seal is not two escalating shapes repeated")
+			WorldMap.KIND_DUAL:
+				if int(mission.get("max_concurrent", 1)) != 2 or not mission.get("cluster_rifts", false):
+					failures.append("Crossfire does not open its rifts in pairs")
+			WorldMap.KIND_HOLD:
+				var hold: Dictionary = rifts[0]
+				var hold_seconds := float(hold.get("hold_seconds", 0.0))
+				# A strong puncher (1.3x rift damage) kills one per spawn against the team's own drain.
+				var strong := float(hold["health"]) / (WorldMap.KILL_DAMAGE * 1.3 / float(hold["interval"]) + float(hold["health"]) / maxf(hold_seconds, 1.0))
+				if hold_seconds <= 0.0 or hold_seconds > 300.0 or strong < 170.0:
+					failures.append("Cover the Team runs %.0f s for a strong puncher and %.0f s on its own, not three to five minutes" % [strong, hold_seconds])
+				if WorldMap.estimate_seconds(rifts) >= hold_seconds:
+					failures.append("Cover the Team's player never shortens the hold")
+			WorldMap.KIND_MAW:
+				var maw := MissionCatalog.get_mission("the_maw")
+				if rifts != maw.get("rifts", []) or minutes != maw.get("expected_minutes", []):
+					failures.append("Shut the Maw is not The Maw's rift")
+	# The estimate reads the catalog's own operations about as the catalog did.
+	for mission_id in ["first_light", "widen_the_ring"]:
+		var operation := MissionCatalog.get_mission(mission_id)
+		var estimate := WorldMap.expected_minutes(operation)
+		if int(estimate[0]) != int(operation["expected_minutes"][0]):
+			failures.append("The world estimate puts %s at %s, the catalog at %s" % [mission_id, estimate, operation["expected_minutes"]])
 
 ## A player who steps out of the path is still the target. A phantom that flies past the head
 ## must come back for it at once, never float at the point where the head used to be.
@@ -2620,15 +2715,8 @@ func _validate_world_menu() -> void:
 		failures.append("The world panel offers %d filters" % filters)
 	if not _has_label(left, "%d%%" % WorldMap.world_liberation(profile)):
 		failures.append("The world panel does not show world liberation")
-	# Every city is in exactly one region.
-	for entry in entries:
-		var homes := 0
-		for region_data in WorldMap.REGIONS:
-			if entry["id"] in region_data["cities"]:
-				homes += 1
-		if homes != 1:
-			failures.append("%s is in %d regions" % [entry["id"], homes])
-	# The whole world: a button per region, and no city to press.
+	# The whole world: a button per region (_validate_world_regions checks the regions themselves),
+	# and no city to press.
 	var view := center.world_map_view()
 	var world_window := view.window()
 	var shown := _map_buttons(center)

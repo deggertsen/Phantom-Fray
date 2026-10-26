@@ -70,17 +70,21 @@ const CITIES := [
 	{"id": "sydney", "name": "Sydney", "lon": 151.2, "lat": -33.9, "ops": 30, "seed_ops": 0, "blurb": "Consumed in the second week. The last broadcast came from here."},
 ]
 
-## The world map zooms to a region before a city is picked. Every city is in exactly one; label is
-## where the region's name sits on the world view, in longitude and latitude.
+## The world map zooms to a region before a city is picked: one region per continent, each an
+## authored box in longitude and latitude ([west, south, east, north]) rather than one grown from
+## its cities, so no box crosses into another continent (David, 2026-10-26: Asia was taking part
+## of Australia). Asia stops at Australia's north coast; Europe and Africa split along the
+## Mediterranean; Europe and Africa meet Asia at 45 east. Boxes may share an edge but never
+## overlap; every city is in exactly one and inside its box. label is where the region's name
+## sits on the world view, in longitude and latitude.
 const REGIONS := [
-	{"id": "north_america", "name": "North America", "label": [-112, 27], "cities": ["portland", "vancouver", "denver", "chicago", "toronto", "new_york", "atlanta", "mexico_city"]},
-	{"id": "south_america", "name": "South America", "label": [-66, -10], "cities": ["bogota", "lima", "sao_paulo", "buenos_aires"]},
-	{"id": "europe_africa", "name": "Europe & Africa", "label": [18, 16], "cities": ["berlin", "moscow", "cairo", "lagos", "nairobi", "johannesburg"]},
-	{"id": "asia", "name": "Asia", "label": [100, 47], "cities": ["tehran", "delhi", "mumbai", "beijing", "seoul", "tokyo", "bangkok", "manila", "jakarta"]},
-	{"id": "oceania", "name": "Oceania", "label": [134, -24], "cities": ["perth", "sydney"]},
+	{"id": "north_america", "name": "North America", "box": [-170, 10, -50, 84], "label": [-100, 62], "cities": ["portland", "vancouver", "denver", "chicago", "toronto", "new_york", "atlanta", "mexico_city"]},
+	{"id": "south_america", "name": "South America", "box": [-82, -57, -33, 10], "label": [-62, -12], "cities": ["bogota", "lima", "sao_paulo", "buenos_aires"]},
+	{"id": "europe", "name": "Europe", "box": [-25, 36, 45, 72], "label": [8, 64], "cities": ["berlin", "moscow"]},
+	{"id": "africa", "name": "Africa", "box": [-20, -36, 45, 36], "label": [20, 16], "cities": ["cairo", "lagos", "nairobi", "johannesburg"]},
+	{"id": "asia", "name": "Asia", "box": [45, -11, 180, 78], "label": [100, 52], "cities": ["tehran", "delhi", "mumbai", "beijing", "seoul", "tokyo", "bangkok", "manila", "jakarta"]},
+	{"id": "oceania", "name": "Oceania", "box": [110, -50, 180, -11], "label": [134, -22], "cities": ["perth", "sydney"]},
 ]
-## A region's box is its cities and label grown by this, in projected units.
-const REGION_PADDING := 18.0
 ## The side of the box the map closes in on when a city opens.
 const CITY_ZOOM_UNITS := 44.0
 
@@ -129,16 +133,22 @@ static func regions() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for raw in REGIONS:
 		var region_data: Dictionary = (raw as Dictionary).duplicate()
-		var label_point := project(float(raw["label"][0]), float(raw["label"][1]))
-		var box := Rect2(label_point, Vector2.ZERO)
-		for city_id in raw["cities"]:
-			for city_raw in CITIES:
-				if city_raw["id"] == city_id:
-					box = box.expand(project(float(city_raw["lon"]), float(city_raw["lat"])))
-		region_data["label_point"] = label_point
-		region_data["box"] = box.grow(REGION_PADDING)
+		region_data["label_point"] = project(float(raw["label"][0]), float(raw["label"][1]))
+		region_data["box"] = region_box(raw)
 		out.append(region_data)
 	return out
+
+## A region's authored box ([west, south, east, north] in degrees), projected.
+static func region_box(raw: Dictionary) -> Rect2:
+	var box: Array = raw["box"]
+	var top_left := project(float(box[0]), float(box[3]))
+	var bottom_right := project(float(box[2]), float(box[1]))
+	return Rect2(top_left, bottom_right - top_left)
+
+## Whether a point in degrees is inside a region's authored box, edges included.
+static func region_has(raw: Dictionary, lon: float, lat: float) -> bool:
+	var box: Array = raw["box"]
+	return lon >= float(box[0]) and lon <= float(box[2]) and lat >= float(box[1]) and lat <= float(box[3])
 
 static func region(region_id: String) -> Dictionary:
 	for candidate in regions():
@@ -429,8 +439,8 @@ static func kind_label(kind: String) -> String:
 
 static func kind_summary(kind: String) -> String:
 	match kind:
-		KIND_SINGLE: return "One rift, a steady stream. Read every tell, answer it, and shut the door."
-		KIND_DUAL: return "Two rifts in one view, out of step. Keep both doors in front of you."
+		KIND_SINGLE: return "Four rifts in turn, each faster than the last. Read every tell, answer it, and shut the door."
+		KIND_DUAL: return "Two pairs of rifts, out of step in one view. Keep both doors in front of you."
 		KIND_HOLD: return "Chen's team seals from the pylons. Keep the phantoms off you until they finish."
 		KIND_MAW: return "One vast rift, a heavy flood, and a glimpse of what holds it open. It takes a long chew to shut."
 		_: return ""
@@ -455,8 +465,26 @@ static func parse_mission_id(mission_id_value: String) -> Dictionary:
 static func record_key(city_id: String, kind: String, tier_id: String) -> String:
 	return DifficultyTier.record_key("world:%s:%s" % [city_id, kind], tier_id)
 
+## The estimate behind expected_minutes, made the way the catalog's were (see the note above
+## MissionCatalog._first_light and Known_Issues.md): a kill takes about this much rift health,
+## one kill per spawn interval but never faster than a player's cadence, and every rift costs
+## its opening. Rifts that open together feed the player at once, so a pair is capped by the
+## cadence rather than summed; a hold rift's own drain adds to the player's.
+const KILL_DAMAGE := 13.0
+const KILL_CADENCE_SECONDS := 2.0
+const RIFT_OPENING_SECONDS := 6.0
+## Cover the Team: Chen's team seals the rift on its own over this long (RiftManager drains it);
+## the player's kills shorten it. With HOLD_HEALTH, a strong puncher (1.3x rift damage) still
+## takes about three minutes, an average one three and a half, and nobody waits past five.
+const HOLD_SECONDS := 300.0
+const HOLD_HEALTH := 2500
+const POOL: Array = ["yellow", "blue", "green", "pink"]
+
 ## A playable mission for a district at a tier, in MissionCatalog's vocabulary. The round applies
-## the tier itself (RoundController.begin_round), so the waves here are at Standard.
+## the tier itself (RoundController.begin_round), so the waves here are at Standard. Every kind
+## runs about as long as a Breach Night operation (David, 2026-10-26: one or two rifts and the
+## mission was over in under a minute): Clean Seal and Crossfire seal four rifts, Cover the Team
+## holds one until the team shuts it, Shut the Maw is The Maw's own rift.
 static func build_mission(city_data: Dictionary, section_index: int, node: Dictionary, tier_id: String) -> Dictionary:
 	var kind := String(node.get("kind", KIND_SINGLE))
 	var city_name := String(city_data.get("name", "the city"))
@@ -466,53 +494,118 @@ static func build_mission(city_data: Dictionary, section_index: int, node: Dicti
 		"codename": "%s • %s" % [city_name.to_upper(), district.to_upper()],
 		"title": kind_label(kind),
 		"summary": kind_summary(kind),
-		"objective": "SEAL THE DISTRICT",
+		"objective": "SEAL FOUR RIFTS",
 		"site": node.get("site", DEFAULT_SITE),
 		"world": {"city_id": city_data.get("id", ""), "section": section_index, "node_id": node.get("id", ""), "kind": kind},
 		"start_line": "CHEN: %s. PUSH THE LINE." % district.to_upper(),
-		"pressure_labels": [district.to_upper()],
-		"open_barks": [""],
-		"seal_lines": [],
+		"pressure_labels": ["CONTACT", "ADAPTING", "SECOND PASS", "LAST DOOR"],
+		"open_barks": ["", "THEY ADJUST — FASTER LUNGES", "TWO MORE. SAME DISTRICT.", "LAST ONE. SHUT THE DOOR."],
+		"seal_lines": ["FIRST SEAL. THREE LEFT.", "HALF DONE. TWO MORE ARE OPENING.", "ONE LEFT. FINISH THE DISTRICT."],
 		"victory_line": "Chen: %s is shut. Pick the next district when you are ready." % district,
 		"defeat_line": "Chen: The failsafe fired. %s held. Rest, then go back in." % district,
 	}
 	match kind:
 		KIND_DUAL:
-			mission["expected_minutes"] = [6, 8]
+			mission["objective"] = "SEAL TWO PAIRS"
 			mission["max_concurrent"] = 2
 			mission["cluster_rifts"] = true
-			mission["pressure_labels"] = ["PAIR LIVE", "PARTNER"]
+			mission["start_line"] = "CHEN: %s. TWO DOORS, SAME VIEW. THEY WILL NOT SYNC." % district.to_upper()
+			mission["pressure_labels"] = ["PAIR LIVE", "PARTNER", "SECOND PAIR", "LAST DOOR"]
+			mission["open_barks"] = ["", "THE OTHER ONE IS ALREADY OPEN.", "SECOND PAIR. KEEP THEM IN FRONT.", "BOTH DOORS LIVE. STAY IN FRONT."]
+			mission["seal_lines"] = ["ONE DOWN. ITS PARTNER IS STILL FEEDING.", "PAIR SEALED. THE NEXT TWO ARE OPENING.", "THREE DOWN. ONE PARTNER LEFT."]
+			# Two pairs; the second is faster with shorter tells, as Double Breach's later pairs are.
 			mission["rifts"] = [
-				_wave(130, 3.1, 2, 1.1, 0.9, ["yellow", "blue", "green", "pink"]),
-				_wave(130, 3.6, 2, 1.1, 0.9, ["blue", "green", "pink", "yellow"]),
+				_wave(260, 3.1, 2, 1.1, 0.9, POOL),
+				_wave(260, 3.6, 2, 1.1, 0.9, ["blue", "green", "pink", "yellow"]),
+				_wave(280, 2.8, 2, 1.18, 0.82, ["green", "pink", "yellow", "blue"]),
+				_wave(280, 3.2, 2, 1.18, 0.82, ["pink", "yellow", "green", "blue"]),
 			]
 		KIND_HOLD:
-			mission["expected_minutes"] = [5, 7]
 			mission["objective"] = "COVER THE TEAM"
 			mission["start_line"] = "CHEN: %s. MY TEAM IS ON THE SEAL. KEEP THEM OFF YOU." % district.to_upper()
-			var hold := _wave(360, 3.0, 3, 1.0, 1.0, ["yellow", "blue", "green", "pink"])
-			# RiftManager drains the rift on its own over this long; the player's seals shorten it.
-			hold["hold_seconds"] = 150.0
+			mission["pressure_labels"] = ["TEAM ON THE SEAL"]
+			mission["open_barks"] = [""]
+			mission["seal_lines"] = []
+			var hold := _wave(HOLD_HEALTH, 3.2, 3, 1.0, 1.0, POOL)
+			hold["hold_seconds"] = HOLD_SECONDS
 			mission["rifts"] = [hold]
 		KIND_MAW:
 			var maw := MissionCatalog.get_mission("the_maw")
-			mission["expected_minutes"] = maw.get("expected_minutes", [4, 6])
 			mission["objective"] = "SEAL THE MAW"
 			mission["arc_rifts"] = true
 			mission["start_line"] = "CHEN: A MAW IN %s. IT DOES NOT STOP FEEDING." % district.to_upper()
+			mission["pressure_labels"] = ["THE MAW"]
+			mission["open_barks"] = [""]
+			mission["seal_lines"] = []
 			mission["glimpse"] = true
 			if maw.has("tier_boss"):
 				mission["tier_boss"] = (maw["tier_boss"] as Dictionary).duplicate(true)
 			mission["rifts"] = []
 			for wave in maw.get("rifts", []):
 				mission["rifts"].append((wave as Dictionary).duplicate(true))
+			# The same mission as the operation, so the same card.
+			mission["expected_minutes"] = maw.get("expected_minutes", expected_minutes(mission))
 		_:
-			mission["expected_minutes"] = [4, 6]
-			mission["rifts"] = [_wave(180, 3.4, 3, 1.0, 1.0, ["yellow", "blue", "green", "pink"])]
+			# Four rifts in sequence, two shapes repeated and escalating, as First Light does.
+			mission["rifts"] = _repeat([
+				_wave(150, 3.4, 3, 1.0, 1.0, POOL),
+				_wave(170, 3.0, 3, 1.06, 0.94, ["blue", "green", "pink", "yellow"]),
+			], 2)
+	if not mission.has("expected_minutes"):
+		mission["expected_minutes"] = expected_minutes(mission)
 	return mission
+
+## [low, high] minutes for a mission's waves at Standard: the clean run rounded, and the clean
+## run with half again for misses and dodges, never past the time a hold ends on its own.
+static func expected_minutes(mission: Dictionary) -> Array:
+	var rifts: Array = mission.get("rifts", [])
+	var seconds := estimate_seconds(rifts, int(mission.get("max_concurrent", 1)))
+	var low := maxi(roundi(seconds / 60.0), 1)
+	var high := roundi(seconds * 1.5 / 60.0)
+	var ceiling := 0.0
+	for wave in rifts:
+		if float(wave.get("hold_seconds", 0.0)) <= 0.0:
+			ceiling = INF
+			break
+		ceiling += float(wave.get("hold_seconds", 0.0)) + RIFT_OPENING_SECONDS
+	if ceiling < INF:
+		high = mini(high, roundi(ceiling / 60.0))
+	return [low, maxi(high, low + 1)]
+
+## Seconds a clean Standard run of these waves takes, estimated as the catalog's times were (see
+## KILL_DAMAGE). Rifts open max_concurrent at a time, in order.
+static func estimate_seconds(rifts: Array, max_concurrent: int = 1) -> float:
+	var seconds := 0.0
+	var index := 0
+	var group_size := maxi(max_concurrent, 1)
+	while index < rifts.size():
+		var group: Array = rifts.slice(index, index + group_size)
+		var health := 0.0
+		var spawn_rate := 0.0
+		var team_rate := 0.0
+		for wave in group:
+			var wave_health := float(wave.get("health", 0))
+			health += wave_health
+			spawn_rate += 1.0 / maxf(float(wave.get("interval", 3.0)), 0.1)
+			var hold := float(wave.get("hold_seconds", 0.0))
+			if hold > 0.0:
+				team_rate += wave_health / hold
+		var kill_interval := maxf(1.0 / spawn_rate, KILL_CADENCE_SECONDS) if spawn_rate > 0.0 else KILL_CADENCE_SECONDS
+		var player_rate := KILL_DAMAGE / kill_interval
+		seconds += health / (player_rate + team_rate) + RIFT_OPENING_SECONDS * group.size()
+		index += group_size
+	return seconds
 
 static func _wave(health: int, interval: float, max_live: int, speed_scale: float, telegraph_scale: float, pool: Array, scale: float = 1.0) -> Dictionary:
 	return {"health": health, "interval": interval, "max_live": max_live, "speed_scale": speed_scale, "telegraph_scale": telegraph_scale, "pool": pool, "scale": scale}
+
+## The waves in order, run `times` times over; each copy is its own dictionary.
+static func _repeat(waves: Array, times: int) -> Array:
+	var run: Array = []
+	for _pass in times:
+		for wave in waves:
+			run.append((wave as Dictionary).duplicate(true))
+	return run
 
 # --- Progress -------------------------------------------------------------------------------
 
