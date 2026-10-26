@@ -29,6 +29,7 @@ func _ready() -> void:
 	_add_quad(_lane_material())
 	_add_quad(_veins_material())
 	_add_boss_and_hazards()
+	_add_site_materials()
 	ResonanceSweep.prepare_generated_audio()
 
 func _process(_delta: float) -> void:
@@ -109,6 +110,15 @@ func _add_boss_and_hazards() -> void:
 		energy.disable_fog = true
 		energy.albedo_color = Color(1.0, 0.4, 0.6, 0.5)
 		_add_quad(energy)
+
+## Every breach site's dressing draws with these two plus the city facade shader, which the
+## Dead City already shows behind the menu. Switching site at deploy then compiles nothing.
+## Built by SiteKit itself, so the vertex format matches the sites exactly.
+func _add_site_materials() -> void:
+	var kit := SiteKit.new()
+	kit.box(SiteKit.SOLID, Vector3.ZERO, Vector3.ONE, Color.WHITE)
+	kit.box(SiteKit.LIT, Vector3.ZERO, Vector3.ONE, Color.WHITE)
+	_add_speck(kit.build("SiteMaterials"))
 
 func _add_quad(material: Material) -> void:
 	var quad := MeshInstance3D.new()

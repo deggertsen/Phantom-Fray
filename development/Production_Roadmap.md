@@ -25,7 +25,7 @@ Ideas that are not scheduled live in [Ideas_Backlog.md](Ideas_Backlog.md).
 - Dr. Chen on comms: 33 moments, 4 to 5 takes each, voiced with ElevenLabs. Cooldown and max-wait pacing so she never cuts herself off. Opening line knows if this is a first attempt, a retry after the failsafe, or a replay; victory line knows if it was flawless, at critical, or a new best.
 - Play My Own Music: a settings switch silences the soundtrack so any music app plays through.
 - Four difficulties chosen beside Deploy on the city map and saved: Assist, Standard (the game as tuned), Operator, and Full Resonance, the movement difficulty, where The Maw can break into its boss fight (high and low sweeps, slams, push-ups on a spent tentacle, escort volleys). `Scripts/Core/difficulty_tier.gd`.
-- Breach-site arena: hex floor with corruption veins that follow open rifts, RSF pylons, dead-city skyline, rubble, night sky.
+- Breach-site arena: hex floor with corruption veins that follow open rifts, RSF pylons, night sky, and seven sites to play it at (dead city, harbor, summit, stadium, salt flat, small town, farmland) chosen by id or world-map district.
 - Bracer wrist panel: operation, elapsed time, life force, rift hexes, score, multiplier, Chen caption.
 - World-space menu with dual lasers: main (next mission with its expected time and difficulty), Operations (difficulty row, six contracts with lock state, expected time, and best time at that difficulty), Training (the chamber) and Training Complete, Settings (own music, music, effects, haptics, reduced flashes, reset progress), pause, abort confirm, XR-suspended, results with Next Operation and, after a defeat, Review Training.
 - Mission progress, best scores, best times, and settings persist. Validation runner and GitHub Actions cover resources, rules, catalog, menus, own-music settings, rift stragglers, and the pink dodge.
@@ -94,10 +94,10 @@ Give the sweat a purpose. The Overseer is winning unless Strikers show up.
 
 ## Phase 8 — Location variety
 
-- [ ] Breach-site presets per operation: sky color, pylon state, city density and height, floor palette, rubble. All of it is already procedural.
+- [x] Breach-site presets. Built 2026-10-25: `BreachSites` (`Scripts/Presentation/breach_sites.gd`) holds each site's sky, fog, light, and ground past the pad, and `SiteDressing` builds its set dressing; `ArenaPresentation.apply_site(id)` swaps both before a deploy. The pad, pylons, hex floor, and veins are identical everywhere, and sites carry no in-world place names. The world map's districts resolve to sites through `BreachSites.DISTRICTS` (`BreachSites.ids()` lists every id); unknown ids play at the Dead City. Desktop stills of every site: `res://Scenes/Debug/site_capture.tscn`. Not yet headset-tested.
 - [x] Remove the training-chamber briefing text from the dead-city arena. Done 2026-10-13: the sign shows only inside the training chamber dome.
 - [x] Remove the sky crack. Done 2026-10-25: it did not fit the lore (the Breach came through microscopic rifts, not a tear in the sky). The sky is a plain breach night; in The Maw's turn it burns dark crimson behind the rift instead of the crack spreading.
-- [ ] Two or three distinct sites for the map: dead city, coastal breach, mountain relay. (The training chamber exists as a dome over the breach site; a real chamber interior could replace it.)
+- [x] Distinct sites for the map. Built 2026-10-25 from the approved mock-ups: dead city, harbor (container port at low tide), summit (RSF relay on a ridge), stadium (evacuation shelter), salt flat (radio telescope array), small town (square and main street), and farmland. Districts without a site of their own borrow the closest one; Airport, Quarry, University, Foundry, and Rail Yards may each earn their own later. (The training chamber exists as a dome over the breach site; a real chamber interior could replace it.)
 
 ## Phase 9 — Comfort and feel
 

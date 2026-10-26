@@ -26,7 +26,7 @@ static func city(seed_value: int = 11) -> MeshInstance3D:
 		var basis := Basis(Vector3.UP, rng.randf() * PI)
 		if rng.randf() < 0.12:
 			basis = basis * Basis(Vector3.BACK, rng.randf_range(-0.12, 0.12))
-		_tower(st, Transform3D(basis, center), size, rng.randf())
+		tower(st, Transform3D(basis, center), size, rng.randf())
 	var material := ShaderMaterial.new()
 	material.shader = CITY_SHADER
 	var city_mesh := MeshInstance3D.new()
@@ -135,7 +135,7 @@ static func _unshaded(color: Color) -> StandardMaterial3D:
 	return material
 
 ## Four walls and a roof. UV is facade meters, UV2.x the tower height, COLOR.r its seed.
-static func _tower(st: SurfaceTool, xform: Transform3D, size: Vector3, seed_value: float) -> void:
+static func tower(st: SurfaceTool, xform: Transform3D, size: Vector3, seed_value: float) -> void:
 	var hx := size.x * 0.5
 	var hz := size.z * 0.5
 	var h := size.y

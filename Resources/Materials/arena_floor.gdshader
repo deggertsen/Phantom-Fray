@@ -17,6 +17,15 @@ uniform vec4 rifts[4];
 uniform vec3 surge = vec3(0.0);
 // The boss turn's blackout: 1 puts the floor out entirely, so only the rift is lit.
 uniform float blackout = 0.0;
+// The breach site's own ground past the pad (BreachSites). The veins run over it all the same.
+uniform vec3 outer_color : source_color = vec3(0.022, 0.026, 0.04);
+uniform float outer_from = 9.0;
+// Ground patterns, each 0 (off) to 1: rows or mown stripes along X, water, salt crust, pitch lines.
+uniform float stripes = 0.0;
+uniform float stripe_period = 4.0;
+uniform float shimmer = 0.0;
+uniform float crust = 0.0;
+uniform float pitch = 0.0;
 
 varying vec3 world_pos;
 
@@ -40,6 +49,18 @@ void fragment() {
 	float d = length(p);
 	float grain = texture(noise_tex, p * 0.05).r;
 	vec3 col = ground_color + vec3(0.02, 0.022, 0.03) * grain;
+
+	vec3 site = outer_color + vec3(0.02, 0.022, 0.03) * grain;
+	site *= 1.0 + stripes * 0.35 * step(0.5, fract(p.x / stripe_period));
+	float ripple = texture(noise_tex, p * 0.09 + vec2(TIME * 0.011, TIME * 0.007)).r;
+	site += vec3(0.05, 0.1, 0.13) * shimmer * pow(ripple, 4.0);
+	vec2 warp = vec2(texture(noise_tex, p * 0.02).r, texture(noise_tex, p * 0.02 + 0.5).r) * 2.0;
+	site += vec3(0.05, 0.045, 0.055) * crust * smoothstep(0.45, 0.5, hex_edge(p * 0.22 + warp));
+	// A football pitch round the pad: centre circle, halfway line, touchlines and goal lines.
+	float paint = exp(-abs(d - 9.15) * 14.0) + step(9.3, d) * step(abs(p.y), 34.0) * exp(-abs(p.x) * 14.0);
+	paint += exp(-abs(abs(p.y) - 34.0) * 14.0) * step(abs(p.x), 52.5) + exp(-abs(abs(p.x) - 52.5) * 14.0) * step(abs(p.y), 34.0);
+	site += vec3(0.16, 0.17, 0.18) * pitch * clamp(paint, 0.0, 1.0);
+	col = mix(col, site, smoothstep(outer_from - 1.5, outer_from + 1.5, d));
 
 	float vein = 1.0 - abs(texture(noise_tex, p * 0.035 + vec2(0.37, 0.11)).r * 2.0 - 1.0);
 	vein = pow(vein, 22.0) * smoothstep(0.3, 0.6, texture(noise_tex, p * 0.011).r);

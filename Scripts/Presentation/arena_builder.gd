@@ -1,7 +1,8 @@
 extends Node3D
 
-## Dresses the breach site: the floor, the RSF pylons, the dead city and its rubble.
-## The floor's corruption veins follow whichever rifts are open and fade as they seal.
+## Dresses the breach site: the floor, the RSF pylons, and the site itself (BreachSites): its
+## sky, light, ground past the pad, and set dressing. The floor's corruption veins follow
+## whichever rifts are open and fade as they seal.
 
 const CYAN := Color(0.08, 0.7, 1.0, 1.0)
 const DARK := Color(0.012, 0.018, 0.04, 1.0)
@@ -26,6 +27,8 @@ var _sun_energy: float = 1.0
 var _ambient_energy: float = 1.0
 var _background_energy: float = 1.0
 var _fog_energy: float = 1.0
+var _site_id: String = ""
+var _dressing: Node3D
 
 func _ready() -> void:
 	add_to_group("ArenaPresentation")
@@ -34,13 +37,56 @@ func _ready() -> void:
 	_pylons = BreachCity.pylons()
 	add_child(_pylons)
 	_cache_boss_mood_targets()
-	add_child(BreachCity.city())
-	add_child(BreachCity.rubble())
+	apply_site(BreachSites.DEFAULT)
 	var vfx := CombatVFX.new()
 	vfx.name = "CombatVFX"
 	add_child(vfx)
 	_build_briefing_panel()
 	_warm_shaders.call_deferred()
+
+## Plays the arena at `id`: a site or a world-map district from BreachSites.ids(). Unknown ids
+## play at the Dead City. Swaps the set dressing and sets the sky, light, fog, and ground; the
+## pad, pylons, and veins stay as they are. Call it before a mission deploys, not mid-fight:
+## the sky's change re-renders the radiance map once.
+func apply_site(id: String) -> void:
+	var site := BreachSites.resolve(id)
+	if site == _site_id:
+		return
+	_site_id = site
+	if _dressing:
+		remove_child(_dressing)
+		_dressing.queue_free()
+	_dressing = SiteDressing.build(site)
+	add_child(_dressing)
+	_apply_look(BreachSites.look(site))
+
+## The site the arena is dressed as (a site id, never a district id).
+func site_id() -> String:
+	return _site_id
+
+func _apply_look(look: Dictionary) -> void:
+	if _floor_material:
+		_floor_material.set_shader_parameter("outer_color", look["outer"])
+		for key in ["outer_from", "stripes", "stripe_period", "shimmer", "crust", "pitch"]:
+			_floor_material.set_shader_parameter(key, look[key])
+	var sky := _sky_material()
+	if sky:
+		sky.set_shader_parameter("horizon_color", look["sky_horizon"])
+		sky.set_shader_parameter("zenith_color", look["sky_zenith"])
+		sky.set_shader_parameter("breach_color", look["sky_breach"])
+	# The boss turn lerps from these, and the blackout scales these energies.
+	_ambient_color = look["ambient"]
+	_ambient_energy = look["ambient_energy"]
+	_sun_color = look["sun"]
+	_sun_energy = look["sun_energy"]
+	if _environment:
+		_environment.ambient_light_color = _ambient_color
+		_environment.ambient_light_energy = _ambient_energy * (1.0 - _blackout)
+		_environment.fog_light_color = look["fog"]
+		_environment.fog_density = look["fog_density"]
+	if _sun:
+		_sun.light_color = _sun_color
+		_sun.light_energy = _sun_energy * (1.0 - _blackout)
 
 ## Compile combat shaders while the menu is up, not when the first phantom appears.
 func _warm_shaders() -> void:
