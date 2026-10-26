@@ -46,6 +46,35 @@ Pass condition: 1 to 5 identified within 10 seconds; 6 explained without help.
 - A clear at any difficulty unlocks the next site.
 - All three panels fit without scrolling or clipped text, in every state (new recruit, Full Resonance, all sealed).
 - After Phase 6: best score and medal are visible per site.
+- The left panel's World Map button opens the world front; Escape on desktop goes back.
+
+## World map
+
+Ask a player who has not seen the project, without coaching:
+
+1. Where is the war? Expected: the two hatched regions behind the magenta lines, with arrows showing where they push.
+2. Which cities can you fight in? Expected: the lit markers (cyan, amber, magenta); grey dots are safe and have no missions; dark dots are consumed.
+3. How do you play on easy? Expected: the EASY filter on the left, or a cyan (threatened) city.
+4. How do you start? Expected: point at a city, then **Open** on the right panel, then a district, then **Deploy**.
+
+Pass condition: all four within 15 seconds.
+
+- Every city is a button; the picked one carries a white ring and fills the right panel. Nothing starts until Open.
+- The filter dims cities that do not match; ALL is marked (●) on a fresh profile. The legend in the center header names the colors.
+- The right panel shows the city's state, difficulty, distance from the front, liberation, resistance, tier, and operations done. Open leads on a playable city; a safe or consumed city shows a disabled button with its difficulty word (NO MISSIONS) instead. The home city's card also has Breach Night, back to the six operations.
+- World liberation on the left is the average of every city's liberation. Chen's priority names the home city while it has missions.
+- The left panel has Training (leading for a new recruit) and Settings. Settings returns to the world map.
+- All three panels fit without scrolling or clipped text for the home city, a safe city, a consumed city, and an overrun city.
+
+## City operations
+
+- The center shows one section: up to three columns of districts, the first column open, the rest dashed and locked behind a magenta line one column right of the last seal. Sections are not labeled or numbered.
+- A sealed district carries a check and lights its edges cyan; the open ones after it have a cyan edge. Picking a district fills the right panel. Nothing starts until Deploy.
+- Deploy names the tier the city plays at (threatened = STANDARD or ASSIST, in danger = OPERATOR, overrun = FULL RESONANCE). Only a threatened city shows the STANDARD / ASSIST choice; it is remembered across cities and restarts.
+- The left panel has Back to the world map, the liberation percentage with the city's resistance word, a bar whose dashed part is the operation in progress, and three pips for this operation's seals.
+- After a seal, results say THE LINE MOVED (or OPERATION COMPLETE on the third), show the section with the old line faint and the new one lit, and lead with City Map; Replay and World sit below. After a defeat, Retry leads at the same tier, with City Map and World below.
+- The third seal advances the city: liberation rises by one operation's share, the next section opens, and the pips clear.
+- Replay after a seal does not reopen the sealed district; it returns to the city map.
 
 ## Training
 

@@ -32,6 +32,10 @@ func _run_validation() -> void:
 	_validate_maw_cycle_variety()
 	await _validate_maw_glimpse()
 	await _validate_phantom_hold()
+	_validate_world_map()
+	await _validate_world_menu()
+	_validate_district_sites()
+	await _validate_hold_the_line()
 	await _validate_punch_power()
 	await _validate_tutorial_flow()
 	await _validate_resonance_sweep()
@@ -358,6 +362,114 @@ func _validate_attack_window() -> void:
 	await _validate_green_arrival()
 	await _validate_possession(yellow_scene)
 
+## The war as data: states from distance to the fronts, sections that always have a way around
+## the boss, operations that count only when three districts along a path are sealed.
+func _validate_world_map() -> void:
+	var by_id := {}
+	for city in WorldMap.cities():
+		by_id[city["id"]] = city
+	var expected := {
+		"jakarta": WorldMap.STATE_CONSUMED, "chicago": WorldMap.STATE_CONSUMED, "mumbai": WorldMap.STATE_CONSUMED,
+		"tokyo": WorldMap.STATE_OVERRUN, "delhi": WorldMap.STATE_OVERRUN, "new_york": WorldMap.STATE_OVERRUN, "toronto": WorldMap.STATE_OVERRUN,
+		"tehran": WorldMap.STATE_DANGER, "beijing": WorldMap.STATE_DANGER, "denver": WorldMap.STATE_DANGER,
+		"portland": WorldMap.STATE_THREATENED, "cairo": WorldMap.STATE_THREATENED, "mexico_city": WorldMap.STATE_THREATENED,
+		"berlin": WorldMap.STATE_SAFE, "sao_paulo": WorldMap.STATE_SAFE, "moscow": WorldMap.STATE_SAFE, "lagos": WorldMap.STATE_SAFE,
+	}
+	for city_id in expected:
+		var state: String = by_id.get(city_id, {}).get("state", "")
+		if state != expected[city_id]:
+			failures.append("World map puts %s in state %s, expected %s" % [city_id, state, expected[city_id]])
+	if WorldMap.tier_for(WorldMap.STATE_OVERRUN) != DifficultyTier.FULL_RESONANCE or WorldMap.tier_for(WorldMap.STATE_DANGER) != DifficultyTier.OPERATOR:
+		failures.append("World map tiers do not follow the city state")
+	if WorldMap.tier_for(WorldMap.STATE_THREATENED) != DifficultyTier.STANDARD or WorldMap.tier_for(WorldMap.STATE_THREATENED, true) != DifficultyTier.ASSIST:
+		failures.append("A threatened city should play Standard, or Assist as the session choice")
+	if WorldMap.has_missions(WorldMap.STATE_SAFE) or WorldMap.has_missions(WorldMap.STATE_CONSUMED):
+		failures.append("Safe or consumed cities offer missions")
+	# Sections: shape, links, and a way around every Maw.
+	for city_id in ["portland", "tokyo", "tehran"]:
+		for index in 6:
+			var section := WorldMap.section(city_id, index)
+			var again := WorldMap.section(city_id, index)
+			if str(section) != str(again):
+				failures.append("Section %s/%d is not stable for its seed" % [city_id, index])
+			var nodes: Array = section["nodes"]
+			var columns := {}
+			for node in nodes:
+				columns[node["column"]] = columns.get(node["column"], []) + [node]
+			if columns.size() != 3:
+				failures.append("Section %s/%d does not have three columns" % [city_id, index])
+				continue
+			for column in 3:
+				var members: Array = columns[column]
+				if members.size() < 1 or members.size() > 3:
+					failures.append("Section %s/%d column %d has %d districts" % [city_id, index, column, members.size()])
+				var maws := 0
+				for member in members:
+					if member["kind"] == WorldMap.KIND_MAW:
+						maws += 1
+				if maws == members.size():
+					failures.append("Section %s/%d column %d is all Maws" % [city_id, index, column])
+				if column < 2:
+					for member in members:
+						var linked := false
+						for edge in section["edges"]:
+							if edge[0] == member["id"]:
+								linked = true
+						if not linked:
+							failures.append("Section %s/%d: %s links nowhere" % [city_id, index, member["name"]])
+				if column > 0:
+					for member in members:
+						var reached := false
+						for edge in section["edges"]:
+							if edge[1] == member["id"]:
+								reached = true
+						if not reached:
+							failures.append("Section %s/%d: %s cannot be reached" % [city_id, index, member["name"]])
+			var names := {}
+			for node in nodes:
+				names[node["name"]] = true
+			if names.size() != nodes.size():
+				failures.append("Section %s/%d repeats a district name" % [city_id, index])
+	# Progress: three seals along a path complete an operation and open the next section.
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.settings_path = "user://world_map_validation.cfg"
+	profile.clear_mission_progress()
+	var city_id := "portland"
+	var before := WorldMap.progress_for(profile, city_id)
+	var section := WorldMap.section(city_id, int(before["section"]))
+	var open := WorldMap.available_nodes(section, [])
+	if open.is_empty() or open.size() != (section["starts"] as Array).size():
+		failures.append("A fresh section should open exactly its first column")
+	var path: Array = []
+	var current := String(open[0])
+	for step in 3:
+		path.append(current)
+		var result := WorldMap.seal_node(profile, city_id, current)
+		if step < 2:
+			if result["operation_complete"]:
+				failures.append("Operation completed after %d seals" % (step + 1))
+			var next := WorldMap.available_nodes(section, result["sealed"])
+			if next.is_empty():
+				failures.append("No district opened after sealing %s" % current)
+				break
+			current = String(next[0])
+		elif not result["operation_complete"] or int(result["section"]) != int(before["section"]) + 1 or int(result["ops_done"]) != int(before["ops_done"]) + 1:
+			failures.append("Three seals did not complete the operation: %s" % [result])
+	var after := WorldMap.progress_for(profile, city_id)
+	if not (after["sealed"] as Array).is_empty():
+		failures.append("The new section started with districts already sealed")
+	var entry := WorldMap.city_entry(profile, city_id)
+	if int(entry.get("liberation", 0)) <= WorldMap.liberation(entry, int(before["ops_done"])):
+		failures.append("Liberation did not rise after a completed operation")
+	var mission := WorldMap.build_mission(entry, int(after["section"]), WorldMap.node_in(WorldMap.section(city_id, int(after["section"])), String(WorldMap.available_nodes(WorldMap.section(city_id, int(after["section"])), [])[0])), DifficultyTier.STANDARD)
+	if not WorldMap.is_world_mission(String(mission.get("id", ""))) or (mission.get("rifts", []) as Array).is_empty() or not mission.has("expected_minutes"):
+		failures.append("A district did not build a playable mission: %s" % [mission.get("id", "")])
+	var parsed := WorldMap.parse_mission_id(String(mission["id"]))
+	if parsed.get("city_id", "") != city_id or int(parsed.get("section", -1)) != int(after["section"]):
+		failures.append("World mission id does not round-trip: %s" % [mission["id"]])
+	profile.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://world_map_validation.cfg"))
+
 ## A player who steps out of the path is still the target. A phantom that flies past the head
 ## must come back for it at once, never float at the point where the head used to be.
 func _validate_turn_back(yellow_scene: PackedScene) -> void:
@@ -486,7 +598,7 @@ func _validate_city_menu() -> void:
 	right.show_site_detail(entries[2], DifficultyTier.STANDARD, false)
 	for _frame in 3:
 		await process_frame
-	if _button_actions(left) != ["training", "settings"]:
+	if _button_actions(left) != ["training", "world", "settings"]:
 		failures.append("The city's left panel offers %s" % [_button_actions(left)])
 	elif bool(_find_button(left, "TRAINING").get_meta(&"primary", false)):
 		failures.append("Training leads the city map for a trained Striker")
@@ -2461,6 +2573,200 @@ func _held_yellow(head: Node3D) -> ResonancePhantom:
 
 ## Punch power: rift damage rises from 0.85x for a 2 m/s punch to 1.3x for a 6 m/s one, the score
 ## does not move, and a soft lure hit still beats the hardest plain hit.
+## The world front and a city's section on the wrap panels: every city is a button, the filter
+## dims the rest, Open leads the city card, a district leads to Deploy at the city's tier, and
+## the results panels for a world mission fit.
+func _validate_world_menu() -> void:
+	var left := _wrap_panel(Vector2(VRWrapPanel.SIDE_PIXELS))
+	var center := _wrap_panel(Vector2(VRWrapPanel.CENTER_PIXELS))
+	var right := _wrap_panel(Vector2(VRWrapPanel.SIDE_PIXELS))
+	await process_frame
+	var profile = load("res://Scripts/Core/game_settings.gd").new()
+	profile.settings_path = "user://world_map_validation.cfg"
+	profile.clear_mission_progress()
+	var entries := WorldMap.city_entries(profile)
+	var home_id := WorldMap.home_city_id()
+	var world := {"liberation": WorldMap.world_liberation(profile), "filter": "hard", "home_id": home_id, "priority": {"body": "Portland. The front is about 2500 km out and it does not stop. Hold home ground.", "bonus": "EASY  •  LIGHT"}, "training_first": true, "assist": false}
+	var home: Dictionary = {}
+	var tokyo: Dictionary = {}
+	for entry in entries:
+		if entry["id"] == home_id:
+			home = entry
+		if entry["id"] == "tokyo":
+			tokyo = entry
+	left.show_world_status(world)
+	center.show_world_map(entries, home_id, "hard", home_id)
+	right.show_world_city(home, world)
+	for _frame in 3:
+		await process_frame
+	var filters := 0
+	for button in _buttons_under(left):
+		var action := String(button.get_meta(&"menu_action", &""))
+		if action.begins_with("world_filter_"):
+			filters += 1
+			if button.text.begins_with("●") != (action == "world_filter_hard"):
+				failures.append("The world filter does not mark %s" % action)
+	if filters != 4:
+		failures.append("The world panel offers %d filters" % filters)
+	if not _has_label(left, "%d%%" % WorldMap.world_liberation(profile)):
+		failures.append("The world panel does not show world liberation")
+	var cities := {}
+	for button in _buttons_under(center):
+		cities[String(button.get_meta(&"menu_action", &""))] = button
+	for entry in entries:
+		var button: Button = cities.get("world_city_%s" % entry["id"])
+		if button == null:
+			failures.append("The world map has no button for %s" % entry["id"])
+		elif (button.modulate.a < 0.99) != (String(entry.get("difficulty", "")) != "hard"):
+			failures.append("The hard filter dims %s wrongly" % entry["id"])
+	var picked := [&""]
+	center.action_requested.connect(func(action: StringName) -> void: picked[0] = action)
+	var tokyo_button: Button = cities.get("world_city_tokyo")
+	if tokyo_button == null or not center.activate_at_viewport_point(tokyo_button.get_global_rect().get_center()) or picked[0] != &"world_city_tokyo":
+		failures.append("Pointing at a city did not pick it")
+	var open := _find_button(right, "OPEN")
+	if open == null or open.disabled or not bool(open.get_meta(&"primary", false)):
+		failures.append("Open does not lead the home city's card")
+	if _find_button(right, "BREACH NIGHT") == null:
+		failures.append("The home city does not offer Breach Night")
+	_check_fits(left, "world panel")
+	_check_fits(right, "city card")
+	# A safe city has nothing to open; a consumed one neither.
+	for entry in entries:
+		if entry["state"] in [WorldMap.STATE_SAFE, WorldMap.STATE_CONSUMED]:
+			right.show_world_city(entry, world)
+			await process_frame
+			var button := _find_button(right, entry["difficulty_label"])
+			if button == null or not button.disabled:
+				failures.append("%s offers missions while %s" % [entry["name"], entry["state"]])
+			_check_fits(right, "%s card" % entry["name"])
+			break
+	# Tokyo, overrun: its section at Full Resonance.
+	var section := WorldMap.section("tokyo", int(tokyo["section"]))
+	var sealed: Array = tokyo["sealed"]
+	var starts := WorldMap.available_nodes(section, sealed)
+	var node := WorldMap.node_in(section, starts[0])
+	var tier := WorldMap.tier_for(String(tokyo["state"]), false)
+	var mission := WorldMap.build_mission(tokyo, int(tokyo["section"]), node, tier)
+	var city := {
+		"entry": tokyo, "section": section, "sealed": sealed, "selected_id": node["id"], "tier": tier, "assist": false,
+		"node": node, "status": WorldMap.node_status(section, sealed, node["id"]),
+		"kind_label": WorldMap.kind_label(node["kind"], tier), "kind_summary": WorldMap.kind_summary(node["kind"], tier),
+		"expected_minutes": DifficultyTier.apply_mission(mission, tier).get("expected_minutes", []), "best_seconds": 0.0,
+	}
+	left.show_operations_status(city)
+	center.show_operations_map(city)
+	right.show_district_detail(city)
+	for _frame in 3:
+		await process_frame
+	if tier != DifficultyTier.FULL_RESONANCE:
+		failures.append("Tokyo should play at Full Resonance, not %s" % tier)
+	if _find_button(left, "WORLD MAP") == null:
+		failures.append("The city panel has no way back to the world")
+	var districts := {}
+	for button in _buttons_under(center):
+		districts[String(button.get_meta(&"menu_action", &""))] = button
+	for candidate in section["nodes"]:
+		var button: Button = districts.get("node_%s" % candidate["id"])
+		if button == null:
+			failures.append("The section has no button for %s" % candidate["name"])
+		elif button.disabled != (not candidate["id"] in starts):
+			failures.append("District %s is %s" % [candidate["name"], "locked" if button.disabled else "open"])
+	var deploy := _find_button(right, "DEPLOY")
+	if deploy == null or deploy.disabled or not bool(deploy.get_meta(&"primary", false)) or not DifficultyTier.label(tier) in deploy.text:
+		failures.append("Deploy does not lead the district panel at the city's tier")
+	if _find_button(right, "ASSIST") != null:
+		failures.append("An overrun city offers Assist")
+	_check_fits(left, "operations panel")
+	_check_fits(right, "district panel")
+	# A threatened city offers the Assist choice.
+	for entry in entries:
+		if entry["state"] == WorldMap.STATE_THREATENED:
+			var easy := city.duplicate()
+			easy["entry"] = entry
+			easy["tier"] = WorldMap.tier_for(entry["state"], true)
+			right.show_district_detail(easy)
+			await process_frame
+			if _find_button(right, "ASSIST") == null or not "ASSIST" in _find_button(right, "DEPLOY").text:
+				failures.append("A threatened city with Assist on does not deploy at Assist")
+			_check_fits(right, "assisted district panel")
+			break
+	# Results after sealing the first district: the line moved, the city map leads.
+	var report := {
+		"outcome": &"victory", "score": 4200, "debrief": "Chen: sealed.", "seconds": 300.0, "previous_best": 0.0, "best_seconds": 300.0, "tier": tier,
+		"world": {
+			"entry": tokyo, "section": section, "sealed_before": [], "sealed_after": [node["id"]], "node": node,
+			"kind_label": city["kind_label"], "operation_complete": false, "liberation_before": tokyo["liberation"], "liberation_after": tokyo["liberation"],
+		},
+		"offer_training": false,
+	}
+	left.show_world_report(report)
+	center.show_world_results_map(report)
+	right.show_world_results_actions(report)
+	for _frame in 3:
+		await process_frame
+	if not _has_label(left, "THE LINE MOVED"):
+		failures.append("World results do not say the line moved")
+	var city_button := _find_button(right, "CITY MAP")
+	if city_button == null or not bool(city_button.get_meta(&"primary", false)):
+		failures.append("City map does not lead world results after a seal")
+	_check_fits(left, "world report")
+	_check_fits(right, "world results actions")
+	report["outcome"] = &"defeat"
+	report["offer_training"] = true
+	left.show_world_report(report)
+	right.show_world_results_actions(report)
+	for _frame in 2:
+		await process_frame
+	var retry := _find_button(right, "RETRY")
+	if retry == null or not bool(retry.get_meta(&"primary", false)):
+		failures.append("Retry does not lead world results after a defeat")
+	_check_fits(right, "world defeat actions")
+	for panel in [left, center, right]:
+		panel.get_parent().queue_free()
+	await process_frame
+
+## Every district name is a site id BreachSites knows, so no district silently plays at the Dead City.
+func _validate_district_sites() -> void:
+	var sites := BreachSites.site_ids()
+	for district in WorldMap.DISTRICT_NAMES:
+		var id := WorldMap.site_for(district)
+		if not BreachSites.DISTRICTS.has(id):
+			failures.append("District %s (%s) has no BreachSites entry" % [district, id])
+		elif not BreachSites.resolve(id) in sites:
+			failures.append("District %s resolves to unknown site %s" % [district, BreachSites.resolve(id)])
+	var mission := WorldMap.build_mission(WorldMap.city("tokyo"), 0, {"id": "s0n0", "name": "Harbor", "kind": WorldMap.KIND_SINGLE, "site": WorldMap.site_for("Harbor")}, DifficultyTier.STANDARD)
+	if BreachSites.resolve(String(mission.get("site", ""))) != "harbor":
+		failures.append("A Harbor district's mission does not play at the harbor")
+
+## Hold the line: a wave with hold_seconds drains its rift on its own while it is open.
+func _validate_hold_the_line() -> void:
+	var rift: RiftManager = (load("res://Scenes/Rifts/rift_manager.tscn") as PackedScene).instantiate()
+	root.add_child(rift)
+	await process_frame
+	rift.configure_wave({"health": 100, "interval": 60.0, "max_live": 0, "hold_seconds": 10.0})
+	rift.spawning_enabled = true
+	for _tick in 5:
+		rift._process(1.0)
+	if rift.rift_health != 50:
+		failures.append("Hold the line drained to %d after half its hold, not 50" % rift.rift_health)
+	for _tick in 5:
+		rift._process(1.0)
+	if rift.rift_health != 0:
+		failures.append("Hold the line did not drain its rift by the end of the hold (%d left)" % rift.rift_health)
+	var plain: RiftManager = (load("res://Scenes/Rifts/rift_manager.tscn") as PackedScene).instantiate()
+	root.add_child(plain)
+	await process_frame
+	plain.configure_wave({"health": 100, "interval": 60.0, "max_live": 0})
+	plain.spawning_enabled = true
+	for _tick in 5:
+		plain._process(1.0)
+	if plain.rift_health != 100:
+		failures.append("A wave without hold_seconds drained on its own")
+	rift.queue_free()
+	plain.queue_free()
+	await process_frame
+
 func _validate_punch_power() -> void:
 	var soft := await _committed_strike(2.0, false)
 	var hard := await _committed_strike(6.0, false)

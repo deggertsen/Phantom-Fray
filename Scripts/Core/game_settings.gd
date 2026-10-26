@@ -26,6 +26,13 @@ var difficulty_tier: String = DifficultyTier.DEFAULT
 ## They drive the break odds (MawBoss.decide_break) and persist with progress.
 var boss_maws_faced: int = 0
 var maws_without_boss: int = 0
+## The war map (WorldMap): city id -> {"ops_done", "section", "sealed"}. Only the player's own
+## operations; the seed each city starts with lives in WorldMap.CITIES.
+var world_progress: Dictionary = {}
+## The Striker's home city on the world map.
+var home_city: String = ""
+## Session assist: a threatened city plays at Assist instead of Standard. A preference, like the tier.
+var world_assist: bool = false
 var pending_mission_id: String = ""
 ## Where load_settings and save_settings read and write. Validation points it at a scratch file.
 var settings_path: String = SETTINGS_PATH
@@ -63,6 +70,11 @@ func load_settings() -> void:
 	boss_maws_faced = int(config.get_value("progress", "boss_maws_faced", boss_maws_faced))
 	maws_without_boss = int(config.get_value("progress", "maws_without_boss", maws_without_boss))
 	difficulty_tier = DifficultyTier.resolve(String(config.get_value("gameplay", "difficulty_tier", difficulty_tier)))
+	var saved_world: Variant = config.get_value("world", "progress", {})
+	if saved_world is Dictionary:
+		world_progress = saved_world
+	home_city = String(config.get_value("world", "home_city", home_city))
+	world_assist = bool(config.get_value("world", "assist", world_assist))
 	_snap_volumes(true)
 
 func save_settings() -> void:
@@ -81,6 +93,9 @@ func save_settings() -> void:
 	config.set_value("progress", "boss_maws_faced", boss_maws_faced)
 	config.set_value("progress", "maws_without_boss", maws_without_boss)
 	config.set_value("gameplay", "difficulty_tier", difficulty_tier)
+	config.set_value("world", "progress", world_progress)
+	config.set_value("world", "home_city", home_city)
+	config.set_value("world", "assist", world_assist)
 	config.save(settings_path)
 	apply_audio()
 
@@ -182,12 +197,32 @@ func record_maw(broke: bool) -> void:
 	maws_without_boss = 0 if broke else maws_without_boss + 1
 	save_settings()
 
+## World map progress for one city, as WorldMap.seal_node leaves it.
+func store_world_progress(city_id: String, progress: Dictionary) -> void:
+	if city_id == "":
+		return
+	world_progress[city_id] = progress.duplicate(true)
+	save_settings()
+
+func set_world_assist(enabled: bool) -> void:
+	if world_assist == enabled:
+		return
+	world_assist = enabled
+	save_settings()
+
+func set_home_city(city_id: String) -> void:
+	if city_id == home_city:
+		return
+	home_city = city_id
+	save_settings()
+
 func clear_mission_progress() -> void:
 	cleared_missions = PackedStringArray()
 	best_scores = {}
 	best_times = {}
 	boss_maws_faced = 0
 	maws_without_boss = 0
+	world_progress = {}
 	pending_mission_id = ""
 
 func reset_mission_progress() -> void:
