@@ -148,13 +148,22 @@ func _place_free_visuals() -> void:
 
 func _physics_process(_delta: float) -> void:
 	var pose := get_pose()
-	current_velocity = pose.linear_velocity if pose else Vector3.ZERO
+	current_velocity = _world_velocity(pose.linear_velocity) if pose else Vector3.ZERO
 	_strike_active = not hand_free and is_button_pressed("grip_click") and current_velocity.length() > punch_strength_threshold
 	if not _strike_active:
 		_last_target_id = 0
 		return
 	for body in punch_area.get_overlapping_bodies():
 		_try_strike(body)
+
+## XRPose.linear_velocity stays in the raw OpenXR play space: Godot turns the pose's transform by
+## XRServer's reference frame (moved by center_on_hmd on the Meta recenter) and the origin, but
+## not its velocity, so the velocity takes the same turn here or the fling goes sideways.
+## https://docs.godotengine.org/en/stable/classes/class_xrpose.html#class-xrpose-method-get-adjusted-transform
+func _world_velocity(play_space_velocity: Vector3) -> Vector3:
+	var origin := get_parent() as Node3D
+	var origin_basis := origin.global_basis if origin else Basis.IDENTITY
+	return origin_basis * (XRServer.get_reference_frame().basis * play_space_velocity) * XRServer.world_scale
 
 func _on_punch_area_body_entered(body: Node3D) -> void:
 	_try_strike(body)

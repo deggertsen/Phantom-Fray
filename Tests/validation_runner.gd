@@ -37,6 +37,7 @@ func _run_validation() -> void:
 	_validate_district_sites()
 	await _validate_hold_the_line()
 	await _validate_punch_power()
+	await _validate_punch_direction()
 	await _validate_tutorial_flow()
 	await _validate_resonance_sweep()
 	_validate_hand_tracking_probe()
@@ -2780,6 +2781,60 @@ func _validate_punch_power() -> void:
 		failures.append("A soft lure hit no longer beats the hardest plain hit")
 	if not is_equal_approx(float(soft.get("power", -1.0)), 0.0) or not is_equal_approx(float(hard.get("power", -1.0)), 1.0):
 		failures.append("Punch power is not carried on the result")
+
+## A headset whose head is turned a quarter turn left in the play space, for center_on_hmd.
+class TurnedHeadset extends XRInterfaceExtension:
+	func _get_name() -> StringName:
+		return &"ValidationTurnedHeadset"
+
+	func _get_camera_transform() -> Transform3D:
+		return Transform3D(Basis(Vector3.UP, PI / 2.0), Vector3(0.3, 1.6, -0.2))
+
+## A punch flings the phantom along the fist's world-space path, after a Meta recenter has turned
+## the reference frame (2026-10-26: every phantom flew to the player's left). The pose velocity is
+## given in the raw play space, as OpenXR reports it; the origin is turned too for the left hand.
+func _validate_punch_direction() -> void:
+	var previous := XRServer.primary_interface
+	var headset := TurnedHeadset.new()
+	XRServer.add_interface(headset)
+	XRServer.primary_interface = headset
+	XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT, true)
+	var to_world := XRServer.get_reference_frame().basis
+	var combat_script := load("res://Scripts/Player/hand_collision.gd") as GDScript
+	var punches := {
+		&"right": [Vector3(-0.6, 0.1, -0.8).normalized(), 0.0],
+		&"left": [Vector3(0.5, 0.2, -0.85).normalized(), PI / 3.0],
+	}
+	for side in punches:
+		var world_direction: Vector3 = punches[side][0]
+		var origin := XROrigin3D.new()
+		origin.rotate_y(punches[side][1])
+		root.add_child(origin)
+		var play_space := (origin.global_basis * to_world).inverse() * world_direction * 5.0
+		var tracker := XRControllerTracker.new()
+		tracker.name = StringName("validation_%s_fist" % side)
+		tracker.set_pose(&"default", Transform3D.IDENTITY, play_space, Vector3.ZERO, XRPose.XR_TRACKING_CONFIDENCE_HIGH)
+		tracker.set_input(&"grip_click", true)
+		XRServer.add_tracker(tracker)
+		var controller = combat_script.new()
+		controller.hand_id = side
+		controller.tracker = tracker.name
+		origin.add_child(controller)
+		var phantom := (load("res://Scenes/Phantoms/base_phantom.tscn") as PackedScene).instantiate() as Phantom
+		root.add_child(phantom)
+		await process_frame
+		phantom._phase = Phantom.Phase.COMMIT
+		controller._physics_process(1.0 / 60.0)
+		controller._try_strike(phantom)
+		var fling: Vector3 = phantom._knockback_velocity
+		if fling.length() < 1.0 or fling.normalized().dot(world_direction) < 0.99:
+			failures.append("A %s punch along %s flung the phantom along %s" % [side, world_direction.snapped(Vector3.ONE * 0.01), fling.normalized().snapped(Vector3.ONE * 0.01)])
+		phantom.queue_free()
+		origin.queue_free()
+		XRServer.remove_tracker(tracker)
+	XRServer.clear_reference_frame()
+	XRServer.primary_interface = previous
+	XRServer.remove_interface(headset)
 
 func _committed_strike(speed: float, on_lure: bool) -> Dictionary:
 	var yellow := (load("res://Scenes/Phantoms/yellow_phantom.tscn") as PackedScene).instantiate() as ResonancePhantom
