@@ -190,30 +190,80 @@ func _capture_world() -> void:
 	_center.show_operations_map(easy)
 	_right.show_district_detail(easy)
 	await _capture("city-operations-assist.png")
-	# Results after the first seal, and after a defeat.
+	# A Maw district's card at Full Resonance: it reads the same at every tier.
+	var maw := _maw_city(entries)
+	if not maw.is_empty():
+		_left.show_operations_status(maw)
+		_center.show_operations_map(maw)
+		_right.show_district_detail(maw)
+		await _capture("city-operations-maw.png")
+	# Results after the first seal are the city map: the next district picked, Deploy leading.
+	var after_seal := _city(tokyo, [first])
 	var report := {
-		"outcome": &"victory", "score": 9860, "debrief": "Chen: %s is sealed. The line moved. Pick the next district when you are ready." % city["node"]["name"],
+		"outcome": &"victory", "score": 9860, "debrief": "Chen: %s is shut. Pick the next district when you are ready." % city["node"]["name"],
 		"seconds": 287.0, "previous_best": 0.0, "best_seconds": 287.0, "tier": city["tier"],
 		"world": {
 			"entry": tokyo, "section": city["section"], "sealed_before": [], "sealed_after": [first], "node": city["node"],
-			"kind_label": city["kind_label"], "operation_complete": false, "liberation_before": tokyo["liberation"], "liberation_after": tokyo["liberation"],
+			"kind_label": city["kind_label"], "moved": true, "operation_complete": false, "liberation_before": tokyo["liberation"], "liberation_after": tokyo["liberation"],
 		},
+		"city": after_seal,
+		"picked": false,
 		"offer_training": false,
 	}
-	_left.show_world_report(report)
-	_center.show_world_results_map(report)
-	_right.show_world_results_actions(report)
+	_show_world_results(report)
 	await _capture("world-results.png")
+	# A defeat: Retry leads, the open districts still pressable.
 	report["outcome"] = &"defeat"
 	report["score"] = 3120
 	report["debrief"] = "Chen: The failsafe fired. %s held. Rest, then go back in." % city["node"]["name"]
 	report["offer_training"] = true
 	report["world"]["sealed_after"] = []
+	report["world"]["moved"] = false
+	report["city"] = _city(tokyo, [], false, first)
+	report["picked"] = false
+	_show_world_results(report)
+	await _capture("world-results-defeat.png")
+	# Another start district picked after the defeat: its card and Deploy replace Retry.
+	var starts: Array = city["section"]["starts"]
+	if starts.size() > 1:
+		report["city"] = _city(tokyo, [], false, String(starts[starts.size() - 1]))
+		report["picked"] = true
+		_show_world_results(report)
+		await _capture("world-results-picked.png")
+	# The third seal: the operation is complete and the next section is open.
+	var next_city := _city(tokyo, [], false, "", int(tokyo.get("section", 0)) + 1)
+	report = {
+		"outcome": &"victory", "score": 11240, "debrief": "Chen: %s is shut. Pick the next district when you are ready." % city["node"]["name"],
+		"seconds": 262.0, "previous_best": 287.0, "best_seconds": 262.0, "tier": city["tier"],
+		"world": {
+			"entry": tokyo, "section": city["section"], "sealed_before": [], "sealed_after": [], "node": city["node"],
+			"kind_label": city["kind_label"], "moved": true, "operation_complete": true, "liberation_before": tokyo["liberation"], "liberation_after": int(tokyo["liberation"]) + 4,
+		},
+		"city": next_city,
+		"picked": false,
+		"offer_training": false,
+	}
+	_show_world_results(report)
+	await _capture("world-results-operation.png")
+	profile.free()
+
+func _show_world_results(report: Dictionary) -> void:
 	_left.show_world_report(report)
 	_center.show_world_results_map(report)
 	_right.show_world_results_actions(report)
-	await _capture("world-results-defeat.png")
-	profile.free()
+
+## The first Maw district in an overrun city's early sections, as a picked city card.
+func _maw_city(entries: Array[Dictionary]) -> Dictionary:
+	for entry in entries:
+		if entry.get("state", "") != WorldMap.STATE_OVERRUN:
+			continue
+		for index in 4:
+			for node in WorldMap.section(String(entry["id"]), index)["nodes"]:
+				if node["kind"] == WorldMap.KIND_MAW:
+					var shown := entry.duplicate()
+					shown["section"] = index
+					return _city(shown, [], false, String(node["id"]), index)
+	return {}
 
 func _entry(entries: Array[Dictionary], city_id: String) -> Dictionary:
 	for entry in entries:
@@ -221,18 +271,22 @@ func _entry(entries: Array[Dictionary], city_id: String) -> Dictionary:
 			return entry
 	return {}
 
-## The shape GameFlowController._city_status builds, with the first open district picked.
-func _city(entry: Dictionary, sealed: Array, assist: bool = false) -> Dictionary:
-	var section := WorldMap.section(String(entry["id"]), int(entry.get("section", 0)))
+## The shape GameFlowController._city_status builds, with `selected` or the first open district
+## picked, in the entry's section or in `section_index`.
+func _city(entry: Dictionary, sealed: Array, assist: bool = false, selected: String = "", section_index: int = -1) -> Dictionary:
+	var index := section_index if section_index >= 0 else int(entry.get("section", 0))
+	var section := WorldMap.section(String(entry["id"]), index)
 	var open := WorldMap.available_nodes(section, sealed)
-	var node := WorldMap.node_in(section, open[0]) if not open.is_empty() else {}
+	if selected == "":
+		selected = String(open[0]) if not open.is_empty() else ""
+	var node := WorldMap.node_in(section, selected)
 	var tier := WorldMap.tier_for(String(entry.get("state", "")), assist)
 	var kind := String(node.get("kind", WorldMap.KIND_SINGLE))
-	var mission := WorldMap.build_mission(entry, int(entry.get("section", 0)), node, tier)
+	var mission := WorldMap.build_mission(entry, index, node, tier)
 	return {
 		"entry": entry, "section": section, "sealed": sealed, "selected_id": node.get("id", ""), "tier": tier, "assist": assist,
 		"node": node, "status": WorldMap.node_status(section, sealed, String(node.get("id", ""))),
-		"kind_label": WorldMap.kind_label(kind, tier), "kind_summary": WorldMap.kind_summary(kind, tier),
+		"kind_label": WorldMap.kind_label(kind), "kind_summary": WorldMap.kind_summary(kind),
 		"expected_minutes": DifficultyTier.apply_mission(mission, tier).get("expected_minutes", []), "best_seconds": 0.0,
 	}
 

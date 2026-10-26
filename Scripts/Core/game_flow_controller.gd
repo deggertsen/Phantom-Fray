@@ -59,6 +59,8 @@ var _zoom_from_city_id: String = ""
 var _selected_node_id: String = ""
 ## What the last world mission did to the war, for results: see _finish_world_mission.
 var _world_result: Dictionary = {}
+## A world mission's results are the city map: a district picked there since the round ended.
+var _results_picked: bool = false
 var _menu_input_armed: bool = false
 var _results_pointer_warmup: float = 0.0
 var _results_action_locked: bool = false
@@ -129,8 +131,8 @@ func _process(delta: float) -> void:
 	if _state == STATE_RESULTS and _results_pointer_warmup > 0.0:
 		_results_pointer_warmup -= delta
 		if _results_pointer_warmup <= 0.0:
-			_sync_menu_trigger_baseline()
-			_menu_input_armed = true
+			# A trigger still held from the fight arms nothing until it lets go.
+			_arm_menu_input_after_release()
 	if _presenter != null and _presenter.is_menu_visible():
 		_hold_menu_pointers()
 	_poll_menu_trigger()
@@ -160,7 +162,11 @@ func _on_menu_action(action: StringName) -> void:
 	if _state == STATE_WORLD and _opening_city_id != "":
 		return
 	_menu_action_cooldown = 0.45
-	if _state != STATE_RESULTS:
+	# Results take one press each behind _results_action_locked; picking and deploying a district
+	# from a world mission's results are menu presses like the city map's, so a trigger held from
+	# the fight waits for its release.
+	var district_press := String(action).begins_with("node_") or action == &"deploy"
+	if _state != STATE_RESULTS or district_press:
 		if not _menu_input_armed:
 			return
 		_menu_input_armed = false
@@ -192,11 +198,21 @@ func _on_menu_action(action: StringName) -> void:
 		return
 	if String(action).begins_with("node_"):
 		_selected_node_id = String(action).trim_prefix("node_")
-		_show_city_operations()
+		if _state == STATE_RESULTS:
+			_results_picked = true
+			_show_results()
+		else:
+			_show_city_operations()
 		return
 	match action:
 		&"deploy":
-			if _state == STATE_CITY:
+			if _state == STATE_RESULTS:
+				if _results_action_locked:
+					return
+				_results_action_locked = true
+				_leave_results()
+				_start_world_mission()
+			elif _state == STATE_CITY:
 				_start_world_mission()
 			else:
 				_start_mission(_selected_site_id)
@@ -209,16 +225,13 @@ func _on_menu_action(action: StringName) -> void:
 		&"world_open":
 			_selected_node_id = ""
 			_open_selected_city()
-		&"results_world", &"results_city":
+		&"results_world":
 			if _results_action_locked:
 				return
 			_results_action_locked = true
 			_leave_results()
 			_selected_node_id = ""
-			if action == &"results_world":
-				_show_world_map()
-			else:
-				_show_city_operations()
+			_show_world_map()
 			_menu_input_armed = false
 			_sync_menu_trigger_baseline()
 			_arm_menu_input_after_release()
@@ -227,7 +240,10 @@ func _on_menu_action(action: StringName) -> void:
 		&"assist_on", &"assist_off":
 			if _settings:
 				_settings.set_world_assist(action == &"assist_on")
-			_show_city_operations()
+			if _state == STATE_RESULTS:
+				_show_results()
+			else:
+				_show_city_operations()
 		&"training":
 			_start_training()
 		&"results_training":
@@ -236,7 +252,7 @@ func _on_menu_action(action: StringName) -> void:
 			_results_action_locked = true
 			_start_training()
 		&"settings":
-			_show_settings(_state if _state in [STATE_WORLD, STATE_CITY] else STATE_MENU)
+			_show_settings(_state if _state in [STATE_WORLD, STATE_CITY, STATE_RESULTS] else STATE_MENU)
 		&"music_down":
 			if _settings:
 				_settings.adjust_music(-1)
@@ -348,6 +364,8 @@ func _arm_menu_input_after_release() -> void:
 		if controller and _trigger_down(controller):
 			get_tree().create_timer(0.1).timeout.connect(_arm_menu_input_after_release)
 			return
+	# The release just waited out is not a press.
+	_sync_menu_trigger_baseline()
 	_menu_input_armed = true
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -551,8 +569,8 @@ func _city_status(entry: Dictionary) -> Dictionary:
 		"assist": assist,
 		"node": node,
 		"status": WorldMap.node_status(section, sealed, _selected_node_id) if not node.is_empty() else "locked",
-		"kind_label": WorldMap.kind_label(kind, tier),
-		"kind_summary": WorldMap.kind_summary(kind, tier),
+		"kind_label": WorldMap.kind_label(kind),
+		"kind_summary": WorldMap.kind_summary(kind),
 		"expected_minutes": DifficultyTier.apply_mission(mission, tier).get("expected_minutes", []) if not mission.is_empty() else [],
 		"best_seconds": _settings.best_time(_world_record_id(String(entry["id"]), kind), tier) if _settings else 0.0,
 	}
@@ -595,6 +613,20 @@ func _world_mission(mission_id: String) -> Dictionary:
 	var tier := WorldMap.tier_for(String(entry.get("state", "")), _settings != null and _settings.world_assist)
 	return WorldMap.build_mission(entry, int(parsed["section"]), node, tier)
 
+## The mission for any district the city has played, sealed or open, in its section then. {} for
+## a city with no missions or a district that never existed.
+func _replay_mission(mission_id: String) -> Dictionary:
+	var parsed := WorldMap.parse_mission_id(mission_id)
+	if parsed.is_empty():
+		return {}
+	var entry := WorldMap.city_entry(_settings, String(parsed["city_id"]))
+	if entry.is_empty() or not entry.get("playable", false) or int(parsed["section"]) > int(entry.get("section", 0)):
+		return {}
+	var node := WorldMap.node_in(WorldMap.section(String(entry["id"]), int(parsed["section"])), String(parsed["node_id"]))
+	if node.is_empty():
+		return {}
+	return WorldMap.build_mission(entry, int(parsed["section"]), node, _active_tier)
+
 ## Dresses the arena for a breach site or district before a deploy. ArenaPresentation decides
 ## what the id means and falls back to the Dead City; nothing happens without that method.
 func _apply_site(site_id: String) -> void:
@@ -603,6 +635,8 @@ func _apply_site(site_id: String) -> void:
 		arena.call("apply_site", site_id)
 
 ## Records a world mission's victory and credits the seal. Returns the report's "world" block.
+## A replay of a district already sealed, or of one in a section the city has moved past, keeps
+## its score and time but moves nothing.
 func _finish_world_mission(victory: bool, score: int) -> Dictionary:
 	var parsed := WorldMap.parse_mission_id(_active_mission_id)
 	if parsed.is_empty():
@@ -612,13 +646,16 @@ func _finish_world_mission(victory: bool, score: int) -> Dictionary:
 	var section := WorldMap.section(city_id, int(parsed["section"]))
 	var node := WorldMap.node_in(section, String(parsed["node_id"]))
 	var kind := String(node.get("kind", WorldMap.KIND_SINGLE))
-	var sealed_before: Array = Array(before.get("sealed", [])).duplicate()
+	var same_section := int(before.get("section", 0)) == int(parsed["section"])
+	var sealed_before: Array = Array(before.get("sealed", [])).duplicate() if same_section else []
+	var moved := victory and same_section and not String(parsed["node_id"]) in sealed_before
 	var result := {"operation_complete": false, "sealed": sealed_before}
-	if victory and _settings and int(before.get("section", 0)) == int(parsed["section"]):
+	if victory and _settings:
 		_previous_best_time = _settings.best_time(_world_record_id(city_id, kind), _active_tier)
 		_settings.record_score(_world_record_id(city_id, kind), score, _active_tier)
 		_settings.record_time(_world_record_id(city_id, kind), _last_seconds, _active_tier)
-		result = WorldMap.seal_node(_settings, city_id, String(parsed["node_id"]))
+		if moved:
+			result = WorldMap.seal_node(_settings, city_id, String(parsed["node_id"]))
 	var after := WorldMap.city_entry(_settings, city_id)
 	return {
 		"entry": after,
@@ -626,7 +663,8 @@ func _finish_world_mission(victory: bool, score: int) -> Dictionary:
 		"sealed_before": sealed_before,
 		"sealed_after": result.get("sealed", sealed_before),
 		"node": node,
-		"kind_label": WorldMap.kind_label(kind, _active_tier),
+		"kind_label": WorldMap.kind_label(kind),
+		"moved": moved,
 		"operation_complete": result.get("operation_complete", false),
 		"liberation_before": before.get("liberation", 0),
 		"liberation_after": after.get("liberation", 0),
@@ -799,8 +837,14 @@ func _on_round_finished(outcome: StringName, score: int) -> void:
 	_next_mission_id = ""
 	_sealed_before = -1
 	_world_result = {}
+	_results_picked = false
 	if WorldMap.is_world_mission(_active_mission_id):
 		_world_result = _finish_world_mission(outcome == &"victory", score)
+		# Results are the city map: after a seal it picks the first open district, after a
+		# defeat the one that held.
+		var parsed := WorldMap.parse_mission_id(_active_mission_id)
+		_selected_city_id = String(parsed.get("city_id", _selected_city_id))
+		_selected_node_id = "" if outcome == &"victory" else String(parsed.get("node_id", ""))
 	# A debug drill or shortcut is not campaign progress, so it records no clear, score, or time.
 	# Records are kept per tier; a clear at any tier unlocks the next operation.
 	elif outcome == &"victory" and _settings and not _debug_run and not MissionCatalog.is_debug_mission(_active_mission_id):
@@ -833,7 +877,11 @@ func _results_report() -> Dictionary:
 		var world_node: Dictionary = _world_result.get("node", {})
 		var city_id := String((_world_result.get("entry", {}) as Dictionary).get("id", ""))
 		var kind := String(world_node.get("kind", WorldMap.KIND_SINGLE))
+		var entry := WorldMap.city_entry(_settings, city_id)
 		return {
+			# The city map as it stands now, for the pressable section and the district card.
+			"city": _city_status(entry) if entry.get("playable", false) else {},
+			"picked": _results_picked,
 			"outcome": _last_outcome,
 			"score": _last_score,
 			"debrief": _last_debrief,
@@ -900,7 +948,10 @@ func _poll_menu_trigger() -> void:
 func _action_belongs_to_state(action: StringName) -> bool:
 	match _state:
 		STATE_RESULTS:
-			return action in [&"retry", &"next_mission", &"results_menu", &"results_training", &"results_city", &"results_world"]
+			# A world mission's results are its city map: districts, Deploy, and Assist work there.
+			if not _world_result.is_empty() and (String(action).begins_with("node_") or action in [&"deploy", &"assist_on", &"assist_off"]):
+				return true
+			return action in [&"retry", &"next_mission", &"results_menu", &"results_training", &"results_world", &"settings"]
 		STATE_WORLD:
 			return String(action).begins_with("world_city_") or String(action).begins_with("world_filter_") or String(action).begins_with("world_region_") or action in [&"world_open", &"world_back", &"campaign", &"training", &"settings"]
 		STATE_CITY:
@@ -953,8 +1004,11 @@ func _activate_menu_from_controller(controller: XRController3D) -> void:
 
 func _restart_mission(mission_id: String) -> void:
 	if WorldMap.is_world_mission(mission_id):
-		# Replay after a seal reopens nothing: the district is sealed, so the city map takes over.
+		# Retry plays an open district again; Replay after a seal plays the sealed one for its
+		# time, and _finish_world_mission credits nothing twice.
 		var world_mission := _world_mission(mission_id)
+		if world_mission.is_empty():
+			world_mission = _replay_mission(mission_id)
 		if world_mission.is_empty() or _round == null:
 			_results_action_locked = false
 			_selected_node_id = ""

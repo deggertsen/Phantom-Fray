@@ -72,7 +72,7 @@ const TIERS := {
 	# because nothing in the fiction would be swinging it.
 	FULL_RESONANCE: {
 		"label": "FULL RESONANCE",
-		"blurb": "Bosses that demand squats, jumps, and push-ups. Clear room to jump.",
+		"blurb": "The heaviest fights: squats, jumps, and push-ups. Clear room to jump.",
 		"speed": 1.0,
 		"telegraph": 1.0,
 		"health": 1.1,

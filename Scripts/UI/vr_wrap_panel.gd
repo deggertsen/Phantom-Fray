@@ -731,13 +731,17 @@ func show_operations_map(city: Dictionary) -> void:
 	row.add_child(_label("□ OPEN", 14, COLOR_TEXT, true))
 	row.add_child(_label("▨ BEHIND THE LINE", 14, COLOR_MUTED, true))
 	_content.add_child(header)
+	_content.add_child(_operations_map(city.get("section", {}), sealed, String(city.get("selected_id", "")), true))
+
+## A section's districts, pressable when interactive. See CityOperationsMap.show_section.
+func _operations_map(section: Dictionary, sealed: Array, selected_id: String, interactive: bool, highlight_id: String = "", sealed_before: int = -1) -> CityOperationsMap:
 	var map := CityOperationsMap.new()
 	map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	map.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	map.node_pressed.connect(_on_action_pressed)
 	map.node_hovered.connect(_on_button_hovered.bind(null))
-	map.show_section(city.get("section", {}), sealed, String(city.get("selected_id", "")), String(city.get("tier", DifficultyTier.STANDARD)), true)
-	_content.add_child(map)
+	map.show_section(section, sealed, selected_id, interactive, highlight_id, sealed_before)
+	return map
 
 ## Right: the picked district and Deploy at the city's tier.
 func show_district_detail(city: Dictionary) -> void:
@@ -783,9 +787,15 @@ func show_district_detail(city: Dictionary) -> void:
 		_content.add_child(button)
 
 # --- World results -------------------------------------------------------------------------
-# report["world"]: entry (after), section, sealed_before (Array), sealed_after (Array), node,
-# operation_complete (bool), liberation_before, liberation_after, next_section (Dictionary or {}).
+# A world mission's results are its city map with the outcome on top: the section as it stands
+# now is pressable, and picking a district puts its card and Deploy on the right.
+# report["world"]: entry (after), section (the one played), sealed_before (Array), sealed_after
+# (Array), node, kind_label, moved (the seal counted), operation_complete (bool),
+# liberation_before, liberation_after.
+# report["city"]: the city map now, as show_operations_status takes it, or {} for a city with no
+# missions. report["picked"]: a district was picked since the round ended.
 
+## Left: what the round did to the city, the best time, then Replay, World, and Settings.
 func show_world_report(report: Dictionary) -> void:
 	var victory: bool = report.get("outcome", &"") == &"victory"
 	var world: Dictionary = report.get("world", {})
@@ -805,16 +815,26 @@ func show_world_report(report: Dictionary) -> void:
 		_content.add_child(_label("UP FROM %d%%" % before, 16, COLOR_MUTED, true))
 	var sealed_after: Array = world.get("sealed_after", [])
 	var complete: bool = world.get("operation_complete", false)
-	var headline := "OPERATION COMPLETE" if complete else ("THE LINE MOVED" if victory else "THE BREACH HELD")
-	_content.add_child(_label(headline, 24, COLOR_GREEN if victory else COLOR_RED, true))
-	var body := ""
-	var node: Dictionary = world.get("node", {})
+	var moved: bool = world.get("moved", victory)
+	var headline := "THE BREACH HELD"
 	if complete:
-		body = "%s sealed the operation. New ground opened ahead; keep going or stop here." % node.get("name", "The district")
+		headline = "OPERATION COMPLETE"
+	elif moved:
+		headline = "THE LINE MOVED"
 	elif victory:
-		body = "%s is sealed. %d of 3 for this operation." % [node.get("name", "The district"), sealed_after.size()]
-	else:
-		body = "The failsafe fired. %s held, and the line did not move." % node.get("name", "The district")
+		headline = "THE LINE HELD"
+	var headline_color := COLOR_RED
+	if victory:
+		headline_color = COLOR_GREEN if moved or complete else COLOR_TEXT
+	_content.add_child(_label(headline, 24, headline_color, true))
+	var district := String((world.get("node", {}) as Dictionary).get("name", "The district"))
+	var body := "The failsafe fired. %s held, and the line did not move." % district
+	if complete:
+		body = "%s sealed the operation. New ground is open on the map." % district
+	elif moved:
+		body = "%s is sealed. %d of 3 for this operation. Pick the next district on the map." % [district, sealed_after.size()]
+	elif victory:
+		body = "%s was already sealed. Your time still counts." % district
 	_content.add_child(_wrapped(body, 16, COLOR_MUTED))
 	_content.add_child(_divider())
 	var best := float(report.get("best_seconds", 0.0))
@@ -822,11 +842,25 @@ func show_world_report(report: Dictionary) -> void:
 		_content.add_child(_wrapped("YOUR BEST  •  %s AT %s" % [String(world.get("kind_label", "")), DifficultyTier.label(String(report.get("tier", "")))], 14, COLOR_MUTED, true))
 		_content.add_child(_label(_clock(best), 34, COLOR_TEXT, true))
 	_content.add_child(_spacer())
+	# After a defeat Retry leads on the right; after a seal, Replay plays the district for its time.
+	if victory:
+		var replay := _make_action_button(&"retry", "↻  REPLAY %s" % district.to_upper(), COLOR_CYAN, Vector2(0, 50))
+		_compact_menu_button(replay, 50.0)
+		_content.add_child(replay)
+	var world_button := _make_action_button(&"results_world", "◎  WORLD", COLOR_MAGENTA, Vector2(0, 50))
+	var settings := _make_action_button(&"settings", "⌁  SETTINGS", COLOR_BLUE, Vector2(0, 50))
+	for button in [world_button, settings]:
+		_compact_menu_button(button, 50.0)
+		_tight_sides(button, 8)
+	_content.add_child(_button_pair(world_button, settings))
 	_content.add_child(_hint())
 
+## Center: the outcome, time and score over the city's section as it stands now. Its open
+## districts are pressable; after a seal the line shows where it moved from.
 func show_world_results_map(report: Dictionary) -> void:
 	var victory: bool = report.get("outcome", &"") == &"victory"
 	var world: Dictionary = report.get("world", {})
+	var city: Dictionary = report.get("city", {})
 	var accent := COLOR_GREEN if victory else COLOR_RED
 	_begin_wrap(accent, 0)
 	var header := MarginContainer.new()
@@ -840,7 +874,15 @@ func show_world_results_map(report: Dictionary) -> void:
 	var outcome := VBoxContainer.new()
 	outcome.add_theme_constant_override("separation", 2)
 	outcome.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var subtitle := "DISTRICT SEALED" if victory else "LIFE FORCE DEPLETED"
+	var complete: bool = world.get("operation_complete", false)
+	var moved: bool = world.get("moved", victory)
+	var subtitle := "LIFE FORCE DEPLETED"
+	if complete:
+		subtitle = "OPERATION COMPLETE"
+	elif moved:
+		subtitle = "DISTRICT SEALED"
+	elif victory:
+		subtitle = "ALL RIFTS SEALED"
 	if report.has("tier"):
 		subtitle += "  •  %s" % DifficultyTier.label(String(report.get("tier", "")))
 	outcome.add_child(_label(subtitle, 16, accent, true))
@@ -869,17 +911,21 @@ func show_world_results_map(report: Dictionary) -> void:
 	score_stack.add_child(score_note)
 	row.add_child(score_stack)
 	_content.add_child(header)
-	var map := CityOperationsMap.new()
-	map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var sealed_before: Array = world.get("sealed_before", [])
-	var shown_sealed: Array = world.get("sealed_after", sealed_before)
-	# A completed operation shows the section it finished, fully sealed, before the next opens.
-	if world.get("operation_complete", false):
-		shown_sealed = sealed_before.duplicate()
-		shown_sealed.append(String((world.get("node", {}) as Dictionary).get("id", "")))
-	map.show_section(world.get("section", {}), shown_sealed, "", String(report.get("tier", DifficultyTier.STANDARD)), false, String((world.get("node", {}) as Dictionary).get("id", "")) if victory else "", sealed_before.size() if victory else -1)
-	_content.add_child(map)
+	if city.is_empty():
+		_content.add_child(_operations_map(world.get("section", {}), world.get("sealed_after", []), "", false))
+	else:
+		# A completed operation has already opened the next section, which shows fresh. Otherwise
+		# the district just sealed is ringed and the old line drawn faint behind the new one.
+		var traced := moved and not complete
+		var sealed_before: Array = world.get("sealed_before", [])
+		_content.add_child(_operations_map(
+			city.get("section", {}),
+			city.get("sealed", []),
+			String(city.get("selected_id", "")),
+			true,
+			String((world.get("node", {}) as Dictionary).get("id", "")) if traced else "",
+			sealed_before.size() if traced else -1
+		))
 	var debrief := String(report.get("debrief", ""))
 	if debrief != "":
 		var strip := MarginContainer.new()
@@ -893,38 +939,33 @@ func show_world_results_map(report: Dictionary) -> void:
 		strip.add_child(line)
 		_content.add_child(strip)
 
-## Right: after a seal, back to the city to pick the next district; after a defeat, retry leads.
+## Right: the picked district and Deploy, as on the city map. After a defeat, until a district
+## is picked, Retry leads instead, at the tier the round was played at.
 func show_world_results_actions(report: Dictionary) -> void:
 	var victory: bool = report.get("outcome", &"") == &"victory"
+	var city: Dictionary = report.get("city", {})
+	if not city.is_empty() and (victory or report.get("picked", false)):
+		show_district_detail(city)
+		return
 	var tier := String(report.get("tier", DifficultyTier.STANDARD))
 	var world: Dictionary = report.get("world", {})
 	var entry: Dictionary = world.get("entry", {})
 	var node: Dictionary = world.get("node", {})
 	var tier_color := _tier_color(tier)
 	_begin_wrap(tier_color)
-	var complete: bool = world.get("operation_complete", false)
-	var eyebrow := "NEXT" if victory else "TRY AGAIN"
-	_content.add_child(_label(eyebrow, 16, COLOR_MUTED, true))
-	_content.add_child(_wrapped(String(entry.get("name", "")), 30, COLOR_TEXT, true))
-	var line := "New ground is open. Pick the next district." if complete else ("Pick a connected district to continue the operation." if victory else "%s held. The operation continues where it stood." % node.get("name", "The district"))
-	if entry.get("liberated", false):
-		line = "The city is liberated."
-	_content.add_child(_wrapped(line, 16, Color("c4d3e4")))
+	if victory:
+		# A city with nothing left to deploy to.
+		_content.add_child(_label("NEXT", 16, COLOR_MUTED, true))
+		_content.add_child(_wrapped(String(entry.get("name", "")), 30, COLOR_TEXT, true))
+		_content.add_child(_wrapped("Nothing is open here now. Pick another city on the world map.", 16, Color("c4d3e4")))
+		_content.add_child(_spacer())
+		_content.add_child(_make_solid_button(&"results_world", "WORLD MAP", COLOR_MAGENTA, 92.0))
+		return
+	_content.add_child(_wrapped("TRY AGAIN  •  %s" % String(entry.get("name", "")).to_upper(), 16, COLOR_MUTED, true))
+	_content.add_child(_wrapped(String(node.get("name", "")), 30, COLOR_TEXT, true))
+	_content.add_child(_wrapped("%s held. Go again, or pick another open district on the map." % node.get("name", "The district"), 16, Color("c4d3e4")))
 	_content.add_child(_wrapped("%s  •  %s" % [String(world.get("kind_label", "")), DifficultyTier.label(tier)], 16, COLOR_TEXT, true))
 	_content.add_child(_spacer())
-	if victory:
-		_content.add_child(_make_solid_button(&"results_city", "CITY MAP\n%s" % String(entry.get("name", "")).to_upper(), tier_color, 92.0))
-		var retry := _make_action_button(&"retry", "REPLAY", COLOR_CYAN, Vector2(0, 60))
-		var world_button := _make_action_button(&"results_world", "WORLD", COLOR_BLUE, Vector2(0, 60))
-		_tight_sides(retry, 8)
-		_tight_sides(world_button, 8)
-		_content.add_child(_button_pair(retry, world_button))
-	else:
-		_content.add_child(_make_solid_button(&"retry", "RETRY\n%s" % DifficultyTier.label(tier), tier_color, 92.0))
-		if report.get("offer_training", false):
-			_content.add_child(_make_action_button(&"results_training", "◈  REVIEW TRAINING", COLOR_VIOLET, Vector2(0, 60)))
-		var city := _make_action_button(&"results_city", "CITY MAP", COLOR_CYAN, Vector2(0, 60))
-		var world_button := _make_action_button(&"results_world", "WORLD", COLOR_BLUE, Vector2(0, 60))
-		_tight_sides(city, 8)
-		_tight_sides(world_button, 8)
-		_content.add_child(_button_pair(city, world_button))
+	_content.add_child(_make_solid_button(&"retry", "RETRY\n%s" % DifficultyTier.label(tier), tier_color, 92.0))
+	if report.get("offer_training", false):
+		_content.add_child(_make_action_button(&"results_training", "◈  REVIEW TRAINING", COLOR_VIOLET, Vector2(0, 60)))
