@@ -34,6 +34,7 @@ func _run_validation() -> void:
 	await _validate_phantom_hold()
 	_validate_world_map()
 	await _validate_world_menu()
+	_validate_district_sites()
 	await _validate_hold_the_line()
 	await _validate_punch_power()
 	await _validate_tutorial_flow()
@@ -2724,6 +2725,19 @@ func _validate_world_menu() -> void:
 	for panel in [left, center, right]:
 		panel.get_parent().queue_free()
 	await process_frame
+
+## Every district name is a site id BreachSites knows, so no district silently plays at the Dead City.
+func _validate_district_sites() -> void:
+	var sites := BreachSites.site_ids()
+	for district in WorldMap.DISTRICT_NAMES:
+		var id := WorldMap.site_for(district)
+		if not BreachSites.DISTRICTS.has(id):
+			failures.append("District %s (%s) has no BreachSites entry" % [district, id])
+		elif not BreachSites.resolve(id) in sites:
+			failures.append("District %s resolves to unknown site %s" % [district, BreachSites.resolve(id)])
+	var mission := WorldMap.build_mission(WorldMap.city("tokyo"), 0, {"id": "s0n0", "name": "Harbor", "kind": WorldMap.KIND_SINGLE, "site": WorldMap.site_for("Harbor")}, DifficultyTier.STANDARD)
+	if BreachSites.resolve(String(mission.get("site", ""))) != "harbor":
+		failures.append("A Harbor district's mission does not play at the harbor")
 
 ## Hold the line: a wave with hold_seconds drains its rift on its own while it is open.
 func _validate_hold_the_line() -> void:
