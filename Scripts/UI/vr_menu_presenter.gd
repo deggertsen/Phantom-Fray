@@ -2,6 +2,8 @@ extends Node3D
 class_name VRMenuPresenter
 
 signal action_requested(action: StringName)
+## The world map's view reached where it was easing to: see zoom_world_to_city.
+signal world_zoom_settled
 
 @export var panel_distance: float = 2.45
 @export var panel_height_offset: float = -0.02
@@ -80,12 +82,17 @@ func show_city_map(entries: Array[Dictionary], selected_id: String, tier_id: Str
 func show_world_map(world: Dictionary, entries: Array[Dictionary], selected_id: String) -> void:
 	_show(true)
 	_left_panel.show_world_status(world)
-	_map_panel.show_world_map(entries, selected_id, String(world.get("filter", "all")), String(world.get("home_id", "")))
+	_map_panel.show_world_map(entries, selected_id, world)
 	var selected: Dictionary = {}
 	for entry in entries:
 		if entry.get("id", "") == selected_id:
 			selected = entry
 	_right_panel.show_world_city(selected, world)
+
+## Closes the world map in on a city before its section opens. False when the world map is not
+## showing; otherwise world_zoom_settled fires once it is there.
+func zoom_world_to_city(city_id: String) -> bool:
+	return _is_visible and _wrapped and _map_panel.zoom_world_to_city(city_id)
 
 ## One section of a city. city: see VRWrapPanel.show_operations_status.
 func show_city_operations(city: Dictionary) -> void:
@@ -327,6 +334,7 @@ func _build_wrap() -> void:
 	_left_panel = VRWrapPanel.new()
 	_map_panel = VRWrapPanel.new()
 	_right_panel = VRWrapPanel.new()
+	_map_panel.world_zoom_settled.connect(func() -> void: world_zoom_settled.emit())
 	var left := _add_screen(_wrap_root, "WrapLeft", _left_panel, VRWrapPanel.SIDE_PIXELS, side_size)
 	left.position = Vector3(-side_x, 0.0, side_z)
 	left.rotation.y = angle
