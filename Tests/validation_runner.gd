@@ -265,6 +265,14 @@ func _buttons_under(node: Node) -> Array[Button]:
 		found.append_array(_buttons_under(child))
 	return found
 
+## Buttons a pointer could press under a node, by action.
+func _map_buttons(node: Node) -> Dictionary:
+	var found := {}
+	for button in _buttons_under(node):
+		if button.is_visible_in_tree() and not button.disabled:
+			found[String(button.get_meta(&"menu_action", &""))] = button
+	return found
+
 func _button_actions(node: Node) -> Array[String]:
 	var actions: Array[String] = []
 	for button in _buttons_under(node):
@@ -2595,7 +2603,7 @@ func _validate_world_menu() -> void:
 		if entry["id"] == "tokyo":
 			tokyo = entry
 	left.show_world_status(world)
-	center.show_world_map(entries, home_id, "hard", home_id)
+	center.show_world_map(entries, home_id, world)
 	right.show_world_city(home, world)
 	for _frame in 3:
 		await process_frame
@@ -2610,20 +2618,118 @@ func _validate_world_menu() -> void:
 		failures.append("The world panel offers %d filters" % filters)
 	if not _has_label(left, "%d%%" % WorldMap.world_liberation(profile)):
 		failures.append("The world panel does not show world liberation")
-	var cities := {}
-	for button in _buttons_under(center):
-		cities[String(button.get_meta(&"menu_action", &""))] = button
+	# Every city is in exactly one region.
 	for entry in entries:
-		var button: Button = cities.get("world_city_%s" % entry["id"])
-		if button == null:
-			failures.append("The world map has no button for %s" % entry["id"])
-		elif (button.modulate.a < 0.99) != (String(entry.get("difficulty", "")) != "hard"):
-			failures.append("The hard filter dims %s wrongly" % entry["id"])
+		var homes := 0
+		for region_data in WorldMap.REGIONS:
+			if entry["id"] in region_data["cities"]:
+				homes += 1
+		if homes != 1:
+			failures.append("%s is in %d regions" % [entry["id"], homes])
+	# The whole world: a button per region, and no city to press.
+	var view := center.world_map_view()
+	var world_window := view.window()
+	var shown := _map_buttons(center)
+	for region_data in WorldMap.regions():
+		if not shown.has("world_region_%s" % region_data["id"]):
+			failures.append("The world view has no button for %s" % region_data["id"])
+	for action in shown:
+		if String(action).begins_with("world_city_"):
+			failures.append("%s is pressable at world zoom" % action)
 	var picked := [&""]
 	center.action_requested.connect(func(action: StringName) -> void: picked[0] = action)
-	var tokyo_button: Button = cities.get("world_city_tokyo")
+	# A point inside one region but nearer a neighbor's center: the region the point is in wins.
+	var probed := 0
+	for action in shown:
+		var inside: Rect2 = (shown[action] as Button).get_global_rect()
+		var nearest_other := false
+		var probe := Vector2.ZERO
+		for x in range(int(inside.position.x) + 1, int(inside.end.x), 6):
+			for y in range(int(inside.position.y) + 1, int(inside.end.y), 6):
+				probe = Vector2(x, y)
+				var own := probe.distance_to(inside.get_center())
+				for other in shown:
+					var rect: Rect2 = (shown[other] as Button).get_global_rect()
+					if other != action and not rect.has_point(probe) and rect.grow(64.0).has_point(probe) and probe.distance_to(rect.get_center()) < own:
+						nearest_other = true
+				if nearest_other:
+					break
+			if nearest_other:
+				break
+		if nearest_other:
+			probed += 1
+			if not center.activate_at_viewport_point(probe) or picked[0] != StringName(action):
+				failures.append("Pointing inside %s at %s picked %s" % [action, probe, picked[0]])
+	if probed == 0:
+		failures.append("No region is near enough a neighbor to test the picker")
+	# Region by region: its cities are the buttons, the hard filter dims them, nothing else is.
+	world["region"] = "north_america"
+	center.show_world_map(entries, home_id, world)
+	if not view.is_zooming() or center.world_map_view() != view:
+		failures.append("Picking a region did not ease the same map to it")
+	for button in _buttons_under(view):
+		if button.visible and not button.disabled:
+			failures.append("%s is pressable while the map zooms" % button.get_meta(&"menu_action", &""))
+	await create_timer(WorldMapView.ZOOM_SECONDS + 0.2).timeout
+	if view.is_zooming():
+		failures.append("The region zoom did not settle on its own")
+	for region_data in WorldMap.regions():
+		world["region"] = region_data["id"]
+		center.show_world_map(entries, home_id, world)
+		view.finish_zoom()
+		await process_frame
+		if view.window().get_area() >= world_window.get_area() * 0.5:
+			failures.append("%s does not zoom in" % region_data["id"])
+		shown = _map_buttons(center)
+		if not shown.has("world_back"):
+			failures.append("%s has no way back to the whole world" % region_data["id"])
+		for entry in entries:
+			var button: Button = shown.get("world_city_%s" % entry["id"])
+			var member: bool = entry["id"] in region_data["cities"]
+			if member and button == null:
+				failures.append("%s has no button for %s" % [region_data["id"], entry["id"]])
+			elif not member and button != null:
+				failures.append("%s offers %s, which is elsewhere" % [region_data["id"], entry["id"]])
+			elif member and (button.modulate.a < 0.99) != (String(entry.get("difficulty", "")) != "hard"):
+				failures.append("The hard filter dims %s wrongly" % entry["id"])
+			if member and not view.window().has_point(entry["point"]):
+				failures.append("%s is off screen in %s" % [entry["id"], region_data["id"]])
+		for action in shown:
+			if String(action).begins_with("world_region_"):
+				failures.append("%s is pressable in %s" % [action, region_data["id"]])
+	world["region"] = "asia"
+	center.show_world_map(entries, home_id, world)
+	view.finish_zoom()
+	await process_frame
+	shown = _map_buttons(center)
+	var tokyo_button: Button = shown.get("world_city_tokyo")
 	if tokyo_button == null or not center.activate_at_viewport_point(tokyo_button.get_global_rect().get_center()) or picked[0] != &"world_city_tokyo":
 		failures.append("Pointing at a city did not pick it")
+	# Open: the map closes in on the city, and says so when it is there.
+	var settled := [false]
+	center.world_zoom_settled.connect(func() -> void: settled[0] = true)
+	if not center.zoom_world_to_city("tokyo") or not view.is_zooming():
+		failures.append("Open did not zoom the map to the city")
+	view.finish_zoom()
+	await process_frame
+	if not settled[0]:
+		failures.append("The city zoom never reported it settled")
+	if not view.window().has_point(tokyo["point"]) or view.window().get_area() >= WorldMap.region("asia")["box"].get_area():
+		failures.append("The city zoom does not close in on Tokyo: %s" % view.window())
+	if not _map_buttons(view).is_empty():
+		failures.append("The map can be pressed while a city opens")
+	# The controller keeps the region and opens it on a city in it.
+	var flow = load("res://Scripts/Core/game_flow_controller.gd").new()
+	flow._settings = profile
+	flow._state = &"world"
+	if not flow._action_belongs_to_state(&"world_region_asia") or not flow._action_belongs_to_state(&"world_back"):
+		failures.append("The world map does not accept region picks or Back")
+	if flow._region_pick(entries, "north_america") != home_id or WorldMap.region_of(flow._region_pick(entries, "asia")) != "asia":
+		failures.append("A region does not open on home or one of its own cities")
+	flow._world_region_id = "asia"
+	if flow._world_status(entries).get("region", "") != "asia":
+		failures.append("The world status does not carry the region")
+	flow.free()
 	var open := _find_button(right, "OPEN")
 	if open == null or open.disabled or not bool(open.get_meta(&"primary", false)):
 		failures.append("Open does not lead the home city's card")
@@ -2679,6 +2785,16 @@ func _validate_world_menu() -> void:
 		failures.append("An overrun city offers Assist")
 	_check_fits(left, "operations panel")
 	_check_fits(right, "district panel")
+	# Back out to Asia from Tokyo's section: a new map starts on the city and eases out.
+	world["region"] = "asia"
+	world["zoom_from"] = "tokyo"
+	center.show_world_map(entries, "tokyo", world)
+	var back_view := center.world_map_view()
+	if back_view == view or not back_view.is_zooming() or not back_view.window().has_point(tokyo["point"]):
+		failures.append("Coming back from a city does not ease out from it")
+	back_view.finish_zoom()
+	if back_view.region_id() != "asia":
+		failures.append("Coming back from a city does not land in its region")
 	# A threatened city offers the Assist choice.
 	for entry in entries:
 		if entry["state"] == WorldMap.STATE_THREATENED:

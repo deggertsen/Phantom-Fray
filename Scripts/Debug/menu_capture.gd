@@ -143,15 +143,33 @@ func _capture_world() -> void:
 		"assist": false,
 	}
 	_left.show_world_status(world)
-	_center.show_world_map(entries, home_id, "all", home_id)
+	_center.show_world_map(entries, home_id, world)
 	_right.show_world_city(home, world)
 	await _capture("world-map.png")
+	world["region"] = "north_america"
+	_center.show_world_map(entries, home_id, world)
+	_center.world_map_view().finish_zoom()
+	await _capture("world-map-region.png")
 	world["filter"] = "hard"
 	world["training_first"] = false
+	world["region"] = "asia"
 	_left.show_world_status(world)
-	_center.show_world_map(entries, "tokyo", "hard", home_id)
+	_center.show_world_map(entries, "tokyo", world)
+	_center.world_map_view().finish_zoom()
 	_right.show_world_city(tokyo, world)
 	await _capture("world-map-hard.png")
+	# Open on Tokyo: halfway in, then there.
+	var view := _center.world_map_view()
+	_center.zoom_world_to_city("tokyo")
+	view._process(WorldMapView.CITY_ZOOM_SECONDS * 0.4)
+	await _capture("world-map-city-zooming.png")
+	view.finish_zoom()
+	await _capture("world-map-city-zoom.png")
+	world["region"] = "south_america"
+	world["filter"] = "all"
+	_left.show_world_status(world)
+	_center.show_world_map(entries, "sao_paulo", world)
+	_center.world_map_view().finish_zoom()
 	_right.show_world_city(_entry(entries, "sao_paulo"), world)
 	await _capture("world-map-safe-card.png")
 	# Tokyo's section, fresh and then with one seal.

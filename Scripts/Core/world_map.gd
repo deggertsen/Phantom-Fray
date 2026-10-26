@@ -70,6 +70,20 @@ const CITIES := [
 	{"id": "sydney", "name": "Sydney", "lon": 151.2, "lat": -33.9, "ops": 30, "seed_ops": 0, "blurb": "Consumed in the second week. The last broadcast came from here."},
 ]
 
+## The world map zooms to a region before a city is picked. Every city is in exactly one; label is
+## where the region's name sits on the world view, in longitude and latitude.
+const REGIONS := [
+	{"id": "north_america", "name": "North America", "label": [-112, 27], "cities": ["portland", "vancouver", "denver", "chicago", "toronto", "new_york", "atlanta", "mexico_city"]},
+	{"id": "south_america", "name": "South America", "label": [-66, -10], "cities": ["bogota", "lima", "sao_paulo", "buenos_aires"]},
+	{"id": "europe_africa", "name": "Europe & Africa", "label": [18, 16], "cities": ["berlin", "moscow", "cairo", "lagos", "nairobi", "johannesburg"]},
+	{"id": "asia", "name": "Asia", "label": [100, 47], "cities": ["tehran", "delhi", "mumbai", "beijing", "seoul", "tokyo", "bangkok", "manila", "jakarta"]},
+	{"id": "oceania", "name": "Oceania", "label": [134, -24], "cities": ["perth", "sydney"]},
+]
+## A region's box is its cities and label grown by this, in projected units.
+const REGION_PADDING := 18.0
+## The side of the box the map closes in on when a city opens.
+const CITY_ZOOM_UNITS := 44.0
+
 ## Generic district names; a city's sections draw from these. No in-world place names.
 const DISTRICT_NAMES: Array[String] = ["Harbor", "Rail Yards", "Junction", "Stadium", "Reservoir", "Old Town", "Civic Ring", "Foundry", "Airport", "Docks", "University", "Bluffs", "Quarry", "Northgate", "Eastbank", "Riverside"]
 ## A district's breach-site id is its name as a key ("Rail Yards" is rail_yards). BreachSites
@@ -105,6 +119,43 @@ static func arrows() -> Array[Dictionary]:
 	for arrow in ARROWS:
 		out.append({"point": project(float(arrow[0]), float(arrow[1])), "degrees": float(arrow[2])})
 	return out
+
+## The whole projected map.
+static func world_box() -> Rect2:
+	return Rect2(Vector2.ZERO, Vector2(WorldCoastline.WIDTH, WorldCoastline.HEIGHT))
+
+## Every region with its projected label point and box.
+static func regions() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for raw in REGIONS:
+		var region_data: Dictionary = (raw as Dictionary).duplicate()
+		var label_point := project(float(raw["label"][0]), float(raw["label"][1]))
+		var box := Rect2(label_point, Vector2.ZERO)
+		for city_id in raw["cities"]:
+			for city_raw in CITIES:
+				if city_raw["id"] == city_id:
+					box = box.expand(project(float(city_raw["lon"]), float(city_raw["lat"])))
+		region_data["label_point"] = label_point
+		region_data["box"] = box.grow(REGION_PADDING)
+		out.append(region_data)
+	return out
+
+static func region(region_id: String) -> Dictionary:
+	for candidate in regions():
+		if candidate["id"] == region_id:
+			return candidate
+	return {}
+
+## The region a city is in, or "".
+static func region_of(city_id: String) -> String:
+	for raw in REGIONS:
+		if city_id in raw["cities"]:
+			return String(raw["id"])
+	return ""
+
+## The box the map closes in on when a city opens.
+static func city_box(point: Vector2) -> Rect2:
+	return Rect2(point - Vector2.ONE * CITY_ZOOM_UNITS * 0.5, Vector2.ONE * CITY_ZOOM_UNITS)
 
 static func distance_to_polygon(point: Vector2, polygon: PackedVector2Array) -> float:
 	var best := INF

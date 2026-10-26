@@ -55,12 +55,17 @@ Ask a player who has not seen the project, without coaching:
 1. Where is the war? Expected: the two hatched regions behind the magenta lines, with arrows showing where they push.
 2. Which cities can you fight in? Expected: the lit markers (cyan, amber, magenta); grey dots are safe and have no missions; dark dots are consumed.
 3. How do you play on easy? Expected: the EASY filter on the left, or a cyan (threatened) city.
-4. How do you start? Expected: point at a city, then **Open** on the right panel, then a district, then **Deploy**.
+4. How do you start? Expected: point at a region, then a city, then **Open** on the right panel, then a district, then **Deploy**.
 
 Pass condition: all four within 15 seconds.
 
-- Every city is a button; the picked one carries a white ring and fills the right panel. Nothing starts until Open.
-- The filter dims cities that do not match; ALL is marked (●) on a fresh profile. The legend in the center header names the colors.
+- The whole world opens with PICK A REGION: five outlined regions (North America, South America, Europe & Africa, Asia, Oceania), each named with how many of its cities are in reach. A region lights when pointed at, and the trigger picks the region the ray is inside, even at its edge next to a neighbor. No city can be picked from here.
+- Picking a region eases the map to it over about half a second; the header names the region. Nothing can be pressed on the map until it settles. Its cities are then the buttons, large enough to pick in the headset: check the Toronto / New York / Chicago cluster and Vancouver / Portland. Cities outside the region are drawn but not pickable. If the picked city was elsewhere, the card switches to home or the region's most fought-over city.
+- **Whole World** at the bottom of the map, or Escape on desktop, eases back out. The World Map button on the main menu always starts at the whole world.
+- The picked city carries a white ring and fills the right panel. Nothing starts until Open. Open closes the map in on the city with a ring locking onto it and its name; the city screen appears only after the zoom ends, in under half a second. Triggering anything during that zoom does nothing.
+- From the city screen, World Map returns to the same region, easing out from the city.
+- Lines, markers, and labels stay the same size on screen at every zoom; the land fills in at every step of the zoom (no missing continents).
+- The filter dims cities that do not match at every zoom, and dims regions with nothing that matches; ALL is marked (●) on a fresh profile. The legend in the center header names the colors.
 - The right panel shows the city's state, difficulty, distance from the front, liberation, resistance, tier, and operations done. Open leads on a playable city; a safe or consumed city shows a disabled button with its difficulty word (NO MISSIONS) instead. The home city's card also has Breach Night, back to the six operations.
 - World liberation on the left is the average of every city's liberation. Chen's priority names the home city while it has missions.
 - The left panel has Training (leading for a new recruit) and Settings. Settings returns to the world map.

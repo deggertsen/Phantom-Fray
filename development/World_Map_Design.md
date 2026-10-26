@@ -43,6 +43,7 @@ A section is a small directed graph in three columns, generated from a seed of c
 - The player picks any district in the first column, then any linked district, then any linked district. Three seals complete the operation. The front line across the city map sits one column right of the last sealed district.
 - On completion the section is replaced by the next one and the city's `ops_done` increments. The player can continue or leave. A liberated city has no sections; Chen says she will call when the front turns back toward it.
 - Sections are not labeled or numbered on screen.
+- The world map gets there in two steps. The whole world shows five regions (North America, South America, Europe & Africa, Asia, Oceania; `WorldMap.REGIONS`, every city in exactly one) as the pickable outlines, each with its name and how many of its cities are in reach; the cities stay drawn so the fronts read. Picking a region eases the map to it (0.5 s) and its cities become the buttons; Whole World eases back. Open on the city card closes the map in on the city (0.45 s), and only then does the section take the panels. The way back from a section starts on the city and eases out to its region, which `GameFlowController` remembers; the World Map button on the main menu starts at the whole world.
 
 ## Missions from districts
 

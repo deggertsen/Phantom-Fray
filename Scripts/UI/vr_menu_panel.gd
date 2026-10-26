@@ -197,6 +197,10 @@ func _closest_button(node: Node, point: Vector2, best: Array) -> void:
 		var rect := button.get_global_rect().grow(64.0)
 		if button.visible and not button.disabled and rect.has_point(point):
 			var distance := rect.get_center().distance_to(point)
+			# A button the point is inside beats one it is only near, so a large button (a world
+			# map region) is not lost to a smaller neighbor's center.
+			if button.get_global_rect().has_point(point):
+				distance -= 1.0e6
 			if distance < float(best[1]):
 				best[0] = button
 				best[1] = distance

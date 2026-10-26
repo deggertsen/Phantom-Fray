@@ -48,6 +48,13 @@ var _selected_site_id: String = ""
 ## The world map's difficulty filter ("all", "easy", "medium", "hard") and the city it has picked.
 var _world_filter: String = "all"
 var _selected_city_id: String = ""
+## The region the world map is zoomed to, "" for the whole world. Kept across a city's section,
+## so the way back lands where the player left.
+var _world_region_id: String = ""
+## The city the map is closing in on before its section opens; menu actions wait for it.
+var _opening_city_id: String = ""
+## The next world map starts zoomed in on this city and eases out to the region.
+var _zoom_from_city_id: String = ""
 ## The district picked on the city map; "" picks the first open one.
 var _selected_node_id: String = ""
 ## What the last world mission did to the war, for results: see _finish_world_mission.
@@ -150,6 +157,8 @@ func _on_controller_button_pressed(button: String, controller: XRController3D = 
 func _on_menu_action(action: StringName) -> void:
 	if _menu_action_cooldown > 0.0 or not _action_belongs_to_state(action):
 		return
+	if _state == STATE_WORLD and _opening_city_id != "":
+		return
 	_menu_action_cooldown = 0.45
 	if _state != STATE_RESULTS:
 		if not _menu_input_armed:
@@ -175,6 +184,12 @@ func _on_menu_action(action: StringName) -> void:
 		_world_filter = String(action).trim_prefix("world_filter_")
 		_show_world_map()
 		return
+	if String(action).begins_with("world_region_"):
+		_world_region_id = String(action).trim_prefix("world_region_")
+		if WorldMap.region_of(_selected_city_id) != _world_region_id:
+			_selected_city_id = _region_pick(WorldMap.city_entries(_settings), _world_region_id)
+		_show_world_map()
+		return
 	if String(action).begins_with("node_"):
 		_selected_node_id = String(action).trim_prefix("node_")
 		_show_city_operations()
@@ -185,11 +200,15 @@ func _on_menu_action(action: StringName) -> void:
 				_start_world_mission()
 			else:
 				_start_mission(_selected_site_id)
-		&"world", &"city_world":
+		&"world", &"world_back":
+			_world_region_id = ""
+			_show_world_map()
+		&"city_world":
+			_zoom_from_city_id = _selected_city_id
 			_show_world_map()
 		&"world_open":
 			_selected_node_id = ""
-			_show_city_operations()
+			_open_selected_city()
 		&"results_world", &"results_city":
 			if _results_action_locked:
 				return
@@ -369,6 +388,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				elif _state == STATE_TUTORIAL:
 					_on_menu_action(&"training_menu")
 				elif _state == STATE_CITY:
+					_zoom_from_city_id = _selected_city_id
+					_show_world_map()
+				elif _state == STATE_WORLD and _world_region_id != "":
+					_world_region_id = ""
 					_show_world_map()
 				elif _state == STATE_WORLD:
 					_show_main_menu()
@@ -414,10 +437,15 @@ func _show_world_map() -> void:
 	_state = STATE_WORLD
 	_set_menu_visible(true)
 	var entries := WorldMap.city_entries(_settings)
+	_opening_city_id = ""
 	if _selected_city_id == "" or WorldMap.city(_selected_city_id).is_empty():
 		_selected_city_id = WorldMap.home_city_id()
+	if _world_region_id != "" and WorldMap.region(_world_region_id).is_empty():
+		_world_region_id = ""
+	var world := _world_status(entries)
+	_zoom_from_city_id = ""
 	if _presenter:
-		_presenter.show_world_map(_world_status(entries), entries, _selected_city_id)
+		_presenter.show_world_map(world, entries, _selected_city_id)
 
 ## What the world panels need beyond the entries: see VRWrapPanel.show_world_status.
 func _world_status(entries: Array[Dictionary]) -> Dictionary:
@@ -428,7 +456,41 @@ func _world_status(entries: Array[Dictionary]) -> Dictionary:
 		"priority": _world_priority(entries),
 		"training_first": _settings != null and not _settings.tutorial_completed,
 		"assist": _settings != null and _settings.world_assist,
+		"region": _world_region_id,
+		"zoom_from": _zoom_from_city_id,
 	}
+
+## The city a region opens on when the picked one is elsewhere: home, then the most fought-over
+## city still in reach, then the first.
+func _region_pick(entries: Array[Dictionary], region_id: String) -> String:
+	var members: Array = WorldMap.region(region_id).get("cities", [])
+	var best: Dictionary = {}
+	var rank := {WorldMap.STATE_OVERRUN: 3, WorldMap.STATE_DANGER: 2, WorldMap.STATE_THREATENED: 1}
+	for entry in entries:
+		if not entry.get("id", "") in members:
+			continue
+		if entry.get("id", "") == WorldMap.home_city_id():
+			return String(entry["id"])
+		var score := int(rank.get(String(entry.get("state", "")), 0)) if not entry.get("liberated", false) else 0
+		if best.is_empty() or score > int(best["score"]):
+			best = {"id": entry["id"], "score": score}
+	return String(best.get("id", _selected_city_id))
+
+## Open on the city card: the map closes in on the city, then its section takes the panels.
+## Anything that leaves the world map meanwhile (Back, Escape, a recenter) cancels the open.
+func _open_selected_city() -> void:
+	var city_id := _selected_city_id
+	var entry := WorldMap.city_entry(_settings, city_id)
+	if entry.is_empty() or not entry.get("playable", false) or _presenter == null or not _presenter.zoom_world_to_city(city_id):
+		_show_city_operations()
+		return
+	_opening_city_id = city_id
+	await _presenter.world_zoom_settled
+	if _opening_city_id != city_id:
+		return
+	_opening_city_id = ""
+	if _state == STATE_WORLD:
+		_show_city_operations()
 
 ## Chen's priority: the home city while it has missions, otherwise the overrun city closest to
 ## being liberated, otherwise whatever is playable. {} when the war offers nothing.
@@ -840,7 +902,7 @@ func _action_belongs_to_state(action: StringName) -> bool:
 		STATE_RESULTS:
 			return action in [&"retry", &"next_mission", &"results_menu", &"results_training", &"results_city", &"results_world"]
 		STATE_WORLD:
-			return String(action).begins_with("world_city_") or String(action).begins_with("world_filter_") or action in [&"world_open", &"campaign", &"training", &"settings"]
+			return String(action).begins_with("world_city_") or String(action).begins_with("world_filter_") or String(action).begins_with("world_region_") or action in [&"world_open", &"world_back", &"campaign", &"training", &"settings"]
 		STATE_CITY:
 			return String(action).begins_with("node_") or action in [&"deploy", &"city_world", &"assist_on", &"assist_off", &"settings"]
 		STATE_SETTINGS:

@@ -427,7 +427,8 @@ func _hint() -> Label:
 
 # --- World map ------------------------------------------------------------------------------
 # world: liberation (int), filter ("all"|"easy"|"medium"|"hard"), home_id, home_name,
-# priority {title, body, bonus}, training_first (bool), assist (bool).
+# priority {title, body, bonus}, training_first (bool), assist (bool), region (a WorldMap region
+# id, or "" for the whole world), zoom_from (a city id, or "").
 
 const STATE_COLORS := {
 	WorldMap.STATE_SAFE: Color("6b7a94"),
@@ -437,6 +438,11 @@ const STATE_COLORS := {
 	WorldMap.STATE_CONSUMED: Color("8b7fa3"),
 }
 const FILTERS := ["all", "easy", "medium", "hard"]
+
+## The world map's view eased to where it was going: see show_world_map and zoom_world_to_city.
+signal world_zoom_settled
+
+var _world_view: WorldMapView
 
 func _state_color(state: String) -> Color:
 	return STATE_COLORS.get(state, COLOR_TEXT)
@@ -489,8 +495,15 @@ func show_world_status(world: Dictionary) -> void:
 	_content.add_child(_button_pair(training, settings))
 	_content.add_child(_hint())
 
-## Center: the drawn world with the fronts and every city.
-func show_world_map(entries: Array[Dictionary], selected_id: String, filter: String, home_id: String) -> void:
+## Center: the drawn world with the fronts and every city. The whole world picks a region; a
+## region (world["region"]) picks a city and has a way back out. The map view outlives a redraw
+## of this panel, so a change of region eases instead of cutting. world["zoom_from"] is a city to
+## start a new view on, for the way back from its section.
+func show_world_map(entries: Array[Dictionary], selected_id: String, world: Dictionary) -> void:
+	var region_id := String(world.get("region", ""))
+	var view := _world_view if is_instance_valid(_world_view) and not _world_view.is_queued_for_deletion() and _world_view.get_parent() == _content else null
+	if view:
+		_content.remove_child(view)
 	_begin_wrap(COLOR_CYAN, 0)
 	var header := MarginContainer.new()
 	for side in ["margin_left", "margin_right"]:
@@ -500,7 +513,8 @@ func show_world_map(entries: Array[Dictionary], selected_id: String, filter: Str
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	header.add_child(row)
-	var title := _label("PICK A CITY", 18, COLOR_TEXT, true)
+	var title_text := "PICK A REGION" if region_id == "" else String(WorldMap.region(region_id).get("name", "")).to_upper()
+	var title := _label(title_text, 18, COLOR_TEXT, true)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(title)
 	row.add_child(_label("● SAFE", 14, _state_color(WorldMap.STATE_SAFE), true))
@@ -509,20 +523,50 @@ func show_world_map(entries: Array[Dictionary], selected_id: String, filter: Str
 	row.add_child(_label("● HARD", 14, _state_color(WorldMap.STATE_OVERRUN), true))
 	row.add_child(_label("▨ CONSUMED", 14, _state_color(WorldMap.STATE_CONSUMED), true))
 	_content.add_child(header)
-	var view := WorldMapView.new()
-	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	view.city_pressed.connect(_on_action_pressed)
-	view.city_hovered.connect(_on_button_hovered.bind(null))
-	view.show_world(entries, selected_id, filter, home_id, true)
+	if view == null:
+		view = WorldMapView.new()
+		view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		view.action_pressed.connect(_on_action_pressed)
+		view.hovered.connect(_on_button_hovered.bind(null))
+		view.window_settled.connect(func() -> void: world_zoom_settled.emit())
+		if String(world.get("zoom_from", "")) != "":
+			view.start_at_city(String(world["zoom_from"]))
+		_world_view = view
 	_content.add_child(view)
+	view.show_world(entries, selected_id, String(world.get("filter", "all")), String(world.get("home_id", "")), true, region_id)
 	var foot := MarginContainer.new()
 	for side in ["margin_left", "margin_right"]:
 		foot.add_theme_constant_override(side, 18)
 	foot.add_theme_constant_override("margin_top", 6)
 	foot.add_theme_constant_override("margin_bottom", 10)
-	foot.add_child(_wrapped("The magenta line is the front; the arrows show where it is pushing. A city's danger is its distance from it.", 15, COLOR_MUTED))
+	if region_id == "":
+		foot.add_child(_wrapped("The magenta line is the front; the arrows show where it is pushing. Point at a region to zoom in.", 15, COLOR_MUTED))
+	else:
+		var foot_row := HBoxContainer.new()
+		foot_row.add_theme_constant_override("separation", 14)
+		var back := _make_action_button(&"world_back", "←  WHOLE WORLD", COLOR_CYAN, Vector2(200, 50))
+		back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_compact_menu_button(back, 50.0)
+		_tight_sides(back, 12)
+		foot_row.add_child(back)
+		var hint := _wrapped("Point at a city to read it. Open is on the right.", 15, COLOR_MUTED)
+		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		foot_row.add_child(hint)
+		foot.add_child(foot_row)
 	_content.add_child(foot)
+
+## Closes the map in on a city before its section opens. False when no world map is showing;
+## otherwise world_zoom_settled fires when the map is there.
+func zoom_world_to_city(city_id: String) -> bool:
+	if not is_instance_valid(_world_view) or _world_view.is_queued_for_deletion() or _world_view.get_parent() != _content:
+		return false
+	_world_view.zoom_to_city(city_id)
+	return true
+
+func world_map_view() -> WorldMapView:
+	return _world_view if is_instance_valid(_world_view) and not _world_view.is_queued_for_deletion() else null
 
 ## Right: the picked city and Open, or why it cannot be opened.
 func show_world_city(entry: Dictionary, world: Dictionary) -> void:
